@@ -10,9 +10,7 @@ namespace nes
 
 enum RESULT
 {
-    RESULT_FILE_NOT_FOUND = -1,
-    RESULT_FILE_NOT_INES_ROM = -2,
-
+    RESULT_INVALID_INES_HEADER = -1,
     RESULT_ERROR = 0,
 
     RESULT_OK    = 1

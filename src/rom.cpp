@@ -7,7 +7,10 @@ namespace nes
 
 namespace
 {
-static const char INES_MAGIC[4] = { 'N', 'E', 'S', 0x1A };
+const char INES_MAGIC[4] = { 'N', 'E', 'S', 0x1A };
+const uint32_t PRG_PAGE_SIZE = 16 * 1024;
+const uint32_t CHR_PAGE_SIZE = 8 * 1024;
+const uint32_t INES_HEADER_SIZE = 16u;
 } // anonymous
 
 ines_rom_t::~ines_rom_t()
@@ -17,6 +20,7 @@ ines_rom_t::~ines_rom_t()
         for (auto i = 0; i < header.prg_size; ++i)
         {
             delete prg_pages[i];
+            prg_pages[i] = nullptr;
         }
     }
     delete prg_pages;
@@ -27,6 +31,7 @@ ines_rom_t::~ines_rom_t()
         for (auto i = 0; i < header.chr_size; ++i)
         {
             delete chr_pages[i];
+            chr_pages = nullptr;
         }
     }
     delete chr_pages;
@@ -42,7 +47,7 @@ RESULT load_rom_from_file(const char* filepath, ines_rom_t &rom)
     
     if (!file.good() || file_size == 0)
     {
-        printf("Failed to open '%s'\n", filepath);
+        printf("Failed to open '%s'\n", filepath); // TODO(xxx): Proper logging;
         return RESULT_ERROR;
     }
 
@@ -51,28 +56,56 @@ RESULT load_rom_from_file(const char* filepath, ines_rom_t &rom)
     file.close();
 
     load_rom_from_data(data, file_size, rom);
-
     free(data);
+
+    printf("ROM '%s' (%u bytes) loaded successfully.\n", filepath, file_size); // TODO(xxx): Proper logging;
     return RESULT_OK;
 }
 
 RESULT load_rom_from_data(const uint8_t* data, const uint32_t size, ines_rom_t &rom)
 {
-    if (size < 16)
+    if (size < INES_HEADER_SIZE)
     {
-        printf("Datasize of rom too small.\n");
-        return RESULT_ERROR;
+        printf("Size too small to contain iNES header.\n"); // TODO(xxx): Proper logging;
+        return RESULT_INVALID_INES_HEADER;
     }
 
     // Copy iNES header
-    memcpy(&rom.header, data, 16);
+    memcpy(&rom.header, data, INES_HEADER_SIZE);
 
     if (strncmp((const char*)rom.header.magic, INES_MAGIC, 4) != 0)
     {
         printf("iNES header magic not valid.\n"); // TODO(xxx): Proper logging;
-        return RESULT_FILE_NOT_INES_ROM;
+        return RESULT_INVALID_INES_HEADER;
     }
 
+    rom.prg_pages = new uint8_t*[rom.header.prg_size];
+    rom.chr_pages = new uint8_t*[rom.header.chr_size];
+
+    // Copy PRG pages
+    const uint8_t* data_ptr = &data[INES_HEADER_SIZE];
+    for (auto i = 0; i < rom.header.prg_size; ++i)
+    {
+        rom.prg_pages[i] = new u_int8_t[PRG_PAGE_SIZE];
+        memcpy(rom.prg_pages[i], data_ptr, PRG_PAGE_SIZE);
+        data_ptr += PRG_PAGE_SIZE;
+    }
+
+    // Copy CHR pages
+    for (auto i = 0; i < rom.header.chr_size; ++i)
+    {
+        rom.chr_pages[i] = new uint8_t[CHR_PAGE_SIZE];
+        memcpy(rom.chr_pages[i], data_ptr, CHR_PAGE_SIZE);
+        data_ptr += CHR_PAGE_SIZE;
+    }
+
+    const auto loaded_data_size = data_ptr - &data[INES_HEADER_SIZE];
+    const auto expected_data_size = size - INES_HEADER_SIZE;
+    if (loaded_data_size != expected_data_size)
+    {
+        printf("Error, written data not the same as specified.\n"); // TODO(xxx): Proper logging;
+        return RESULT_ERROR;
+    }
 
     return RESULT_OK;
 }
