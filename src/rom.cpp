@@ -15,27 +15,34 @@ const uint32_t INES_HEADER_SIZE = 16u;
 
 ines_rom_t::~ines_rom_t()
 {
-    if (prg_pages)
-    {
-        for (auto i = 0; i < header.prg_size; ++i)
-        {
-            delete prg_pages[i];
-            prg_pages[i] = nullptr;
-        }
-    }
-    delete prg_pages;
-    prg_pages = nullptr;
+    clear_rom_contents(*this);
+}
 
-    if (chr_pages)
+void clear_rom_contents(ines_rom_t &rom)
+{
+    if (rom.prg_pages)
     {
-        for (auto i = 0; i < header.chr_size; ++i)
+        for (auto i = 0; i < rom.header.prg_size; ++i)
         {
-            delete chr_pages[i];
-            chr_pages = nullptr;
+            delete rom.prg_pages[i];
+            rom.prg_pages[i] = nullptr;
         }
     }
-    delete chr_pages;
-    chr_pages = nullptr;
+    delete rom.prg_pages;
+    rom.prg_pages = nullptr;
+
+    if (rom.chr_pages)
+    {
+        for (auto i = 0; i < rom.header.chr_size; ++i)
+        {
+            delete rom.chr_pages[i];
+            rom.chr_pages = nullptr;
+        }
+    }
+    delete rom.chr_pages;
+    rom.chr_pages = nullptr;
+
+    memset(&rom.header, 0, INES_HEADER_SIZE);
 }
 
 RESULT load_rom_from_file(const char* filepath, ines_rom_t &rom)
@@ -69,6 +76,9 @@ RESULT load_rom_from_data(const uint8_t* data, const uint32_t size, ines_rom_t &
         printf("Size too small to contain iNES header.\n"); // TODO(xxx): Proper logging;
         return RESULT_INVALID_INES_HEADER;
     }
+
+    // Initialize ROM
+    clear_rom_contents(rom);
 
     // Copy iNES header
     memcpy(&rom.header, data, INES_HEADER_SIZE);

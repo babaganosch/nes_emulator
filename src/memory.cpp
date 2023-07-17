@@ -5,10 +5,7 @@ namespace nes
 
 void mem_t::init()
 {
-    for (auto i = 0; i < sizeof(data); ++i)
-    {
-        data[i] = 0u;
-    }
+    memset(data, 0, sizeof(data));
 }
 
 } // nes

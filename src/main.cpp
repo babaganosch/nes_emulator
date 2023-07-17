@@ -13,10 +13,19 @@ int main()
     memory.init();
     cpu.init();
 
+    nes::load_rom_from_file("../data/nestest.nes", rom);
+
     cpu.execute();
 
-    nes::load_rom_from_file("../data/nestest.nes", rom);
     rom.~ines_rom_t();
+
+    printf("mem size: %04lx\n", sizeof(memory));
+
+    printf("%u %u %u\n", memory[0x0060], memory[0x0061], memory[0x0062]);
+    memory[0x0060] = 0xA;
+    memory[0x0061] = 0xB;
+    memory[0x0062] = 0xC;
+    printf("%u %u %u\n", memory[0x0060], memory[0x0061], memory[0x0062]);
 
     printf("--- Shutting Down ---\n");
     
