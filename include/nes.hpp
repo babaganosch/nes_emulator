@@ -15,43 +15,7 @@ enum RESULT
     RESULT_OK    = 1
 };
 
-struct cpu_t
-{
-
-    // Registers
-    struct regs_t
-    {
-        uint8_t A; // Accumulator
-        uint8_t X; // X
-        uint8_t Y; // Y
-
-        uint8_t  SP; // Stack Pointer
-        uint16_t PC; // Program Counter
-
-        // Status Register
-        //  7 6 5 4 3 2 1 0
-        //  N V - - D I Z C
-        union 
-        {
-            struct 
-            {
-                uint8_t C : 1; // Carry 
-                uint8_t Z : 1; // Zero
-                uint8_t I : 1; // Interrupt Disable
-                uint8_t D : 1; // Decimal
-                uint8_t B : 2; // -- (Break)
-                uint8_t V : 1; // Overflow
-                uint8_t N : 1; // Negative
-            };
-            uint8_t SR;
-        };
-    } regs;
-
-
-    
-    void init();
-    void execute();
-};
+typedef void (* callback_t)(void * cookie);
 
 struct mem_t
 {
@@ -91,17 +55,17 @@ struct mem_t
             {
                 struct
                 {
-                    uint8_t zero_page   [0x0100];       // $0000 - $00FF
-                    uint8_t stack       [0x0100];       // $0100 - $01FF
-                    uint8_t ram         [0x0600];       // $0200 - $07FF
+                    uint8_t zero_page         [0x0100]; // $0000 - $00FF
+                    uint8_t stack             [0x0100]; // $0100 - $01FF
+                    uint8_t ram               [0x0600]; // $0200 - $07FF
                 };
-                uint8_t internal_ram    [0x0800];       // $0000 - $07FF
+                uint8_t internal_ram          [0x0800]; // $0000 - $07FF
             };
             
-            uint8_t ram_mirrors [0x1800];               // $0800 - $1FFF (repeats every $800 bytes)
+            uint8_t ram_mirrors               [0x1800]; // $0800 - $1FFF (repeats every $800 bytes)
 
-            uint8_t ppu_regs    [0x0008];               // $2000 - $2007
-            uint8_t ppu_mirrors [0x1FF8];               // $2008 – $3FFF (repeats every 8 bytes)
+            uint8_t ppu_regs                  [0x0008]; // $2000 - $2007
+            uint8_t ppu_mirrors               [0x1FF8]; // $2008 – $3FFF (repeats every 8 bytes)
 
             union
             {
@@ -112,12 +76,12 @@ struct mem_t
                     uint8_t apu_triangle      [0x0004]; // $4008 – $400B
                     uint8_t apu_noise         [0x0004]; // $400C – $400F
                     uint8_t apu_dmc           [0x0004]; // $4010 – $4013
-                    uint8_t apu_status        [0x0002]; // $4015
+                    uint8_t apu_status        [0x0002]; // $4015 - $4016?
                     uint8_t apu_frame_counter [0x0001]; // $4017
                 };
-                uint8_t apu_regs [0x0018];              // $4000 – $4017
+                uint8_t apu_regs              [0x0018]; // $4000 – $4017
             };
-            uint8_t cpu_test_mode [0x0008];             // $4018 – $401F
+            uint8_t cpu_test_mode             [0x0008]; // $4018 – $401F
 
             union
             {
@@ -128,7 +92,7 @@ struct mem_t
                     uint8_t prg_lower_bank   [0x4000];  // $8000 - $BFFF
                     uint8_t prg_upper_bank   [0x4000];  // $C000 - $FFFF
                 };
-                uint8_t cartridge_space [0xBFE0]; // $4020 – $FFFF
+                uint8_t cartridge_space      [0xBFE0];  // $4020 – $FFFF
             };
         };
         uint8_t data[0x10000];
@@ -139,6 +103,56 @@ struct mem_t
 
     void init();
 };
+
+struct cpu_t
+{
+    // Registers
+    struct regs_t
+    {
+        uint8_t A; // Accumulator
+        uint8_t X; // X
+        uint8_t Y; // Y
+
+        uint8_t  SP; // Stack Pointer
+        uint16_t PC; // Program Counter
+
+        // Status Register
+        //  7 6 5 4 3 2 1 0
+        //  N V - - D I Z C
+        union 
+        {
+            struct 
+            {
+                uint8_t C : 1; // Carry 
+                uint8_t Z : 1; // Zero
+                uint8_t I : 1; // Interrupt Disable
+                uint8_t D : 1; // Decimal
+                uint8_t B : 2; // -- (Break)
+                uint8_t V : 1; // Overflow
+                uint8_t N : 1; // Negative
+            };
+            uint8_t SR;
+        };
+    } regs;
+
+    struct vectors_t
+    {
+        uint16_t NMI;
+        uint16_t RESET;
+        uint16_t IRQBRK;
+    } vectors;
+
+    uint16_t cycles{0};
+    callback_t callback{nullptr};
+
+    mem_t* memory;
+    
+    void tick_clock() { cycles++; if (callback) callback(nullptr); };
+    void init(callback_t cb);
+    void execute();
+};
+
+
 
 struct ines_rom_t
 {
@@ -160,11 +174,22 @@ struct ines_rom_t
     uint8_t** chr_pages{nullptr};
 
     ~ines_rom_t();
+
+    void clear_contents();
+    RESULT load_from_file(const char* filepath);
+    RESULT load_from_data(const uint8_t* data, const uint32_t size);
 };
 
-void clear_rom_contents(ines_rom_t &rom);
-RESULT load_rom_from_file(const char* filepath, ines_rom_t &rom);
-RESULT load_rom_from_data(const uint8_t* data, const uint32_t size, ines_rom_t &rom);
+struct emu_t
+{
+    cpu_t cpu;
+    mem_t memory;
+
+    RESULT init(ines_rom_t &rom);
+    RESULT step(uint16_t cycles);
+};
+
+RESULT debug_dump_emu_contents(emu_t &emu);
 
 } // nes
 

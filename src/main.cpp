@@ -2,32 +2,30 @@
 
 #include "nes.hpp"
 
+namespace 
+{
+const char* nes_test_rom = "../data/nestest.nes";
+}
+
 int main()
 {
     printf("--- Enter Main ---\n");
+    nes::RESULT ret = nes::RESULT_OK;
 
-    nes::mem_t memory{};
-    nes::cpu_t cpu{};
     nes::ines_rom_t rom{};
+    nes::emu_t emu{};
+
+    rom.load_from_file(nes_test_rom);
+    emu.init(rom);
     
-    memory.init();
-    cpu.init();
-
-    nes::load_rom_from_file("../data/nestest.nes", rom);
-
-    cpu.execute();
-
-    rom.~ines_rom_t();
-
-    printf("mem size: %04lx\n", sizeof(memory));
-
-    printf("%u %u %u\n", memory[0x0060], memory[0x0061], memory[0x0062]);
-    memory[0x0060] = 0xA;
-    memory[0x0061] = 0xB;
-    memory[0x0062] = 0xC;
-    printf("%u %u %u\n", memory[0x0060], memory[0x0061], memory[0x0062]);
+    while (ret > 0)
+    {
+        ret = emu.step(3);
+    }
 
     printf("--- Shutting Down ---\n");
-    
-    return 0;
+    rom.~ines_rom_t();
+
+    printf("Exiting with code %d\n", ret);
+    return ret;
 }
