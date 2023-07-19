@@ -20,7 +20,7 @@ int main()
     
     while (ret > 0)
     {
-        ret = emu.step(1);
+        ret = emu.step(3);
     }
 
     printf("--- Shutting Down ---\n");

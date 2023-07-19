@@ -5,7 +5,7 @@ namespace nes
 
 static void cpu_callback(void * cookie)
 {
-    printf("callback!\n");
+    //printf("callback!\n");
 }
 
 RESULT emu_t::init(ines_rom_t &rom)

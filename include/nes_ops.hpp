@@ -31,7 +31,6 @@ ADDRESS_MODE(indirect);              // _ind    ind = ($0000)
 ADDRESS_MODE(pre_index_indirect_x);  // _ind_x  izx = ($00,X)
 ADDRESS_MODE(post_index_indirect_y); // _ind_y  izy = ($00),Y
 ADDRESS_MODE(relative);              //         rel = $0000
-ADDRESS_MODE(accumulator);           //
 
 // OPS
 OP_FUNCTION(UNIMPLEMENTED);
