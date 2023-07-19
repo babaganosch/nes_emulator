@@ -145,10 +145,11 @@ struct cpu_t
     uint16_t cycles{0};
     callback_t callback{nullptr};
 
-    mem_t* memory;
+    mem_t* memory{nullptr};
     
-    void tick_clock() { cycles++; if (callback) callback(nullptr); };
-    void init(callback_t cb);
+    uint8_t fetch_byte( uint16_t address );
+    void tick_clock();
+    void init(callback_t cb, mem_t &mem);
     void execute();
 };
 

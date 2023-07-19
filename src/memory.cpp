@@ -5,7 +5,7 @@ namespace nes
 
 void mem_t::init()
 {
-    memset(data, 0, sizeof(data));
+    memset(data, 0x02, sizeof(data));
 }
 
 } // nes

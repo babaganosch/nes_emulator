@@ -10,14 +10,14 @@ static void cpu_callback(void * cookie)
 
 RESULT emu_t::init(ines_rom_t &rom)
 {
-    cpu.init(&cpu_callback);
     memory.init();
+    cpu.init(&cpu_callback, memory);
 
     // Map PRG ROM
 
 
     // Map CHR ROM
-    
+
 
     return RESULT_OK;
 }
