@@ -12,11 +12,11 @@ namespace
 {
 #define CPU_OP(ADDR_MODE, OPC) { .addr_mode = addr_mode_##ADDR_MODE, .function = OP_##OPC }
 #define ADDRESS_MODE(MODE) uint16_t addr_mode_##MODE(cpu_t &cpu)
-#define OP_FUNCTION(NAME) void OP_##NAME(cpu_t &cpu, uint8_t data)
+#define OP_FUNCTION(NAME) void OP_##NAME(cpu_t &cpu, uint8_t operand)
 } // anonymous
 
 typedef uint16_t (* addr_mode_t)(cpu_t &cpu);
-typedef void (* op_code_function_t)(cpu_t &cpu, uint8_t data);
+typedef void (* op_code_function_t)(cpu_t &cpu, uint8_t operand);
 
 // addr modes
 ADDRESS_MODE(implied);               //
