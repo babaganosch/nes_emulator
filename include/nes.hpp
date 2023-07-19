@@ -190,8 +190,6 @@ struct emu_t
     RESULT step(uint16_t cycles);
 };
 
-RESULT debug_dump_emu_contents(emu_t &emu);
-
 } // nes
 
 #endif /* NES_H */

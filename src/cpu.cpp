@@ -26,8 +26,8 @@ void cpu_t::execute()
     // Fetch instruction
     uint8_t instruction = fetch_byte( regs.PC++ );
 
-    uint16_t operand = op_codes[instruction].addr_mode( 0xAA, 0xAB );
-    op_codes[instruction].function(*this, memory, operand );
+    uint16_t operand = op_codes[instruction].addr_mode(*this);
+    op_codes[instruction].function(*this, operand );
 }
 
 void cpu_t::tick_clock()
@@ -43,8 +43,7 @@ void cpu_t::tick_clock()
 
 uint8_t cpu_t::fetch_byte( uint16_t address )
 {
-    mem_t& mem = *memory;
-    uint8_t data = mem[ address ];
+    uint8_t data = (*memory)[ address ];
     printf("DATA: %04x : %u\n", address, data);
     tick_clock();
     return data;

@@ -5,7 +5,7 @@
 namespace 
 {
 const char* nes_test_rom = "../data/nestest.nes";
-}
+} // anonymous
 
 int main()
 {
