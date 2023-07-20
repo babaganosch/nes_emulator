@@ -24,7 +24,6 @@ int main()
     }
 
     printf("--- Shutting Down ---\n");
-    rom.~ines_rom_t();
 
     printf("Exiting with code %d\n", ret);
     return ret;

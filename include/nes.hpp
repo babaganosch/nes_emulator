@@ -147,11 +147,14 @@ struct cpu_t
 
     mem_t* memory{nullptr};
     
-    uint8_t fetch_byte( uint16_t address );
-    uint8_t fetch_byte( uint8_t lo, uint8_t hi);
     void tick_clock();
     void init(callback_t cb, mem_t &mem);
     void execute();
+
+    uint8_t fetch_byte( uint16_t address );
+    uint8_t fetch_byte( uint8_t lo, uint8_t hi );
+    void    write_byte( uint8_t data, uint16_t address );
+    void    write_byte( uint8_t data, uint8_t lo, uint8_t hi );
 };
 
 

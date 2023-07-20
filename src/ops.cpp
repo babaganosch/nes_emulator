@@ -1,10 +1,13 @@
 #include "nes_ops.hpp"
 #include "nes.hpp"
 
+#define CALC_Z_FLAG(VALUE) cpu.regs.Z = (VALUE == 0)
+#define CALC_N_FLAG(VALUE) cpu.regs.N = ((VALUE & 0x80) > 0)
+
 namespace nes
 {
 
-op_codes_t op_codes[256] = {
+op_code_t op_codes[256] = {
     CPU_OP(implied, UNIMPLEMENTED),      //   0     $ 00
     CPU_OP(implied, UNIMPLEMENTED),      //   1     $ 01
     CPU_OP(implied, UNIMPLEMENTED),      //   2     $ 02
@@ -368,6 +371,11 @@ ADDRESS_MODE(relative)
     return cpu.fetch_byte( cpu.regs.PC + offset );
 }
 
+ADDRESS_MODE(accumulator)
+{
+    return cpu.regs.A;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////// OPs
 OP_FUNCTION(UNIMPLEMENTED)
@@ -377,9 +385,10 @@ OP_FUNCTION(UNIMPLEMENTED)
 
 OP_FUNCTION(LDA)
 {
+    uint8_t operand = addr_mode(cpu);
     cpu.regs.A = operand;
-    cpu.regs.Z = operand == 0;
-    cpu.regs.N = (operand & 0b1000000) > 0;
+    CALC_Z_FLAG(operand);
+    CALC_N_FLAG(operand);
 }
 
 OP_FUNCTION(LDX)
