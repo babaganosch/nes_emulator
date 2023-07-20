@@ -1,8 +1,10 @@
 #include "nes_ops.hpp"
 #include "nes.hpp"
 
-#define CALC_Z_FLAG(VALUE) cpu.regs.Z = (VALUE == 0)
-#define CALC_N_FLAG(VALUE) cpu.regs.N = ((VALUE & 0x80) > 0)
+#define CALC_Z_FLAG(VALUE) cpu.regs.Z = (((VALUE & 0xFF) == 0x00) ? 1 : 0 )
+#define CALC_N_FLAG(VALUE) cpu.regs.N = (((VALUE & 0x80) > 0x00) ? 1 : 0 )
+#define CALC_C_FLAG(VALUE) cpu.regs.C = (( VALUE > 0xFF ) ? 1 : 0 )
+#define CALC_V_FLAG(M, N, RESULT) cpu.regs.V = ((((M ^ RESULT) & (N ^ RESULT) & 0x80) != 0) ? 1 : 0 )
 
 namespace nes
 {
@@ -381,6 +383,25 @@ ADDRESS_MODE(accumulator)
 OP_FUNCTION(UNIMPLEMENTED)
 {
     printf("OP-CODE UNIMPLEMENTED!\n");
+}
+
+/////////////////////////////////////////////////////////
+// ADC - Add Memory to Accumulator with Carry
+// A + M + C -> A, C
+//
+// N Z C I D V
+// | | | _ _ |
+//
+OP_FUNCTION(ADC)
+{
+    uint8_t operand = addr_mode(cpu);
+    uint16_t result = operand + cpu.regs.A + cpu.regs.C;
+
+    CALC_N_FLAG( result );
+    CALC_Z_FLAG( result );
+    CALC_C_FLAG( result );
+    CALC_V_FLAG( cpu.regs.A, operand, result );
+    cpu.regs.A = result;
 }
 
 OP_FUNCTION(LDA)
