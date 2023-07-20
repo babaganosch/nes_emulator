@@ -16,15 +16,15 @@ op_code_t op_codes[256] = {
     CPU_OP(implied, UNIMPLEMENTED),      //   3     $ 03
     CPU_OP(implied, UNIMPLEMENTED),      //   4     $ 04
     CPU_OP(implied, UNIMPLEMENTED),      //   5     $ 05
-    CPU_OP(implied, UNIMPLEMENTED),      //   6     $ 06
+    CPU_OP(zero_page, ASL),              //   6     $ 06
     CPU_OP(implied, UNIMPLEMENTED),      //   7     $ 07
     CPU_OP(implied, UNIMPLEMENTED),      //   8     $ 08
     CPU_OP(implied, UNIMPLEMENTED),      //   9     $ 09
-    CPU_OP(implied, UNIMPLEMENTED),      //  10     $ 0A
+    CPU_OP(accumulator, ASL),            //  10     $ 0A
     CPU_OP(implied, UNIMPLEMENTED),      //  11     $ 0B
     CPU_OP(implied, UNIMPLEMENTED),      //  12     $ 0C
     CPU_OP(implied, UNIMPLEMENTED),      //  13     $ 0D
-    CPU_OP(implied, UNIMPLEMENTED),      //  14     $ 0E
+    CPU_OP(absolute, ASL),               //  14     $ 0E
     CPU_OP(implied, UNIMPLEMENTED),      //  15     $ 0F
     CPU_OP(implied, UNIMPLEMENTED),      //  16     $ 10
     CPU_OP(implied, UNIMPLEMENTED),      //  17     $ 11
@@ -32,7 +32,7 @@ op_code_t op_codes[256] = {
     CPU_OP(implied, UNIMPLEMENTED),      //  19     $ 13
     CPU_OP(implied, UNIMPLEMENTED),      //  20     $ 14
     CPU_OP(implied, UNIMPLEMENTED),      //  21     $ 15
-    CPU_OP(implied, UNIMPLEMENTED),      //  22     $ 16
+    CPU_OP(index_zp_x, ASL),             //  22     $ 16
     CPU_OP(implied, UNIMPLEMENTED),      //  23     $ 17
     CPU_OP(implied, UNIMPLEMENTED),      //  24     $ 18
     CPU_OP(implied, UNIMPLEMENTED),      //  25     $ 19
@@ -40,7 +40,7 @@ op_code_t op_codes[256] = {
     CPU_OP(implied, UNIMPLEMENTED),      //  27     $ 1B
     CPU_OP(implied, UNIMPLEMENTED),      //  28     $ 1C
     CPU_OP(implied, UNIMPLEMENTED),      //  29     $ 1D
-    CPU_OP(implied, UNIMPLEMENTED),      //  30     $ 1E
+    CPU_OP(index_x, ASL),                //  30     $ 1E
     CPU_OP(implied, UNIMPLEMENTED),      //  31     $ 1F
     CPU_OP(implied, UNIMPLEMENTED),      //  32     $ 20
     CPU_OP(pre_index_indirect_x, AND),   //  33     $ 21
@@ -273,25 +273,25 @@ op_code_t op_codes[256] = {
 
 ADDRESS_MODE(implied)
 {
-    return 0;
+    return nullptr;
 }
 
 ADDRESS_MODE(immediate)
 {
-    return cpu.fetch_byte( cpu.regs.PC++ );
+    return cpu.fetch_byte_ref( cpu.regs.PC++ );
 }
 
 ADDRESS_MODE(absolute)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
-    return cpu.fetch_byte( lo, hi );
+    return cpu.fetch_byte_ref( lo, hi );
 }
 
 ADDRESS_MODE(zero_page)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
-    return cpu.fetch_byte( lo, 0x00 );
+    return cpu.fetch_byte_ref( lo, 0x00 );
 }
 
 ADDRESS_MODE(index_x)
@@ -299,12 +299,12 @@ ADDRESS_MODE(index_x)
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t new_lo = cpu.regs.X + lo;
-    if (new_lo < lo)
+    if (new_lo < lo || modify)
     { // Page crossing
         hi++;
         cpu.tick_clock();
     }
-    return cpu.fetch_byte( new_lo, hi );
+    return cpu.fetch_byte_ref( new_lo, hi );
 }
 
 ADDRESS_MODE(index_y)
@@ -312,24 +312,24 @@ ADDRESS_MODE(index_y)
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t new_lo = cpu.regs.Y + lo;
-    if (new_lo < lo)
+    if (new_lo < lo || modify)
     { // Page crossing
         hi++;
         cpu.tick_clock();
     }
-    return cpu.fetch_byte( new_lo, hi );
+    return cpu.fetch_byte_ref( new_lo, hi );
 }
 
 ADDRESS_MODE(index_zp_x)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
-    return cpu.fetch_byte( lo + cpu.regs.X, 0x00 );
+    return cpu.fetch_byte_ref( lo + cpu.regs.X, 0x00 );
 }
 
 ADDRESS_MODE(index_zp_y)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
-    return cpu.fetch_byte( lo + cpu.regs.Y, 0x00 );
+    return cpu.fetch_byte_ref( lo + cpu.regs.Y, 0x00 );
 }
 
 ADDRESS_MODE(indirect)
@@ -339,7 +339,7 @@ ADDRESS_MODE(indirect)
     uint16_t new_address = ((uint16_t)hi << 8) | lo;
     lo = cpu.fetch_byte( new_address     );
     hi = cpu.fetch_byte( new_address + 1 );
-    return cpu.fetch_byte( lo, hi );
+    return cpu.fetch_byte_ref( lo, hi );
 }
 
 ADDRESS_MODE(pre_index_indirect_x)
@@ -348,7 +348,7 @@ ADDRESS_MODE(pre_index_indirect_x)
     tmp += cpu.regs.X;
     uint8_t lo = cpu.fetch_byte( tmp,     0x00 );
     uint8_t hi = cpu.fetch_byte( tmp + 1, 0x00 );
-    return cpu.fetch_byte( lo, hi );
+    return cpu.fetch_byte_ref( lo, hi );
 }
 
 ADDRESS_MODE(post_index_indirect_y)
@@ -357,12 +357,12 @@ ADDRESS_MODE(post_index_indirect_y)
     uint8_t lo = cpu.fetch_byte( tmp,     0x00 );
     uint8_t hi = cpu.fetch_byte( tmp + 1, 0x00 );
     uint8_t new_lo = lo + cpu.regs.Y;
-    if (new_lo < lo)
+    if (new_lo < lo || modify)
     { // Page crossing
         hi++;
         cpu.tick_clock();
     }
-    return cpu.fetch_byte( lo, hi );
+    return cpu.fetch_byte_ref( lo, hi );
 }
 
 ADDRESS_MODE(relative)
@@ -370,12 +370,12 @@ ADDRESS_MODE(relative)
     // TODO(xxx): Remember to add extra clock cycle if branch
     //            causes page movement
     int8_t offset = cpu.fetch_byte( cpu.regs.PC++ );
-    return cpu.fetch_byte( cpu.regs.PC + offset );
+    return cpu.fetch_byte_ref( cpu.regs.PC + offset );
 }
 
 ADDRESS_MODE(accumulator)
 {
-    return cpu.regs.A;
+    return &(cpu.regs.A);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -394,7 +394,7 @@ OP_FUNCTION(UNIMPLEMENTED)
 //
 OP_FUNCTION(ADC)
 {
-    uint8_t operand = addr_mode(cpu);
+    uint8_t operand = *addr_mode(cpu, false);
     uint16_t result = operand + cpu.regs.A + cpu.regs.C;
 
     CALC_N_FLAG( result );
@@ -413,7 +413,7 @@ OP_FUNCTION(ADC)
 //
 OP_FUNCTION(AND)
 {
-    uint8_t operand = addr_mode(cpu);
+    uint8_t operand = *addr_mode(cpu, false);
     uint8_t result = cpu.regs.A & operand;
 
     CALC_N_FLAG( result );
@@ -421,18 +421,37 @@ OP_FUNCTION(AND)
     cpu.regs.A = result;
 }
 
+/////////////////////////////////////////////////////////
+// ASL - Shift Left One Bit (Memory or Accumulator)
+// C <- [76543210] <- 0
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(ASL)
+{
+    uint8_t* operand = addr_mode(cpu, true);
+    uint16_t data = (uint16_t) *operand << 1;
+    
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    CALC_C_FLAG( data );
+
+    if ( addr_mode != addr_mode_accumulator )
+    {
+        cpu.tick_clock();
+    }
+    cpu.write_byte( data, operand );
+}
+
 OP_FUNCTION(LDA)
 {
-    uint8_t operand = addr_mode(cpu);
+    uint8_t operand = *addr_mode(cpu, false);
     cpu.regs.A = operand;
-    CALC_Z_FLAG(operand);
-    CALC_N_FLAG(operand);
+    CALC_Z_FLAG( operand );
+    CALC_N_FLAG( operand) ;
 }
 
-OP_FUNCTION(LDX)
-{
-
-}
 
 
 } // nes

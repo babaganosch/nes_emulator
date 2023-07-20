@@ -29,6 +29,8 @@ void cpu_t::execute()
     // Perform instruction
     op_code_t& op_code = op_codes[ins_num];
     op_code.function(*this, op_code.addr_mode );
+
+    printf("X: %02x Y: %02x A: %02x\n", regs.X, regs.Y, regs.A);
 }
 
 void cpu_t::tick_clock()
@@ -57,6 +59,25 @@ uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
     printf("FETCH BYTE @ %04x : %02x\n", address, data);
     tick_clock();
     return data;
+}
+
+uint8_t* cpu_t::fetch_byte_ref( uint16_t address )
+{
+    tick_clock();
+    return &(*memory)[ address ];
+}
+
+uint8_t* cpu_t::fetch_byte_ref( uint8_t lo, uint8_t hi )
+{
+    tick_clock();
+    uint16_t address = (hi << 8) | lo;
+    return &(*memory)[ address ];
+}
+
+void cpu_t::write_byte( uint8_t data, uint8_t* ref )
+{
+    *ref = data;
+    tick_clock();
 }
 
 void cpu_t::write_byte( uint8_t data, uint16_t address )
