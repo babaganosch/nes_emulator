@@ -43,35 +43,35 @@ op_code_t op_codes[256] = {
     CPU_OP(implied, UNIMPLEMENTED),      //  30     $ 1E
     CPU_OP(implied, UNIMPLEMENTED),      //  31     $ 1F
     CPU_OP(implied, UNIMPLEMENTED),      //  32     $ 20
-    CPU_OP(implied, UNIMPLEMENTED),      //  33     $ 21
+    CPU_OP(pre_index_indirect_x, AND),   //  33     $ 21
     CPU_OP(implied, UNIMPLEMENTED),      //  34     $ 22
     CPU_OP(implied, UNIMPLEMENTED),      //  35     $ 23
     CPU_OP(implied, UNIMPLEMENTED),      //  36     $ 24
-    CPU_OP(implied, UNIMPLEMENTED),      //  37     $ 25
+    CPU_OP(zero_page, AND),              //  37     $ 25
     CPU_OP(implied, UNIMPLEMENTED),      //  38     $ 26
     CPU_OP(implied, UNIMPLEMENTED),      //  39     $ 27
     CPU_OP(implied, UNIMPLEMENTED),      //  40     $ 28
-    CPU_OP(implied, UNIMPLEMENTED),      //  41     $ 29
+    CPU_OP(immediate, AND),              //  41     $ 29
     CPU_OP(implied, UNIMPLEMENTED),      //  42     $ 2A
     CPU_OP(implied, UNIMPLEMENTED),      //  43     $ 2B
     CPU_OP(implied, UNIMPLEMENTED),      //  44     $ 2C
-    CPU_OP(implied, UNIMPLEMENTED),      //  45     $ 2D
+    CPU_OP(absolute, AND),               //  45     $ 2D
     CPU_OP(implied, UNIMPLEMENTED),      //  46     $ 2E
     CPU_OP(implied, UNIMPLEMENTED),      //  47     $ 2F
     CPU_OP(implied, UNIMPLEMENTED),      //  48     $ 30
-    CPU_OP(implied, UNIMPLEMENTED),      //  49     $ 31
+    CPU_OP(post_index_indirect_y, AND),  //  49     $ 31
     CPU_OP(implied, UNIMPLEMENTED),      //  50     $ 32
     CPU_OP(implied, UNIMPLEMENTED),      //  51     $ 33
     CPU_OP(implied, UNIMPLEMENTED),      //  52     $ 34
-    CPU_OP(implied, UNIMPLEMENTED),      //  53     $ 35
+    CPU_OP(index_zp_x, AND),             //  53     $ 35
     CPU_OP(implied, UNIMPLEMENTED),      //  54     $ 36
     CPU_OP(implied, UNIMPLEMENTED),      //  55     $ 37
     CPU_OP(implied, UNIMPLEMENTED),      //  56     $ 38
-    CPU_OP(implied, UNIMPLEMENTED),      //  57     $ 39
+    CPU_OP(index_y, AND),                //  57     $ 39
     CPU_OP(implied, UNIMPLEMENTED),      //  58     $ 3A
     CPU_OP(implied, UNIMPLEMENTED),      //  59     $ 3B
     CPU_OP(implied, UNIMPLEMENTED),      //  60     $ 3C
-    CPU_OP(implied, UNIMPLEMENTED),      //  61     $ 3D
+    CPU_OP(index_x, AND),                //  61     $ 3D
     CPU_OP(implied, UNIMPLEMENTED),      //  62     $ 3E
     CPU_OP(implied, UNIMPLEMENTED),      //  63     $ 3F
     CPU_OP(implied, UNIMPLEMENTED),      //  64     $ 40
@@ -107,35 +107,35 @@ op_code_t op_codes[256] = {
     CPU_OP(implied, UNIMPLEMENTED),      //  94     $ 5E
     CPU_OP(implied, UNIMPLEMENTED),      //  95     $ 5F
     CPU_OP(implied, UNIMPLEMENTED),      //  96     $ 60
-    CPU_OP(implied, UNIMPLEMENTED),      //  97     $ 61
+    CPU_OP(pre_index_indirect_x, ADC),   //  97     $ 61
     CPU_OP(implied, UNIMPLEMENTED),      //  98     $ 62
     CPU_OP(implied, UNIMPLEMENTED),      //  99     $ 63
     CPU_OP(implied, UNIMPLEMENTED),      // 100     $ 64
-    CPU_OP(implied, UNIMPLEMENTED),      // 101     $ 65
+    CPU_OP(zero_page, ADC),              // 101     $ 65
     CPU_OP(implied, UNIMPLEMENTED),      // 102     $ 66
     CPU_OP(implied, UNIMPLEMENTED),      // 103     $ 67
     CPU_OP(implied, UNIMPLEMENTED),      // 104     $ 68
-    CPU_OP(implied, UNIMPLEMENTED),      // 105     $ 69
+    CPU_OP(immediate, ADC),              // 105     $ 69
     CPU_OP(implied, UNIMPLEMENTED),      // 106     $ 6A
     CPU_OP(implied, UNIMPLEMENTED),      // 107     $ 6B
     CPU_OP(implied, UNIMPLEMENTED),      // 108     $ 6C
-    CPU_OP(implied, UNIMPLEMENTED),      // 109     $ 6D
+    CPU_OP(absolute, ADC),               // 109     $ 6D
     CPU_OP(implied, UNIMPLEMENTED),      // 110     $ 6E
     CPU_OP(implied, UNIMPLEMENTED),      // 111     $ 6F
     CPU_OP(implied, UNIMPLEMENTED),      // 112     $ 70
-    CPU_OP(implied, UNIMPLEMENTED),      // 113     $ 71
+    CPU_OP(post_index_indirect_y, ADC),  // 113     $ 71
     CPU_OP(implied, UNIMPLEMENTED),      // 114     $ 72
     CPU_OP(implied, UNIMPLEMENTED),      // 115     $ 73
     CPU_OP(implied, UNIMPLEMENTED),      // 116     $ 74
-    CPU_OP(implied, UNIMPLEMENTED),      // 117     $ 75
+    CPU_OP(index_zp_x, ADC),             // 117     $ 75
     CPU_OP(implied, UNIMPLEMENTED),      // 118     $ 76
     CPU_OP(implied, UNIMPLEMENTED),      // 119     $ 77
     CPU_OP(implied, UNIMPLEMENTED),      // 120     $ 78
-    CPU_OP(implied, UNIMPLEMENTED),      // 121     $ 79
+    CPU_OP(index_y, ADC),                // 121     $ 79
     CPU_OP(implied, UNIMPLEMENTED),      // 122     $ 7A
     CPU_OP(implied, UNIMPLEMENTED),      // 123     $ 7B
     CPU_OP(implied, UNIMPLEMENTED),      // 124     $ 7C
-    CPU_OP(implied, UNIMPLEMENTED),      // 125     $ 7D
+    CPU_OP(index_x, ADC),                // 125     $ 7D
     CPU_OP(implied, UNIMPLEMENTED),      // 126     $ 7E
     CPU_OP(implied, UNIMPLEMENTED),      // 127     $ 7F
     CPU_OP(implied, UNIMPLEMENTED),      // 128     $ 80
@@ -390,7 +390,7 @@ OP_FUNCTION(UNIMPLEMENTED)
 // A + M + C -> A, C
 //
 // N Z C I D V
-// | | | _ _ |
+// + + + - - +
 //
 OP_FUNCTION(ADC)
 {
@@ -401,6 +401,23 @@ OP_FUNCTION(ADC)
     CALC_Z_FLAG( result );
     CALC_C_FLAG( result );
     CALC_V_FLAG( cpu.regs.A, operand, result );
+    cpu.regs.A = result;
+}
+
+/////////////////////////////////////////////////////////
+// AND - AND Memory with Accumulator
+// A AND M -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(AND)
+{
+    uint8_t operand = addr_mode(cpu);
+    uint8_t result = cpu.regs.A & operand;
+
+    CALC_N_FLAG( result );
+    CALC_Z_FLAG( result );
     cpu.regs.A = result;
 }
 
