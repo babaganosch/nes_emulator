@@ -1,10 +1,12 @@
 #include <cstdio>
 
 #include "nes.hpp"
+#include "nes_validator.hpp"
 
 namespace 
 {
 const char* nes_test_rom = "../data/nestest.nes";
+const char* nes_test_log = "../data/nestest.log";
 } // anonymous
 
 int main()
@@ -18,10 +20,21 @@ int main()
     rom.load_from_file(nes_test_rom);
     emu.init(rom);
     
+    if (true)
+    {
+        nes::validator validator{};
+        ret = validator.init(&emu, nes_test_log);
+
+        while (ret > 0)
+        {
+            ret = validator.execute();
+        }
+    }
+    /*
     while (ret > 0)
     {
         ret = emu.step(1);
-    }
+    }*/
 
     printf("--- Shutting Down ---\n");
 
