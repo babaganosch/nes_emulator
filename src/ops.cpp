@@ -29,35 +29,35 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t PC, uint1
 
 op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //   0     $ 00
-    CPU_OP(___, implied),                //   1     $ 01
+    CPU_OP(ORA, pre_index_indirect_x),   //   1     $ 01
     CPU_OP(___, implied),                //   2     $ 02
     CPU_OP(___, implied),                //   3     $ 03
     CPU_OP(___, implied),                //   4     $ 04
-    CPU_OP(___, implied),                //   5     $ 05
+    CPU_OP(ORA, zero_page),              //   5     $ 05
     CPU_OP(ASL, zero_page),              //   6     $ 06
     CPU_OP(___, implied),                //   7     $ 07
     CPU_OP(PHP, implied),                //   8     $ 08
-    CPU_OP(___, implied),                //   9     $ 09
+    CPU_OP(ORA, immediate),              //   9     $ 09
     CPU_OP(ASL, accumulator),            //  10     $ 0A
     CPU_OP(___, implied),                //  11     $ 0B
     CPU_OP(___, implied),                //  12     $ 0C
-    CPU_OP(___, implied),                //  13     $ 0D
+    CPU_OP(ORA, absolute),               //  13     $ 0D
     CPU_OP(ASL, absolute),               //  14     $ 0E
     CPU_OP(___, implied),                //  15     $ 0F
     CPU_OP(BPL, relative),               //  16     $ 10
-    CPU_OP(___, implied),                //  17     $ 11
+    CPU_OP(ORA, post_index_indirect_y),  //  17     $ 11
     CPU_OP(___, implied),                //  18     $ 12
     CPU_OP(___, implied),                //  19     $ 13
     CPU_OP(___, implied),                //  20     $ 14
-    CPU_OP(___, implied),                //  21     $ 15
+    CPU_OP(ORA, index_zp_x),             //  21     $ 15
     CPU_OP(ASL, index_zp_x),             //  22     $ 16
     CPU_OP(___, implied),                //  23     $ 17
     CPU_OP(CLC, implied),                //  24     $ 18
-    CPU_OP(___, implied),                //  25     $ 19
+    CPU_OP(ORA, index_y),                //  25     $ 19
     CPU_OP(___, implied),                //  26     $ 1A
     CPU_OP(___, implied),                //  27     $ 1B
     CPU_OP(___, implied),                //  28     $ 1C
-    CPU_OP(___, implied),                //  29     $ 1D
+    CPU_OP(ORA, index_x),                //  29     $ 1D
     CPU_OP(ASL, index_x),                //  30     $ 1E
     CPU_OP(___, implied),                //  31     $ 1F
     CPU_OP(JSR, absolute),               //  32     $ 20
@@ -68,7 +68,7 @@ op_code_t op_codes[256] = {
     CPU_OP(AND, zero_page),              //  37     $ 25
     CPU_OP(___, implied),                //  38     $ 26
     CPU_OP(___, implied),                //  39     $ 27
-    CPU_OP(___, implied),                //  40     $ 28
+    CPU_OP(PLP, implied),                //  40     $ 28
     CPU_OP(AND, immediate),              //  41     $ 29
     CPU_OP(___, implied),                //  42     $ 2A
     CPU_OP(___, implied),                //  43     $ 2B
@@ -76,7 +76,7 @@ op_code_t op_codes[256] = {
     CPU_OP(AND, absolute),               //  45     $ 2D
     CPU_OP(___, implied),                //  46     $ 2E
     CPU_OP(___, implied),                //  47     $ 2F
-    CPU_OP(___, implied),                //  48     $ 30
+    CPU_OP(BMI, relative),               //  48     $ 30
     CPU_OP(AND, post_index_indirect_y),  //  49     $ 31
     CPU_OP(___, implied),                //  50     $ 32
     CPU_OP(___, implied),                //  51     $ 33
@@ -100,7 +100,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  69     $ 45
     CPU_OP(___, implied),                //  70     $ 46
     CPU_OP(___, implied),                //  71     $ 47
-    CPU_OP(___, implied),                //  72     $ 48
+    CPU_OP(PHA, implied),                //  72     $ 48
     CPU_OP(___, implied),                //  73     $ 49
     CPU_OP(___, implied),                //  74     $ 4A
     CPU_OP(___, implied),                //  75     $ 4B
@@ -244,7 +244,7 @@ op_code_t op_codes[256] = {
     CPU_OP(CMP, index_zp_x),             // 213     $ D5
     CPU_OP(___, implied),                // 214     $ D6
     CPU_OP(___, implied),                // 215     $ D7
-    CPU_OP(___, implied),                // 216     $ D8
+    CPU_OP(CLD, implied),                // 216     $ D8
     CPU_OP(CMP, index_y),                // 217     $ D9
     CPU_OP(___, implied),                // 218     $ DA
     CPU_OP(___, implied),                // 219     $ DB
@@ -820,5 +820,82 @@ OP_FUNCTION(CMP)
     CALC_Z_FLAG( data );
     cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
 }
+
+/////////////////////////////////////////////////////////
+// CLD - Clear Decimal Mode
+// 0 -> D
+//
+// N Z C I D V
+// - - - - 0 -
+//
+OP_FUNCTION(CLD)
+{
+    addr_mode( cpu, false );
+    cpu.regs.D = 0;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// PHA - Push Accumulator on Stack
+// push A
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(PHA)
+{
+    addr_mode( cpu, true );
+    cpu.push_byte_to_stack( cpu.regs.A );
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// PLP - Pull Processor Status from Stack
+// The status register will be pulled with the break
+// flag and bit 5 ignored.
+//
+// pull SR
+//
+// N Z C I D V
+// from stack
+//
+OP_FUNCTION(PLP)
+{
+    addr_mode( cpu, false );
+    uint8_t status = cpu.pull_byte_from_stack() & 0xCF;
+    cpu.regs.SR = status | (cpu.regs.SR & 0x30);
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// BMI - Branch on Result Minus
+// branch on N = 1
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BMI)
+{
+    uint16_t old_pc  = cpu.regs.PC;
+    uint16_t address = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.N, 1, old_pc, address );
+}
+
+/////////////////////////////////////////////////////////
+// ORA - OR Memory with Accumulator
+// A OR M -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(ORA)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    cpu.regs.A = operand | cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
 
 } // nes

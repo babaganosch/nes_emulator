@@ -5,19 +5,23 @@ namespace nes
 
 namespace
 {
-const uint32_t PRG_PAGE_SIZE = 16 * 1024;
-//const uint32_t CHR_PAGE_SIZE = 8 * 1024;
-} // anonymous
+constexpr uint32_t PRG_PAGE_SIZE = 16 * 1024;
+//constexpr uint32_t CHR_PAGE_SIZE = 8 * 1024;
 
-static void cpu_callback(void * cookie)
+emu_t* emulator_ref;
+void cpu_clock_callback(void *cookie)
 {
-    //printf("callback!\n");
+    emulator_ref->ppu.execute();
 }
+
+} // anonymous
 
 RESULT emu_t::init(ines_rom_t &rom)
 {
+    emulator_ref = this;
     memory.init();
-    cpu.init(&cpu_callback, memory);
+    cpu.init(&cpu_clock_callback, memory);
+    ppu.init();
 
     // Map PRG ROM
     if (rom.header.prg_size == 1) {

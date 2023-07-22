@@ -20,6 +20,8 @@ RESULT validator::init(emu_t* emu_ref, const char* key_path)
     emu = emu_ref;
     emu->cpu.nestest_validation = true;
     emu->cpu.cycles = 7;
+    emu->ppu.cycles = 7 * 3;
+    emu->ppu.x      = 7 * 3;
 
     key.open(key_path, std::ios::in |  std::ios::ate);
     auto file_size = key.tellg();
@@ -62,8 +64,8 @@ RESULT validator::construct_output_pre_line()
     uint8_t data1 = emu->memory[cpu.regs.PC + 2];
     op_code_t op  = op_codes[inst];
     uint16_t cycles = cpu.cycles;
-    // TODO(PPU)
-    uint16_t ppu_x = ((cycles * 3) % 341), ppu_y = ((cycles * 3) / 341);
+    uint16_t ppu_x = emu->ppu.x;
+    uint16_t ppu_y = emu->ppu.y;
 
     post_fix_cursor  = 0;
     post_fix_letters = 0;

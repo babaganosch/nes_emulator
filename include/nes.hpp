@@ -196,9 +196,20 @@ struct ines_rom_t
     RESULT load_from_data(const uint8_t* data, const uint32_t size);
 };
 
+struct ppu_t
+{
+    uint16_t x{0};
+    uint16_t y{0};
+    uint16_t cycles{0};
+
+    RESULT init();
+    RESULT execute();
+};
+
 struct emu_t
 {
     cpu_t cpu;
+    ppu_t ppu;
     mem_t memory;
 
     RESULT init(ines_rom_t &rom);
