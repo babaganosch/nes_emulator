@@ -96,6 +96,15 @@ RESULT validator::construct_output_pre_line()
         post_fix_letters = 2;
     }
 
+    else if (op.addr_mode == addr_mode_relative)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X     %s $....                       A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op.name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 21;
+        post_fix_letters = 4;
+    }
+
     else
     {
         printf("UNIMPLEMENTED VALIDATION FOR LINE %u    OP-CODE: %02X (%s)\n", line_number, inst, op.name);
@@ -108,6 +117,11 @@ RESULT validator::construct_output_pre_line()
 RESULT validator::construct_output_post_line()
 {
     auto index = 0;
+    if (strlen(emu->cpu.nestest_validation_str) < post_fix_letters)
+    {
+        printf("ERROR OCCOURED WHEN INJECTING DATA PEEK IN VALIDATION!\n");
+        return RESULT_ERROR;
+    }
     while (post_fix_letters > 0)
     {
         emu_output[post_fix_cursor++] = emu->cpu.nestest_validation_str[index++];

@@ -36,7 +36,7 @@ op_code_t op_codes[256] = {
     CPU_OP(NIP, implied),                //  21     $ 15
     CPU_OP(ASL, index_zp_x),             //  22     $ 16
     CPU_OP(NIP, implied),                //  23     $ 17
-    CPU_OP(NIP, implied),                //  24     $ 18
+    CPU_OP(CLC, implied),                //  24     $ 18
     CPU_OP(NIP, implied),                //  25     $ 19
     CPU_OP(NIP, implied),                //  26     $ 1A
     CPU_OP(NIP, implied),                //  27     $ 1B
@@ -68,7 +68,7 @@ op_code_t op_codes[256] = {
     CPU_OP(AND, index_zp_x),             //  53     $ 35
     CPU_OP(NIP, implied),                //  54     $ 36
     CPU_OP(NIP, implied),                //  55     $ 37
-    CPU_OP(NIP, implied),                //  56     $ 38
+    CPU_OP(SEC, implied),                //  56     $ 38
     CPU_OP(AND, index_y),                //  57     $ 39
     CPU_OP(NIP, implied),                //  58     $ 3A
     CPU_OP(NIP, implied),                //  59     $ 3B
@@ -156,7 +156,7 @@ op_code_t op_codes[256] = {
     CPU_OP(NIP, implied),                // 141     $ 8D
     CPU_OP(STX, absolute),               // 142     $ 8E
     CPU_OP(NIP, implied),                // 143     $ 8F
-    CPU_OP(NIP, implied),                // 144     $ 90
+    CPU_OP(BCC, relative),               // 144     $ 90
     CPU_OP(NIP, implied),                // 145     $ 91
     CPU_OP(NIP, implied),                // 146     $ 92
     CPU_OP(NIP, implied),                // 147     $ 93
@@ -188,7 +188,7 @@ op_code_t op_codes[256] = {
     CPU_OP(LDA, absolute),               // 173     $ AD
     CPU_OP(LDX, absolute),               // 174     $ AE
     CPU_OP(NIP, implied),                // 175     $ AF
-    CPU_OP(NIP, implied),                // 176     $ B0
+    CPU_OP(BCS, relative),               // 176     $ B0
     CPU_OP(LDA, post_index_indirect_y),  // 177     $ B1
     CPU_OP(NIP, implied),                // 178     $ B2
     CPU_OP(NIP, implied),                // 179     $ B3
@@ -220,7 +220,7 @@ op_code_t op_codes[256] = {
     CPU_OP(NIP, implied),                // 205     $ CD
     CPU_OP(NIP, implied),                // 206     $ CE
     CPU_OP(NIP, implied),                // 207     $ CF
-    CPU_OP(NIP, implied),                // 208     $ D0
+    CPU_OP(BNE, relative),               // 208     $ D0
     CPU_OP(NIP, implied),                // 209     $ D1
     CPU_OP(NIP, implied),                // 210     $ D2
     CPU_OP(NIP, implied),                // 211     $ D3
@@ -252,7 +252,7 @@ op_code_t op_codes[256] = {
     CPU_OP(NIP, implied),                // 237     $ ED
     CPU_OP(NIP, implied),                // 238     $ EE
     CPU_OP(NIP, implied),                // 239     $ EF
-    CPU_OP(NIP, implied),                // 240     $ F0
+    CPU_OP(BEQ, relative),               // 240     $ F0
     CPU_OP(NIP, implied),                // 241     $ F1
     CPU_OP(NIP, implied),                // 242     $ F2
     CPU_OP(NIP, implied),                // 243     $ F3
@@ -296,7 +296,7 @@ ADDRESS_MODE(zero_page)
     uint16_t address = UINT16( lo, 0x00 );
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 5, "%02X", cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 3, "%02X", cpu.peek_memory(address));
     }
     return address;
 }
@@ -379,7 +379,12 @@ ADDRESS_MODE(relative)
     // TODO(xxx): Remember to add extra clock cycle if branch
     //            causes page movement
     int8_t offset = cpu.fetch_byte( cpu.regs.PC++ );
-    return cpu.regs.PC + offset;
+    uint16_t address = cpu.regs.PC + offset;
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 5, "%04X", address);
+    }
+    return address;
 }
 
 ADDRESS_MODE(accumulator)
@@ -531,6 +536,12 @@ OP_FUNCTION(NOP)
     addr_mode(cpu, false);
 }
 
+/////////////////////////////////////////////////////////
+// LDA - Load Accumulator with Memory
+//
+// N Z C I D V
+// + + - - - -
+//
 OP_FUNCTION(LDA)
 {
     uint16_t address = addr_mode(cpu, false);
@@ -540,6 +551,121 @@ OP_FUNCTION(LDA)
     CALC_N_FLAG( operand );
 }
 
+/////////////////////////////////////////////////////////
+// SEC - Set Carry Flag
+// 1 -> C
+//
+// N Z C I D V
+// - - 1 - - -
+//
+OP_FUNCTION(SEC)
+{
+    addr_mode(cpu, false);
+    cpu.regs.C = 1;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// BCS - Branch on Carry Set
+// branch on C = 1
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BCS)
+{
+    uint16_t old_pc = cpu.regs.PC;
+    uint16_t address = addr_mode(cpu, false);
+    if (cpu.regs.C == 1)
+    { // Branch occurs
+        cpu.tick_clock();
+        if ( (old_pc & 0xFF00) != (address & 0xFF00) )
+        { // Branch caused page change
+            cpu.tick_clock();
+        }
+        cpu.regs.PC = address;
+    }
+}
+
+/////////////////////////////////////////////////////////
+// CLC - Clear Carry Flag
+// 0 -> C
+//
+// N Z C I D V
+// - - 0 - - -
+//
+OP_FUNCTION(CLC)
+{
+    addr_mode(cpu, false);
+    cpu.regs.C = 0;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// BCS - Branch on Carry Set
+// branch on C = 0
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BCC)
+{
+    uint16_t old_pc = cpu.regs.PC;
+    uint16_t address = addr_mode(cpu, false);
+    if (cpu.regs.C == 0)
+    { // Branch occurs
+        cpu.tick_clock();
+        if ( (old_pc & 0xFF00) != (address & 0xFF00) )
+        { // Branch caused page change
+            cpu.tick_clock();
+        }
+        cpu.regs.PC = address;
+    }
+}
+
+/////////////////////////////////////////////////////////
+// BEQ - Branch on Result Zero
+// branch on Z = 1
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BEQ)
+{
+    uint16_t old_pc = cpu.regs.PC;
+    uint16_t address = addr_mode(cpu, false);
+    if (cpu.regs.Z == 1)
+    { // Branch occurs
+        cpu.tick_clock();
+        if ( (old_pc & 0xFF00) != (address & 0xFF00) )
+        { // Branch caused page change
+            cpu.tick_clock();
+        }
+        cpu.regs.PC = address;
+    }
+}
+
+/////////////////////////////////////////////////////////
+// BNE - Branch on Result not Zero
+// branch on Z = 0
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BNE)
+{
+    uint16_t old_pc = cpu.regs.PC;
+    uint16_t address = addr_mode(cpu, false);
+    if (cpu.regs.Z == 0)
+    { // Branch occurs
+        cpu.tick_clock();
+        if ( (old_pc & 0xFF00) != (address & 0xFF00) )
+        { // Branch caused page change
+            cpu.tick_clock();
+        }
+        cpu.regs.PC = address;
+    }
+}
 
 
 } // nes

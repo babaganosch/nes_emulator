@@ -44,7 +44,7 @@ ADDRESS_MODE(relative);              //         rel = $0000
 ADDRESS_MODE(accumulator);           // A       
 
 // OPS
-OP_FUNCTION(NIP);
+OP_FUNCTION(NIP); // Not Implemented OP
 
 OP_FUNCTION(ADC);
 OP_FUNCTION(AND);
@@ -56,8 +56,13 @@ OP_FUNCTION(LDX);
 OP_FUNCTION(STX);
 OP_FUNCTION(JSR);
 OP_FUNCTION(NOP);
-
 OP_FUNCTION(LDA);
+OP_FUNCTION(SEC);
+OP_FUNCTION(BCS);
+OP_FUNCTION(CLC);
+OP_FUNCTION(BCC);
+OP_FUNCTION(BEQ);
+OP_FUNCTION(BNE);
 
 extern op_code_t op_codes[256];
 
