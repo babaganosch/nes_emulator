@@ -132,7 +132,7 @@ op_code_t op_codes[256] = {
     CPU_OP(ADC, zero_page),              // 101     $ 65
     CPU_OP(___, implied),                // 102     $ 66
     CPU_OP(___, implied),                // 103     $ 67
-    CPU_OP(___, implied),                // 104     $ 68
+    CPU_OP(PLA, implied),                // 104     $ 68
     CPU_OP(ADC, immediate),              // 105     $ 69
     CPU_OP(___, implied),                // 106     $ 6A
     CPU_OP(___, implied),                // 107     $ 6B
@@ -221,35 +221,35 @@ op_code_t op_codes[256] = {
     CPU_OP(LDX, index_y),                // 190     $ BE
     CPU_OP(___, implied),                // 191     $ BF
     CPU_OP(___, implied),                // 192     $ C0
-    CPU_OP(___, implied),                // 193     $ C1
+    CPU_OP(CMP, pre_index_indirect_x),   // 193     $ C1
     CPU_OP(___, implied),                // 194     $ C2
     CPU_OP(___, implied),                // 195     $ C3
     CPU_OP(___, implied),                // 196     $ C4
-    CPU_OP(___, implied),                // 197     $ C5
+    CPU_OP(CMP, zero_page),              // 197     $ C5
     CPU_OP(___, implied),                // 198     $ C6
     CPU_OP(___, implied),                // 199     $ C7
     CPU_OP(___, implied),                // 200     $ C8
-    CPU_OP(___, implied),                // 201     $ C9
+    CPU_OP(CMP, immediate),              // 201     $ C9
     CPU_OP(___, implied),                // 202     $ CA
     CPU_OP(___, implied),                // 203     $ CB
     CPU_OP(___, implied),                // 204     $ CC
-    CPU_OP(___, implied),                // 205     $ CD
+    CPU_OP(CMP, absolute),               // 205     $ CD
     CPU_OP(___, implied),                // 206     $ CE
     CPU_OP(___, implied),                // 207     $ CF
     CPU_OP(BNE, relative),               // 208     $ D0
-    CPU_OP(___, implied),                // 209     $ D1
+    CPU_OP(CMP, post_index_indirect_y),  // 209     $ D1
     CPU_OP(___, implied),                // 210     $ D2
     CPU_OP(___, implied),                // 211     $ D3
     CPU_OP(___, implied),                // 212     $ D4
-    CPU_OP(___, implied),                // 213     $ D5
+    CPU_OP(CMP, index_zp_x),             // 213     $ D5
     CPU_OP(___, implied),                // 214     $ D6
     CPU_OP(___, implied),                // 215     $ D7
     CPU_OP(___, implied),                // 216     $ D8
-    CPU_OP(___, implied),                // 217     $ D9
+    CPU_OP(CMP, index_y),                // 217     $ D9
     CPU_OP(___, implied),                // 218     $ DA
     CPU_OP(___, implied),                // 219     $ DB
     CPU_OP(___, implied),                // 220     $ DC
-    CPU_OP(___, implied),                // 221     $ DD
+    CPU_OP(CMP, index_x),                // 221     $ DD
     CPU_OP(___, implied),                // 222     $ DE
     CPU_OP(___, implied),                // 223     $ DF
     CPU_OP(___, implied),                // 224     $ E0
@@ -679,9 +679,9 @@ OP_FUNCTION(BIT)
 {
     uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
-    cpu.regs.SR |= (operand & 0b11000000);
-    cpu.regs.SR &= (operand | 0b00111111);
-    cpu.regs.Z = CALC_Z_FLAG( operand );
+    cpu.regs.N = (operand >> 7) & 0x1;
+    cpu.regs.V = (operand >> 6) & 0x1;
+    cpu.regs.Z = CALC_Z_FLAG( operand & cpu.regs.A );
 }
 
 /////////////////////////////////////////////////////////
@@ -782,10 +782,43 @@ OP_FUNCTION(SED)
 OP_FUNCTION(PHP)
 {
     addr_mode( cpu, false );
-    cpu.regs.B = 0b10;
+    uint8_t status = cpu.regs.SR | 0x30;
     cpu.tick_clock();
-    cpu.push_byte_to_stack( cpu.regs.SR );
+    cpu.push_byte_to_stack( status );
 }
 
+/////////////////////////////////////////////////////////
+// PLA - Pull Accumulator from Stack
+// pull A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(PLA)
+{
+    addr_mode( cpu, true );
+    uint8_t data = cpu.pull_byte_from_stack();
+    cpu.tick_clock(); // Read-modify-write extra cycle
+    cpu.regs.A = data;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// CMP - Compare Memory with Accumulator
+// A - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(CMP)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint8_t operand = cpu.fetch_byte( address );
+    uint8_t data = operand - cpu.regs.A;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
+}
 
 } // nes
