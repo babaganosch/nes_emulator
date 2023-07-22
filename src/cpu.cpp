@@ -61,7 +61,7 @@ uint8_t cpu_t::fetch_byte( uint16_t address )
 
 uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
 {
-    uint16_t address = (hi << 8) | lo;
+    uint16_t address = ((uint16_t)hi << 8) | lo;
     uint8_t data = (*memory)[ address ];
     tick_clock();
     return data;
@@ -87,7 +87,7 @@ void cpu_t::write_byte( uint8_t data, uint16_t address )
 
 void cpu_t::write_byte( uint8_t data, uint8_t lo, uint8_t hi )
 {
-    uint16_t address = (hi << 8) | lo;
+    uint16_t address = ((uint16_t)hi << 8) | lo;
     (*memory)[ address ] = data;
     tick_clock();
 }
@@ -101,6 +101,20 @@ void cpu_t::push_short_to_stack( uint16_t data )
 {
     push_byte_to_stack( (0xFF00 & data) >> 8 );
     push_byte_to_stack( 0x00FF & data );
+}
+
+uint8_t cpu_t::pull_byte_from_stack()
+{
+    regs.SP++;
+    tick_clock();
+    return fetch_byte( regs.SP );
+}
+
+uint16_t cpu_t::pull_short_from_stack()
+{
+    uint8_t lo = pull_byte_from_stack();
+    uint8_t hi = pull_byte_from_stack();
+    return ((uint16_t)hi << 8) | lo;
 }
 
 } // nes

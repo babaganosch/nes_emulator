@@ -36,7 +36,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //   5     $ 05
     CPU_OP(ASL, zero_page),              //   6     $ 06
     CPU_OP(___, implied),                //   7     $ 07
-    CPU_OP(___, implied),                //   8     $ 08
+    CPU_OP(PHP, implied),                //   8     $ 08
     CPU_OP(___, implied),                //   9     $ 09
     CPU_OP(ASL, accumulator),            //  10     $ 0A
     CPU_OP(___, implied),                //  11     $ 0B
@@ -44,7 +44,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  13     $ 0D
     CPU_OP(ASL, absolute),               //  14     $ 0E
     CPU_OP(___, implied),                //  15     $ 0F
-    CPU_OP(___, implied),                //  16     $ 10
+    CPU_OP(BPL, relative),               //  16     $ 10
     CPU_OP(___, implied),                //  17     $ 11
     CPU_OP(___, implied),                //  18     $ 12
     CPU_OP(___, implied),                //  19     $ 13
@@ -124,7 +124,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  93     $ 5D
     CPU_OP(___, implied),                //  94     $ 5E
     CPU_OP(___, implied),                //  95     $ 5F
-    CPU_OP(___, implied),                //  96     $ 60
+    CPU_OP(RTS, implied),                //  96     $ 60
     CPU_OP(ADC, pre_index_indirect_x),   //  97     $ 61
     CPU_OP(___, implied),                //  98     $ 62
     CPU_OP(___, implied),                //  99     $ 63
@@ -148,7 +148,7 @@ op_code_t op_codes[256] = {
     CPU_OP(ADC, index_zp_x),             // 117     $ 75
     CPU_OP(___, implied),                // 118     $ 76
     CPU_OP(___, implied),                // 119     $ 77
-    CPU_OP(___, implied),                // 120     $ 78
+    CPU_OP(SEI, implied),                // 120     $ 78
     CPU_OP(ADC, index_y),                // 121     $ 79
     CPU_OP(___, implied),                // 122     $ 7A
     CPU_OP(___, implied),                // 123     $ 7B
@@ -276,7 +276,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 245     $ F5
     CPU_OP(___, implied),                // 246     $ F6
     CPU_OP(___, implied),                // 247     $ F7
-    CPU_OP(___, implied),                // 248     $ F8
+    CPU_OP(SED, implied),                // 248     $ F8
     CPU_OP(___, implied),                // 249     $ F9
     CPU_OP(___, implied),                // 250     $ FA
     CPU_OP(___, implied),                // 251     $ FB
@@ -424,7 +424,7 @@ OP_FUNCTION(___)
 //
 OP_FUNCTION(ADC)
 {
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
     uint16_t result = operand + cpu.regs.A + cpu.regs.C;
 
@@ -444,7 +444,7 @@ OP_FUNCTION(ADC)
 //
 OP_FUNCTION(AND)
 {
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
     uint8_t result = cpu.regs.A & operand;
 
@@ -462,8 +462,7 @@ OP_FUNCTION(AND)
 //
 OP_FUNCTION(ASL)
 {
-    /*
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     uint8_t* operand = cpu.fetch_byte_ref( address );
     uint16_t data = (uint16_t) *operand << 1;
     
@@ -475,7 +474,7 @@ OP_FUNCTION(ASL)
     {
         cpu.tick_clock();
     }
-    cpu.write_byte( data, operand );*/
+    cpu.write_byte( data, operand );
 }
 
 
@@ -495,7 +494,7 @@ OP_FUNCTION(ASL)
 //
 OP_FUNCTION(JMP)
 {
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     cpu.regs.PC = address;
 }
 
@@ -508,7 +507,7 @@ OP_FUNCTION(JMP)
 //
 OP_FUNCTION(LDX)
 {
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.X = operand;
     CALC_Z_FLAG( operand );
@@ -524,7 +523,7 @@ OP_FUNCTION(LDX)
 //
 OP_FUNCTION(STX)
 {
-    uint16_t address = addr_mode(cpu, true);
+    uint16_t address = addr_mode( cpu, true );
     cpu.write_byte( cpu.regs.X, address );
 }
 
@@ -539,9 +538,9 @@ OP_FUNCTION(STX)
 //
 OP_FUNCTION(JSR)
 {
-    uint16_t address = addr_mode(cpu, false);
+    cpu.push_short_to_stack( cpu.regs.PC + 1 );
+    uint16_t address = addr_mode( cpu, false );
     cpu.tick_clock(); // One extra cycle when buffering data
-    cpu.push_short_to_stack( cpu.regs.PC + 2 );
     cpu.regs.PC = address;
 }
 
@@ -553,7 +552,7 @@ OP_FUNCTION(JSR)
 //
 OP_FUNCTION(NOP)
 {
-    addr_mode(cpu, false);
+    addr_mode( cpu, false );
 }
 
 /////////////////////////////////////////////////////////
@@ -564,7 +563,7 @@ OP_FUNCTION(NOP)
 //
 OP_FUNCTION(LDA)
 {
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.A = operand;
     CALC_Z_FLAG( operand );
@@ -580,7 +579,7 @@ OP_FUNCTION(LDA)
 //
 OP_FUNCTION(SEC)
 {
-    addr_mode(cpu, false);
+    addr_mode( cpu, false );
     cpu.regs.C = 1;
     cpu.tick_clock();
 }
@@ -595,8 +594,8 @@ OP_FUNCTION(SEC)
 OP_FUNCTION(BCS)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode(cpu, false);
-    branch(cpu, cpu.regs.C, 1, old_pc, address);
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.C, 1, old_pc, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -608,7 +607,7 @@ OP_FUNCTION(BCS)
 //
 OP_FUNCTION(CLC)
 {
-    addr_mode(cpu, false);
+    addr_mode( cpu, false );
     cpu.regs.C = 0;
     cpu.tick_clock();
 }
@@ -623,8 +622,8 @@ OP_FUNCTION(CLC)
 OP_FUNCTION(BCC)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode(cpu, false);
-    branch(cpu, cpu.regs.C, 0, old_pc, address);
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.C, 0, old_pc, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -637,8 +636,8 @@ OP_FUNCTION(BCC)
 OP_FUNCTION(BEQ)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode(cpu, false);
-    branch(cpu, cpu.regs.Z, 1, old_pc, address);
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.Z, 1, old_pc, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -651,8 +650,8 @@ OP_FUNCTION(BEQ)
 OP_FUNCTION(BNE)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode(cpu, false);
-    branch(cpu, cpu.regs.Z, 0, old_pc, address);
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.Z, 0, old_pc, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -664,7 +663,7 @@ OP_FUNCTION(BNE)
 //
 OP_FUNCTION(STA)
 {
-    uint16_t address = addr_mode(cpu, true);
+    uint16_t address = addr_mode( cpu, true );
     cpu.write_byte( cpu.regs.A, address );
 }
 
@@ -678,7 +677,7 @@ OP_FUNCTION(STA)
 //
 OP_FUNCTION(BIT)
 {
-    uint16_t address = addr_mode(cpu, false);
+    uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.SR |= (operand & 0b11000000);
     cpu.regs.SR &= (operand | 0b00111111);
@@ -695,8 +694,8 @@ OP_FUNCTION(BIT)
 OP_FUNCTION(BVC)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode(cpu, false);
-    branch(cpu, cpu.regs.V, 0, old_pc, address);
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.V, 0, old_pc, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -709,8 +708,83 @@ OP_FUNCTION(BVC)
 OP_FUNCTION(BVS)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode(cpu, false);
-    branch(cpu, cpu.regs.V, 1, old_pc, address);
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.V, 1, old_pc, address );
+}
+
+/////////////////////////////////////////////////////////
+// BPL - Branch on Result Plus
+// branch on N = 0
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BPL)
+{
+    uint16_t old_pc    = cpu.regs.PC;
+    uint16_t address   = addr_mode( cpu, false );
+    branch( cpu, cpu.regs.N, 0, old_pc, address );
+}
+
+/////////////////////////////////////////////////////////
+// RTS - Return from Subroutine
+// pull PC, PC+1 -> PC
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(RTS)
+{
+    addr_mode( cpu, false );
+    uint16_t address = cpu.pull_short_from_stack();
+    cpu.regs.PC = address + 1;
+    cpu.tick_clock(); // One extra cycle to post-increment PC
+}
+
+/////////////////////////////////////////////////////////
+// SEI - Set Interrupt Disable Status
+// 1 -> I
+//
+// N Z C I D V
+// - - - 1 - -
+//
+OP_FUNCTION(SEI)
+{
+    addr_mode( cpu, false );
+    cpu.regs.I = 1;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// SED - Set Decimal Flag
+// 1 -> D
+//
+// N Z C I D V
+// - - - - 1 -
+//
+OP_FUNCTION(SED)
+{
+    addr_mode( cpu, false );
+    cpu.regs.D = 1;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// PHP - Push Processor Status on Stack
+// The status register will be pushed with the break
+// flag and bit 5 set to 1.
+//
+// push SR
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(PHP)
+{
+    addr_mode( cpu, false );
+    cpu.regs.B = 0b10;
+    cpu.tick_clock();
+    cpu.push_byte_to_stack( cpu.regs.SR );
 }
 
 
