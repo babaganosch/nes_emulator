@@ -66,21 +66,31 @@ RESULT validator::construct_output_pre_line()
     post_fix_cursor  = 0;
     post_fix_letters = 0;
 
-    if (op.addr_mode.function == addr_mode_absolute)
+    if (op.addr_mode == addr_mode_implied)
     {
-        snprintf(emu_output, 95, "%04X  %02X %02X %02X  %s $%02X%02X                       A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X        %s                             A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, op.name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+    }
+
+    else if (op.addr_mode == addr_mode_absolute)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X %02X  %s $%02X%02X                       A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
                  cpu.regs.PC, inst, data0, data1, op.name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
     }
 
-    else if (op.addr_mode.function == addr_mode_immediate)
+    else if (op.addr_mode == addr_mode_immediate)
     {
-        snprintf(emu_output, 95, "%04X  %02X %02X     %s #$%02X                        A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X     %s #$%02X                        A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
                  cpu.regs.PC, inst, data0, op.name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
     }
 
-    else if (op.addr_mode.function == addr_mode_zero_page)
+    else if (op.addr_mode == addr_mode_zero_page)
     {
-        snprintf(emu_output, 95, "%04X  %02X %02X     %s $%02X = ..                    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X     %s $%02X = ..                    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
                  cpu.regs.PC, inst, data0, op.name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
         post_fix_cursor  = 26;
         post_fix_letters = 2;
@@ -111,9 +121,41 @@ RESULT validator::validate_line()
 {
     std::string line;
     std::getline(key, line);
+    const char* key_cline = line.c_str();
 
-    printf("RES: %s\n", emu_output);
-    printf("KEY: %s\n", line.c_str());
+    if (strncmp(emu_output, key_cline, strlen(emu_output)) == 0)
+    {   // OK!
+        printf("     %-99s\033[0;32mOK!\033[0;0m\n", emu_output);
+    }
+    else
+    {   // FAILURE
+        printf("\n-- \033[1;31mFAILED\033[0;0m --\n");
+        printf(" @ line %u\n", line_number);
+        printf("\033[0;34mRES:\033[0;0m ");
+        auto i = 0;
+        while( i < emu_output_len )
+        {
+            if ( i < strlen(key_cline) && i < strlen(emu_output) )
+            {
+                if (emu_output[i] == key_cline[i])
+                {
+                    printf("\033[0;0m%c", emu_output[i]);
+                }
+                else
+                {
+                    printf("\033[0;31m%c", emu_output[i]);
+                }
+            }
+            else
+            {
+                printf(" ");
+            }
+            ++i;
+        }
+        printf("    \033[0;31mFAIL!\033[0;0m\n");
+        printf("\033[0;34mKEY:\033[0;0m %s\n", key_cline);
+        return RESULT_ERROR;
+    }
 
     return RESULT_OK;
 }

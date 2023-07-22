@@ -10,44 +10,21 @@ namespace nes
 
 namespace
 {
-#define CPU_OP(OPC, MEM_MODIFY, ADDR_MODE) {                                                                                  \
-    .addr_mode = { .function = addr_mode_##ADDR_MODE, .modify_memory = MEM_MODIFY }, \
+#define CPU_OP(OPC, ADDR_MODE) {       \
+    .addr_mode = addr_mode_##ADDR_MODE, \
     .function = OP_##OPC, .name = #OPC }
 #define ADDRESS_MODE(MODE) uint16_t addr_mode_##MODE(cpu_t &cpu, bool modify_memory)
 #define OP_FUNCTION(NAME) void OP_##NAME(cpu_t &cpu, addr_mode_t addr_mode)
 } // anonymous
 
-enum ADDRESS_MODE
-{
-    implied,
-    immediate,
-    absolute,
-    zero_page,
-    index_x,
-    index_y,
-    index_zp_x,
-    index_zp_y,
-    indirect,
-    pre_index_indirect_x,
-    post_index_indirect_y,
-    relative,
-    accumulator
-};
-
-typedef uint16_t (* addr_mode_function_t)(cpu_t &cpu, bool modify_memory);
-struct addr_mode_t
-{
-    //ADDRESS_MODE identifier;
-    addr_mode_function_t function;
-    bool modify_memory;
-};
-
+typedef uint16_t (* addr_mode_t)(cpu_t &cpu, bool modify_memory);
 typedef void (* op_code_function_t)(cpu_t &cpu, addr_mode_t addr_mode);
+
 struct op_code_t
 {
     addr_mode_t addr_mode;
     op_code_function_t function;
-    const char name[14];
+    const char name[4];
 };
 
 
@@ -67,7 +44,7 @@ ADDRESS_MODE(relative);              //         rel = $0000
 ADDRESS_MODE(accumulator);           // A       
 
 // OPS
-OP_FUNCTION(UNIMPLEMENTED);
+OP_FUNCTION(NIP);
 
 OP_FUNCTION(ADC);
 OP_FUNCTION(AND);
@@ -77,6 +54,8 @@ OP_FUNCTION(ASL);
 OP_FUNCTION(JMP);
 OP_FUNCTION(LDX);
 OP_FUNCTION(STX);
+OP_FUNCTION(JSR);
+OP_FUNCTION(NOP);
 
 OP_FUNCTION(LDA);
 

@@ -158,6 +158,8 @@ struct cpu_t
     void     write_byte( uint8_t data, uint8_t* ref );
     void     write_byte( uint8_t data, uint16_t address );
     void     write_byte( uint8_t data, uint8_t lo, uint8_t hi );
+    void     push_byte_to_stack( uint8_t data );
+    void     push_short_to_stack( uint16_t data );
 
     // Validation Helpers
     bool nestest_validation{false};

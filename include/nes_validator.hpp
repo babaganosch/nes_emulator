@@ -8,6 +8,8 @@
 namespace nes
 {
 
+const size_t emu_output_len = 95;
+
 class validator
 {
 public:
@@ -23,7 +25,7 @@ private:
     RESULT validate_line();
 
     emu_t* emu;
-    char emu_output[95];
+    char emu_output[emu_output_len];
     uint16_t post_fix_cursor{0};
     uint16_t post_fix_letters{0};
     uint32_t line_number{0};
