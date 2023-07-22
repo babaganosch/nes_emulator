@@ -19,6 +19,8 @@ public:
     RESULT init(emu_t* emu_ref, const char* key_path);
     RESULT execute();
 
+    uint16_t validated_lines{0};
+
 private:
     RESULT construct_output_pre_line();
     RESULT construct_output_post_line();

@@ -29,6 +29,7 @@ int main()
         {
             ret = validator.execute();
         }
+        printf("\nValidated \033[0;34m%u\033[0;0m lines\n", validator.validated_lines);
     }
     /*
     while (ret > 0)

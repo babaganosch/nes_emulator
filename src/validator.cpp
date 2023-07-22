@@ -2,6 +2,8 @@
 #include "nes_ops.hpp"
 #include "nes.hpp"
 
+
+
 namespace nes
 {
 
@@ -61,7 +63,7 @@ RESULT validator::construct_output_pre_line()
     op_code_t op  = op_codes[inst];
     uint16_t cycles = cpu.cycles;
     // TODO(PPU)
-    uint16_t ppu_x = (cycles * 3) % 341, ppu_y = (cycles / 341);
+    uint16_t ppu_x = ((cycles * 3) % 341), ppu_y = ((cycles * 3) / 341);
 
     post_fix_cursor  = 0;
     post_fix_letters = 0;
@@ -119,7 +121,7 @@ RESULT validator::construct_output_post_line()
     auto index = 0;
     if (strlen(emu->cpu.nestest_validation_str) < post_fix_letters)
     {
-        printf("ERROR OCCOURED WHEN INJECTING DATA PEEK IN VALIDATION!\n");
+        printf("\033[0;31mERROR OCCOURED WHEN INJECTING DATA PEEK IN VALIDATION!\033[0;0m @ line: %u\n", line_number);
         return RESULT_ERROR;
     }
     while (post_fix_letters > 0)
@@ -140,6 +142,7 @@ RESULT validator::validate_line()
     if (strncmp(emu_output, key_cline, strlen(emu_output)) == 0)
     {   // OK!
         printf("     %-99s\033[0;32mOK!\033[0;0m\n", emu_output);
+        validated_lines++;
     }
     else
     {   // FAILURE
