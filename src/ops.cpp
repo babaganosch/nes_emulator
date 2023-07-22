@@ -93,35 +93,35 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  62     $ 3E
     CPU_OP(___, implied),                //  63     $ 3F
     CPU_OP(___, implied),                //  64     $ 40
-    CPU_OP(___, implied),                //  65     $ 41
+    CPU_OP(EOR, pre_index_indirect_x),   //  65     $ 41
     CPU_OP(___, implied),                //  66     $ 42
     CPU_OP(___, implied),                //  67     $ 43
     CPU_OP(___, implied),                //  68     $ 44
-    CPU_OP(___, implied),                //  69     $ 45
+    CPU_OP(EOR, zero_page),              //  69     $ 45
     CPU_OP(___, implied),                //  70     $ 46
     CPU_OP(___, implied),                //  71     $ 47
     CPU_OP(PHA, implied),                //  72     $ 48
-    CPU_OP(___, implied),                //  73     $ 49
+    CPU_OP(EOR, immediate),              //  73     $ 49
     CPU_OP(___, implied),                //  74     $ 4A
     CPU_OP(___, implied),                //  75     $ 4B
     CPU_OP(JMP, absolute),               //  76     $ 4C
-    CPU_OP(___, implied),                //  77     $ 4D
+    CPU_OP(EOR, absolute),               //  77     $ 4D
     CPU_OP(___, implied),                //  78     $ 4E
     CPU_OP(___, implied),                //  79     $ 4F
     CPU_OP(BVC, relative),               //  80     $ 50
-    CPU_OP(___, implied),                //  81     $ 51
+    CPU_OP(EOR, post_index_indirect_y),  //  81     $ 51
     CPU_OP(___, implied),                //  82     $ 52
     CPU_OP(___, implied),                //  83     $ 53
     CPU_OP(___, implied),                //  84     $ 54
-    CPU_OP(___, implied),                //  85     $ 55
+    CPU_OP(EOR, index_zp_x),             //  85     $ 55
     CPU_OP(___, implied),                //  86     $ 56
     CPU_OP(___, implied),                //  87     $ 57
     CPU_OP(___, implied),                //  88     $ 58
-    CPU_OP(___, implied),                //  89     $ 59
+    CPU_OP(EOR, index_y),                //  89     $ 59
     CPU_OP(___, implied),                //  90     $ 5A
     CPU_OP(___, implied),                //  91     $ 5B
     CPU_OP(___, implied),                //  92     $ 5C
-    CPU_OP(___, implied),                //  93     $ 5D
+    CPU_OP(EOR, index_x),                //  93     $ 5D
     CPU_OP(___, implied),                //  94     $ 5E
     CPU_OP(___, implied),                //  95     $ 5F
     CPU_OP(RTS, implied),                //  96     $ 60
@@ -188,11 +188,11 @@ op_code_t op_codes[256] = {
     CPU_OP(STA, index_x),                // 157     $ 9D
     CPU_OP(___, implied),                // 158     $ 9E
     CPU_OP(___, implied),                // 159     $ 9F
-    CPU_OP(___, implied),                // 160     $ A0
+    CPU_OP(LDY, immediate),              // 160     $ A0
     CPU_OP(___, implied),                // 161     $ A1
     CPU_OP(LDX, immediate),              // 162     $ A2
     CPU_OP(___, implied),                // 163     $ A3
-    CPU_OP(___, implied),                // 164     $ A4
+    CPU_OP(LDY, zero_page),              // 164     $ A4
     CPU_OP(LDA, zero_page),              // 165     $ A5
     CPU_OP(LDX, zero_page),              // 166     $ A6
     CPU_OP(___, implied),                // 167     $ A7
@@ -200,7 +200,7 @@ op_code_t op_codes[256] = {
     CPU_OP(LDA, immediate),              // 169     $ A9
     CPU_OP(___, implied),                // 170     $ AA
     CPU_OP(___, implied),                // 171     $ AB
-    CPU_OP(___, implied),                // 172     $ AC
+    CPU_OP(LDY, absolute),               // 172     $ AC
     CPU_OP(LDA, absolute),               // 173     $ AD
     CPU_OP(LDX, absolute),               // 174     $ AE
     CPU_OP(___, implied),                // 175     $ AF
@@ -208,23 +208,23 @@ op_code_t op_codes[256] = {
     CPU_OP(LDA, post_index_indirect_y),  // 177     $ B1
     CPU_OP(___, implied),                // 178     $ B2
     CPU_OP(___, implied),                // 179     $ B3
-    CPU_OP(___, implied),                // 180     $ B4
+    CPU_OP(LDY, index_zp_x),             // 180     $ B4
     CPU_OP(LDA, index_zp_x),             // 181     $ B5
-    CPU_OP(LDX, index_zp_x),             // 182     $ B6
+    CPU_OP(LDX, index_zp_y),             // 182     $ B6
     CPU_OP(___, implied),                // 183     $ B7
-    CPU_OP(___, implied),                // 184     $ B8
+    CPU_OP(CLV, implied),                // 184     $ B8
     CPU_OP(LDA, index_y),                // 185     $ B9
     CPU_OP(___, implied),                // 186     $ BA
     CPU_OP(___, implied),                // 187     $ BB
-    CPU_OP(___, implied),                // 188     $ BC
+    CPU_OP(LDY, index_x),                // 188     $ BC
     CPU_OP(LDA, index_x),                // 189     $ BD
     CPU_OP(LDX, index_y),                // 190     $ BE
     CPU_OP(___, implied),                // 191     $ BF
-    CPU_OP(___, implied),                // 192     $ C0
+    CPU_OP(CPY, immediate),              // 192     $ C0
     CPU_OP(CMP, pre_index_indirect_x),   // 193     $ C1
     CPU_OP(___, implied),                // 194     $ C2
     CPU_OP(___, implied),                // 195     $ C3
-    CPU_OP(___, implied),                // 196     $ C4
+    CPU_OP(CPY, zero_page),              // 196     $ C4
     CPU_OP(CMP, zero_page),              // 197     $ C5
     CPU_OP(___, implied),                // 198     $ C6
     CPU_OP(___, implied),                // 199     $ C7
@@ -232,7 +232,7 @@ op_code_t op_codes[256] = {
     CPU_OP(CMP, immediate),              // 201     $ C9
     CPU_OP(___, implied),                // 202     $ CA
     CPU_OP(___, implied),                // 203     $ CB
-    CPU_OP(___, implied),                // 204     $ CC
+    CPU_OP(CPY, absolute),               // 204     $ CC
     CPU_OP(CMP, absolute),               // 205     $ CD
     CPU_OP(___, implied),                // 206     $ CE
     CPU_OP(___, implied),                // 207     $ CF
@@ -252,36 +252,36 @@ op_code_t op_codes[256] = {
     CPU_OP(CMP, index_x),                // 221     $ DD
     CPU_OP(___, implied),                // 222     $ DE
     CPU_OP(___, implied),                // 223     $ DF
-    CPU_OP(___, implied),                // 224     $ E0
-    CPU_OP(___, implied),                // 225     $ E1
+    CPU_OP(CPX, immediate),              // 224     $ E0
+    CPU_OP(SBC, pre_index_indirect_x),   // 225     $ E1
     CPU_OP(___, implied),                // 226     $ E2
     CPU_OP(___, implied),                // 227     $ E3
-    CPU_OP(___, implied),                // 228     $ E4
-    CPU_OP(___, implied),                // 229     $ E5
+    CPU_OP(CPX, zero_page),              // 228     $ E4
+    CPU_OP(SBC, zero_page),              // 229     $ E5
     CPU_OP(___, implied),                // 230     $ E6
     CPU_OP(___, implied),                // 231     $ E7
     CPU_OP(___, implied),                // 232     $ E8
-    CPU_OP(___, implied),                // 233     $ E9
+    CPU_OP(SBC, immediate),              // 233     $ E9
     CPU_OP(NOP, implied),                // 234     $ EA
     CPU_OP(___, implied),                // 235     $ EB
-    CPU_OP(___, implied),                // 236     $ EC
-    CPU_OP(___, implied),                // 237     $ ED
+    CPU_OP(CPX, absolute),               // 236     $ EC
+    CPU_OP(SBC, absolute),               // 237     $ ED
     CPU_OP(___, implied),                // 238     $ EE
     CPU_OP(___, implied),                // 239     $ EF
     CPU_OP(BEQ, relative),               // 240     $ F0
-    CPU_OP(___, implied),                // 241     $ F1
+    CPU_OP(SBC, post_index_indirect_y),  // 241     $ F1
     CPU_OP(___, implied),                // 242     $ F2
     CPU_OP(___, implied),                // 243     $ F3
     CPU_OP(___, implied),                // 244     $ F4
-    CPU_OP(___, implied),                // 245     $ F5
+    CPU_OP(SBC, index_zp_x),             // 245     $ F5
     CPU_OP(___, implied),                // 246     $ F6
     CPU_OP(___, implied),                // 247     $ F7
     CPU_OP(SED, implied),                // 248     $ F8
-    CPU_OP(___, implied),                // 249     $ F9
+    CPU_OP(SBC, index_y),                // 249     $ F9
     CPU_OP(___, implied),                // 250     $ FA
     CPU_OP(___, implied),                // 251     $ FB
     CPU_OP(___, implied),                // 252     $ FC
-    CPU_OP(___, implied),                // 253     $ FD
+    CPU_OP(SBC, index_x),                // 253     $ FD
     CPU_OP(___, implied),                // 254     $ FE
     CPU_OP(___, implied)                 // 255     $ FF
 };          
@@ -815,7 +815,7 @@ OP_FUNCTION(CMP)
 {
     uint16_t address = addr_mode( cpu, false );
     uint8_t operand = cpu.fetch_byte( address );
-    uint8_t data = operand - cpu.regs.A;
+    uint8_t data = cpu.regs.A - operand;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
     cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
@@ -897,5 +897,106 @@ OP_FUNCTION(ORA)
     CALC_Z_FLAG( cpu.regs.A );
 }
 
+/////////////////////////////////////////////////////////
+// CLV - Clear Overflow Flag
+// 0 -> V
+//
+// N Z C I D V
+// - - - - - 0
+//
+OP_FUNCTION(CLV)
+{
+    addr_mode( cpu, false );
+    cpu.regs.V = 0;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// EOR - Exclusive-OR Memory with Accumulator
+// A EOR M -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(EOR)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    cpu.regs.A = operand ^ cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// LDY - Load Index Y with Memory
+// M -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(LDY)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    cpu.regs.Y = operand;
+    CALC_Z_FLAG( operand );
+    CALC_N_FLAG( operand );
+}
+
+/////////////////////////////////////////////////////////
+// CPY - Compare Memory and Index Y
+// Y - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(CPY)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint8_t operand = cpu.fetch_byte( address );
+    uint8_t data = cpu.regs.Y - operand;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.Y >= operand) ? 1 : 0;
+}
+
+/////////////////////////////////////////////////////////
+// CPX - Compare Memory and Index X
+// X - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(CPX)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    uint8_t data = cpu.regs.X - operand;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.X >= operand) ? 1 : 0;
+}
+
+/////////////////////////////////////////////////////////
+// SBC - Subtract Memory from Accumulator with Borrow
+//         _
+// A - M - C -> A
+//
+// N Z C I D V
+// + + + - - +
+//
+OP_FUNCTION(SBC)
+{
+    uint16_t address = addr_mode( cpu, false );
+    uint16_t data    = cpu.fetch_byte( address );
+    uint8_t  operand = data ^ 0xFF;
+    data = cpu.regs.A + operand + cpu.regs.C;
+
+    CALC_C_FLAG( data );
+    CALC_Z_FLAG( data );
+    CALC_N_FLAG( data );
+    CALC_V_FLAG( cpu.regs.A, operand, data );
+    cpu.regs.A = data;
+}
 
 } // nes
