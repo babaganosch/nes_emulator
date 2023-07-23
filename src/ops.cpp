@@ -164,9 +164,9 @@ op_code_t op_codes[256] = {
     CPU_OP(STA, zero_page),              // 133     $ 85
     CPU_OP(STX, zero_page),              // 134     $ 86
     CPU_OP(___, implied),                // 135     $ 87
-    CPU_OP(___, implied),                // 136     $ 88
+    CPU_OP(DEY, implied),                // 136     $ 88
     CPU_OP(___, implied),                // 137     $ 89
-    CPU_OP(___, implied),                // 138     $ 8A
+    CPU_OP(TXA, implied),                // 138     $ 8A
     CPU_OP(___, implied),                // 139     $ 8B
     CPU_OP(___, implied),                // 140     $ 8C
     CPU_OP(STA, absolute),               // 141     $ 8D
@@ -180,9 +180,9 @@ op_code_t op_codes[256] = {
     CPU_OP(STA, index_zp_x),             // 149     $ 95
     CPU_OP(STX, index_zp_y),             // 150     $ 96
     CPU_OP(___, implied),                // 151     $ 97
-    CPU_OP(___, implied),                // 152     $ 98
+    CPU_OP(TYA, implied),                // 152     $ 98
     CPU_OP(STA, index_y),                // 153     $ 99
-    CPU_OP(___, implied),                // 154     $ 9A
+    CPU_OP(TXS, implied),                // 154     $ 9A
     CPU_OP(___, implied),                // 155     $ 9B
     CPU_OP(___, implied),                // 156     $ 9C
     CPU_OP(STA, index_x),                // 157     $ 9D
@@ -196,9 +196,9 @@ op_code_t op_codes[256] = {
     CPU_OP(LDA, zero_page),              // 165     $ A5
     CPU_OP(LDX, zero_page),              // 166     $ A6
     CPU_OP(___, implied),                // 167     $ A7
-    CPU_OP(___, implied),                // 168     $ A8
+    CPU_OP(TAY, implied),                // 168     $ A8
     CPU_OP(LDA, immediate),              // 169     $ A9
-    CPU_OP(___, implied),                // 170     $ AA
+    CPU_OP(TAX, implied),                // 170     $ AA
     CPU_OP(___, implied),                // 171     $ AB
     CPU_OP(LDY, absolute),               // 172     $ AC
     CPU_OP(LDA, absolute),               // 173     $ AD
@@ -214,7 +214,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 183     $ B7
     CPU_OP(CLV, implied),                // 184     $ B8
     CPU_OP(LDA, index_y),                // 185     $ B9
-    CPU_OP(___, implied),                // 186     $ BA
+    CPU_OP(TSX, implied),                // 186     $ BA
     CPU_OP(___, implied),                // 187     $ BB
     CPU_OP(LDY, index_x),                // 188     $ BC
     CPU_OP(LDA, index_x),                // 189     $ BD
@@ -228,9 +228,9 @@ op_code_t op_codes[256] = {
     CPU_OP(CMP, zero_page),              // 197     $ C5
     CPU_OP(___, implied),                // 198     $ C6
     CPU_OP(___, implied),                // 199     $ C7
-    CPU_OP(___, implied),                // 200     $ C8
+    CPU_OP(INY, implied),                // 200     $ C8
     CPU_OP(CMP, immediate),              // 201     $ C9
-    CPU_OP(___, implied),                // 202     $ CA
+    CPU_OP(DEX, implied),                // 202     $ CA
     CPU_OP(___, implied),                // 203     $ CB
     CPU_OP(CPY, absolute),               // 204     $ CC
     CPU_OP(CMP, absolute),               // 205     $ CD
@@ -260,7 +260,7 @@ op_code_t op_codes[256] = {
     CPU_OP(SBC, zero_page),              // 229     $ E5
     CPU_OP(___, implied),                // 230     $ E6
     CPU_OP(___, implied),                // 231     $ E7
-    CPU_OP(___, implied),                // 232     $ E8
+    CPU_OP(INX, implied),                // 232     $ E8
     CPU_OP(SBC, immediate),              // 233     $ E9
     CPU_OP(NOP, implied),                // 234     $ EA
     CPU_OP(___, implied),                // 235     $ EB
@@ -303,7 +303,19 @@ ADDRESS_MODE(absolute)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
-    return UINT16( lo, hi );
+    uint16_t address = UINT16( lo, hi );
+    if (cpu.nestest_validation)
+    {
+        if (modify_memory)
+        {
+            snprintf(cpu.nestest_validation_str, 5, "= %02X", cpu.peek_memory(address));
+        }
+        else
+        {
+            snprintf(cpu.nestest_validation_str, 5, "    ");
+        }
+    }
+    return address;
 }
 
 ADDRESS_MODE(zero_page)
@@ -507,7 +519,7 @@ OP_FUNCTION(JMP)
 //
 OP_FUNCTION(LDX)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, true );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.X = operand;
     CALC_Z_FLAG( operand );
@@ -563,7 +575,7 @@ OP_FUNCTION(NOP)
 //
 OP_FUNCTION(LDA)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, true );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.A = operand;
     CALC_Z_FLAG( operand );
@@ -997,6 +1009,154 @@ OP_FUNCTION(SBC)
     CALC_N_FLAG( data );
     CALC_V_FLAG( cpu.regs.A, operand, data );
     cpu.regs.A = data;
+}
+
+/////////////////////////////////////////////////////////
+// INY - Increment Index Y by One
+// Y + 1 -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(INY)
+{
+    addr_mode( cpu, false );
+    cpu.regs.Y++;
+    CALC_N_FLAG( cpu.regs.Y );
+    CALC_Z_FLAG( cpu.regs.Y );
+}
+
+/////////////////////////////////////////////////////////
+// INX - Increment Index X by One
+// X + 1 -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(INX)
+{
+    addr_mode( cpu, false );
+    cpu.regs.X++;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// DEY - Decrement Index Y by One
+// Y - 1 -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(DEY)
+{
+    addr_mode( cpu, false );
+    cpu.regs.Y--;
+    CALC_N_FLAG( cpu.regs.Y );
+    CALC_Z_FLAG( cpu.regs.Y );
+}
+
+/////////////////////////////////////////////////////////
+// DEX - Decrement Index X by One
+// X - 1 -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(DEX)
+{
+    addr_mode( cpu, false );
+    cpu.regs.X--;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// TAY - Transfer Accumulator to Index Y
+// A -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TAY)
+{
+    addr_mode( cpu, false );
+    cpu.regs.Y = cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.Y );
+    CALC_Z_FLAG( cpu.regs.Y );
+}
+
+/////////////////////////////////////////////////////////
+// TAX - Transfer Accumulator to Index X
+// A -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TAX)
+{
+    addr_mode( cpu, false );
+    cpu.regs.X = cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// TYA - Transfer Index Y to Accumulator
+// Y -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TYA)
+{
+    addr_mode( cpu, false );
+    cpu.regs.A = cpu.regs.Y;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// TXA - Transfer Index X to Accumulator
+// X -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TXA)
+{
+    addr_mode( cpu, false );
+    cpu.regs.A = cpu.regs.X;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// TSX - Transfer Stack Pointer to Index X
+// SP -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TSX)
+{
+    addr_mode( cpu, false );
+    cpu.regs.X = cpu.regs.SP;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// TXS - Transfer Index X to Stack Pointer
+// X -> SP
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(TXS)
+{
+    addr_mode( cpu, false );
+    cpu.regs.SP = cpu.regs.X;
 }
 
 } // nes

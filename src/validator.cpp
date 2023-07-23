@@ -80,8 +80,10 @@ RESULT validator::construct_output_pre_line()
     else if (op.addr_mode == addr_mode_absolute)
     {
         snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X %02X  %s $%02X%02X                       A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 "%04X  %02X %02X %02X  %s $%02X%02X ....                  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
                  cpu.regs.PC, inst, data0, data1, op.name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 26;
+        post_fix_letters = 4;
     }
 
     else if (op.addr_mode == addr_mode_immediate)

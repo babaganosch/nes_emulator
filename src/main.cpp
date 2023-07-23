@@ -30,6 +30,8 @@ int main()
             ret = validator.execute();
         }
         printf("\nValidated \033[0;34m%u\033[0;0m lines\n", validator.validated_lines);
+
+        printf("%02X %02X %02X\n", emu.memory[0x1083], emu.memory[0x1082], emu.memory[0x1081]);
     }
     /*
     while (ret > 0)

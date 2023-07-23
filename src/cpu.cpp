@@ -94,7 +94,8 @@ void cpu_t::write_byte( uint8_t data, uint8_t lo, uint8_t hi )
 
 void cpu_t::push_byte_to_stack( uint8_t data )
 {
-    write_byte( data, regs.SP-- );
+    uint8_t lo = regs.SP-- ;
+    write_byte( data, 0x0100 | lo );
 }
 
 void cpu_t::push_short_to_stack( uint16_t data )
@@ -105,9 +106,9 @@ void cpu_t::push_short_to_stack( uint16_t data )
 
 uint8_t cpu_t::pull_byte_from_stack()
 {
-    regs.SP++;
+    uint8_t lo = ++regs.SP;
     tick_clock();
-    return fetch_byte( regs.SP );
+    return fetch_byte( 0x0100 | lo );
 }
 
 uint16_t cpu_t::pull_short_from_stack()
