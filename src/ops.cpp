@@ -25,6 +25,7 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t PC, uint1
         cpu.regs.PC = target;
     }
 }
+
 } // anonymous
 
 op_code_t op_codes[256] = {
@@ -316,7 +317,7 @@ ADDRESS_MODE(absolute)
             snprintf(cpu.nestest_validation_str, 5, "    ");
         }
     }
-    
+
     return address;
 }
 
@@ -383,10 +384,27 @@ ADDRESS_MODE(indirect)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
-    uint16_t new_address = UINT16( lo, hi );
-    lo = cpu.fetch_byte( new_address     );
-    hi = cpu.fetch_byte( new_address + 1 );
-    return UINT16( lo, hi );
+    
+    /* 6502 JMP indirect bug:
+    * There's a bug originally on the 6502 chip with the indirect JMP
+    * instruction. The bug manifests itself when a page crossing occurs
+    * during fetching of the high byte of the indirect address.
+    * I.e. if the address to fetch from is lo: $xxFF, hi: $xxFF + 1.
+    * This will cause the low byte to wrap around to 00 and not
+    * modify the high byte causing the indirect address to be fetched
+    * from $xxFF and $xx00.
+    * 
+    * This bug is replicated in this implementation.
+    */
+    uint8_t ind_lo = cpu.fetch_byte( lo,     hi );
+    uint8_t ind_hi = cpu.fetch_byte( lo + 1, hi );
+
+    uint16_t address = UINT16( ind_lo, ind_hi );
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 5, "%04X", address);
+    }
+    return address;
 }
 
 ADDRESS_MODE(pre_index_indirect_x)
