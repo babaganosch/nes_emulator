@@ -92,21 +92,21 @@ op_code_t op_codes[256] = {
     CPU_OP(AND, index_x),                //  61     $ 3D
     CPU_OP(___, implied),                //  62     $ 3E
     CPU_OP(___, implied),                //  63     $ 3F
-    CPU_OP(___, implied),                //  64     $ 40
+    CPU_OP(RTI, implied),                //  64     $ 40
     CPU_OP(EOR, pre_index_indirect_x),   //  65     $ 41
     CPU_OP(___, implied),                //  66     $ 42
     CPU_OP(___, implied),                //  67     $ 43
     CPU_OP(___, implied),                //  68     $ 44
     CPU_OP(EOR, zero_page),              //  69     $ 45
-    CPU_OP(___, implied),                //  70     $ 46
+    CPU_OP(LSR, zero_page),              //  70     $ 46
     CPU_OP(___, implied),                //  71     $ 47
     CPU_OP(PHA, implied),                //  72     $ 48
     CPU_OP(EOR, immediate),              //  73     $ 49
-    CPU_OP(___, implied),                //  74     $ 4A
+    CPU_OP(LSR, accumulator),            //  74     $ 4A
     CPU_OP(___, implied),                //  75     $ 4B
     CPU_OP(JMP, absolute),               //  76     $ 4C
     CPU_OP(EOR, absolute),               //  77     $ 4D
-    CPU_OP(___, implied),                //  78     $ 4E
+    CPU_OP(LSR, absolute),               //  78     $ 4E
     CPU_OP(___, implied),                //  79     $ 4F
     CPU_OP(BVC, relative),               //  80     $ 50
     CPU_OP(EOR, post_index_indirect_y),  //  81     $ 51
@@ -114,7 +114,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  83     $ 53
     CPU_OP(___, implied),                //  84     $ 54
     CPU_OP(EOR, index_zp_x),             //  85     $ 55
-    CPU_OP(___, implied),                //  86     $ 56
+    CPU_OP(LSR, index_zp_x),             //  86     $ 56
     CPU_OP(___, implied),                //  87     $ 57
     CPU_OP(___, implied),                //  88     $ 58
     CPU_OP(EOR, index_y),                //  89     $ 59
@@ -122,7 +122,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  91     $ 5B
     CPU_OP(___, implied),                //  92     $ 5C
     CPU_OP(EOR, index_x),                //  93     $ 5D
-    CPU_OP(___, implied),                //  94     $ 5E
+    CPU_OP(LSR, index_x),                //  94     $ 5E
     CPU_OP(___, implied),                //  95     $ 5F
     CPU_OP(RTS, implied),                //  96     $ 60
     CPU_OP(ADC, pre_index_indirect_x),   //  97     $ 61
@@ -296,7 +296,10 @@ ADDRESS_MODE(implied)
 
 ADDRESS_MODE(immediate)
 {
-    return cpu.regs.PC++;
+    uint16_t address = cpu.regs.PC++;
+    //ADDR_MODE_RET( address );
+    return address;
+    //return ((&address << 16) | address);
 }
 
 ADDRESS_MODE(absolute)
@@ -474,18 +477,21 @@ OP_FUNCTION(AND)
 //
 OP_FUNCTION(ASL)
 {
+    uint8_t* operand;
     uint16_t address = addr_mode( cpu, false );
-    uint8_t* operand = cpu.fetch_byte_ref( address );
+    if (addr_mode != addr_mode_accumulator)
+    {
+        operand = cpu.fetch_byte_ref( address );
+    }
+    else
+    {
+        operand = &cpu.regs.A;
+    }
     uint16_t data = (uint16_t) *operand << 1;
     
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
     CALC_C_FLAG( data );
-
-    if ( addr_mode != addr_mode_accumulator )
-    {
-        cpu.tick_clock();
-    }
     cpu.write_byte( data, operand );
 }
 
@@ -749,6 +755,7 @@ OP_FUNCTION(RTS)
 {
     addr_mode( cpu, false );
     uint16_t address = cpu.pull_short_from_stack();
+    cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.PC = address + 1;
     cpu.tick_clock(); // One extra cycle to post-increment PC
 }
@@ -810,7 +817,7 @@ OP_FUNCTION(PLA)
 {
     addr_mode( cpu, true );
     uint8_t data = cpu.pull_byte_from_stack();
-    cpu.tick_clock(); // Read-modify-write extra cycle
+    cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.A = data;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
@@ -875,8 +882,8 @@ OP_FUNCTION(PLP)
 {
     addr_mode( cpu, false );
     uint8_t status = cpu.pull_byte_from_stack() & 0xCF;
+    cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.SR = status | (cpu.regs.SR & 0x30);
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1157,6 +1164,53 @@ OP_FUNCTION(TXS)
 {
     addr_mode( cpu, false );
     cpu.regs.SP = cpu.regs.X;
+}
+
+/////////////////////////////////////////////////////////
+// RTI - Return from Interrupt
+// The status register is pulled with the break flag
+// and bit 5 ignored. Then PC is pulled from the stack.
+//
+// pull SR, pull PC
+//
+// N Z C I D V
+// from stack
+//
+OP_FUNCTION(RTI)
+{
+    addr_mode( cpu, false );
+    cpu.tick_clock( 2 ); // Stack-pop extra cycles
+    uint8_t status = cpu.pull_byte_from_stack();
+    cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
+    uint16_t new_pc = cpu.pull_short_from_stack();
+    cpu.regs.PC = new_pc;    
+}
+
+/////////////////////////////////////////////////////////
+// LSR - Shift One Bit Right (Memory or Accumulator)
+// 0 -> [76543210] -> C
+//
+// N Z C I D V
+// 0 + + - - -
+//
+OP_FUNCTION(LSR)
+{
+    uint8_t* operand;
+    uint16_t address = addr_mode( cpu, false );
+    if (addr_mode != addr_mode_accumulator)
+    {
+        operand = cpu.fetch_byte_ref( address );
+    }
+    else
+    {
+        operand = &cpu.regs.A;
+    }
+    uint16_t data = (uint16_t) *operand >> 1;
+    
+    cpu.regs.N = 0;
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (*operand & 0x1) == 0x1;
+    cpu.write_byte( data, operand );
 }
 
 } // nes

@@ -111,6 +111,13 @@ RESULT validator::construct_output_pre_line()
         post_fix_letters = 4;
     }
 
+    else if (op.addr_mode == addr_mode_accumulator)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X        %s A                           A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, op.name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+    }
+
     else
     {
         printf("UNIMPLEMENTED VALIDATION FOR LINE %u    OP-CODE: %02X (%s)\n", line_number, inst, op.name);

@@ -148,6 +148,7 @@ struct cpu_t
     mem_t* memory{nullptr};
     
     void tick_clock();
+    void tick_clock( uint8_t cycles );
     void init(callback_t cb, mem_t &mem);
     void execute();
 

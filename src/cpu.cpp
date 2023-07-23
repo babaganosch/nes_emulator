@@ -47,6 +47,14 @@ void cpu_t::tick_clock()
     }
 }
 
+void cpu_t::tick_clock( uint8_t cycles )
+{
+    while ( cycles-- > 0 )
+    {
+        tick_clock();
+    }
+}
+
 uint16_t cpu_t::peek_memory( uint16_t address )
 {
     return (*memory)[ address ];
@@ -94,8 +102,9 @@ void cpu_t::write_byte( uint8_t data, uint8_t lo, uint8_t hi )
 
 void cpu_t::push_byte_to_stack( uint8_t data )
 {
-    uint8_t lo = regs.SP-- ;
-    write_byte( data, 0x0100 | lo );
+    uint8_t address = regs.SP--;
+    tick_clock();
+    (*memory).stack[ address ] = data;
 }
 
 void cpu_t::push_short_to_stack( uint16_t data )
@@ -106,9 +115,10 @@ void cpu_t::push_short_to_stack( uint16_t data )
 
 uint8_t cpu_t::pull_byte_from_stack()
 {
-    uint8_t lo = ++regs.SP;
+    uint8_t address = ++regs.SP;
     tick_clock();
-    return fetch_byte( 0x0100 | lo );
+    uint8_t data = (*memory).stack[ address ];
+    return data;
 }
 
 uint16_t cpu_t::pull_short_from_stack()
