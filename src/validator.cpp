@@ -118,6 +118,24 @@ RESULT validator::construct_output_pre_line()
                  cpu.regs.PC, inst, op.name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
     }
 
+    else if (op.addr_mode == addr_mode_pre_index_indirect_x)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X     %s ($%02X,X) @ ..............    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op.name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 30;
+        post_fix_letters = 14;
+    }
+
+    else if (op.addr_mode == addr_mode_post_index_indirect_y)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X     %s ($%02X),Y = ................  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op.name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 30;
+        post_fix_letters = 16;
+    }
+
     else
     {
         printf("UNIMPLEMENTED VALIDATION FOR LINE %u    OP-CODE: %02X (%s)\n", line_number, inst, op.name);

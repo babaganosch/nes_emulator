@@ -15,7 +15,7 @@ enum RESULT
     RESULT_OK    = 1
 };
 
-typedef void (* callback_t)(void * cookie);
+typedef void (* cpu_callback_t)(void * cookie);
 
 struct mem_t
 {
@@ -143,13 +143,13 @@ struct cpu_t
     } vectors;
 
     uint16_t   cycles{0};
-    callback_t callback{nullptr};
+    cpu_callback_t callback{nullptr};
 
     mem_t* memory{nullptr};
     
     void tick_clock();
     void tick_clock( uint8_t cycles );
-    void init(callback_t cb, mem_t &mem);
+    void init(cpu_callback_t cb, mem_t &mem);
     void execute();
 
     uint8_t  fetch_byte( uint16_t address );

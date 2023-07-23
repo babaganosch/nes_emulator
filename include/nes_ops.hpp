@@ -13,11 +13,11 @@ namespace
 #define CPU_OP(OPC, ADDR_MODE) {       \
     .addr_mode = addr_mode_##ADDR_MODE, \
     .function = OP_##OPC, .name = #OPC }
-#define ADDRESS_MODE(MODE) uint16_t addr_mode_##MODE(cpu_t &cpu, bool modify_memory)
+#define ADDRESS_MODE(MODE) uint16_t addr_mode_##MODE(cpu_t &cpu, bool modify_memory, bool is_branch)
 #define OP_FUNCTION(NAME) void OP_##NAME(cpu_t &cpu, addr_mode_t addr_mode)
 } // anonymous
 
-typedef uint16_t (* addr_mode_t)(cpu_t &cpu, bool modify_memory);
+typedef uint16_t (* addr_mode_t)(cpu_t &cpu, bool modify_memory, bool is_branch);
 typedef void (* op_code_function_t)(cpu_t &cpu, addr_mode_t addr_mode);
 
 struct op_code_t
@@ -97,6 +97,11 @@ OP_FUNCTION(TSX);
 OP_FUNCTION(TXS);
 OP_FUNCTION(RTI);
 OP_FUNCTION(LSR);
+OP_FUNCTION(ROR);
+OP_FUNCTION(ROL);
+OP_FUNCTION(STY);
+OP_FUNCTION(INC);
+OP_FUNCTION(DEC);
 
 extern op_code_t op_codes[256];
 

@@ -66,15 +66,15 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  35     $ 23
     CPU_OP(BIT, zero_page),              //  36     $ 24
     CPU_OP(AND, zero_page),              //  37     $ 25
-    CPU_OP(___, implied),                //  38     $ 26
+    CPU_OP(ROL, zero_page),              //  38     $ 26
     CPU_OP(___, implied),                //  39     $ 27
     CPU_OP(PLP, implied),                //  40     $ 28
     CPU_OP(AND, immediate),              //  41     $ 29
-    CPU_OP(___, implied),                //  42     $ 2A
+    CPU_OP(ROL, accumulator),            //  42     $ 2A
     CPU_OP(___, implied),                //  43     $ 2B
     CPU_OP(BIT, absolute),               //  44     $ 2C
     CPU_OP(AND, absolute),               //  45     $ 2D
-    CPU_OP(___, implied),                //  46     $ 2E
+    CPU_OP(ROL, absolute),               //  46     $ 2E
     CPU_OP(___, implied),                //  47     $ 2F
     CPU_OP(BMI, relative),               //  48     $ 30
     CPU_OP(AND, post_index_indirect_y),  //  49     $ 31
@@ -82,7 +82,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  51     $ 33
     CPU_OP(___, implied),                //  52     $ 34
     CPU_OP(AND, index_zp_x),             //  53     $ 35
-    CPU_OP(___, implied),                //  54     $ 36
+    CPU_OP(ROL, index_zp_x),             //  54     $ 36
     CPU_OP(___, implied),                //  55     $ 37
     CPU_OP(SEC, implied),                //  56     $ 38
     CPU_OP(AND, index_y),                //  57     $ 39
@@ -90,7 +90,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  59     $ 3B
     CPU_OP(___, implied),                //  60     $ 3C
     CPU_OP(AND, index_x),                //  61     $ 3D
-    CPU_OP(___, implied),                //  62     $ 3E
+    CPU_OP(ROL, index_x),                //  62     $ 3E
     CPU_OP(___, implied),                //  63     $ 3F
     CPU_OP(RTI, implied),                //  64     $ 40
     CPU_OP(EOR, pre_index_indirect_x),   //  65     $ 41
@@ -130,15 +130,15 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                //  99     $ 63
     CPU_OP(___, implied),                // 100     $ 64
     CPU_OP(ADC, zero_page),              // 101     $ 65
-    CPU_OP(___, implied),                // 102     $ 66
+    CPU_OP(ROR, zero_page),              // 102     $ 66
     CPU_OP(___, implied),                // 103     $ 67
     CPU_OP(PLA, implied),                // 104     $ 68
     CPU_OP(ADC, immediate),              // 105     $ 69
-    CPU_OP(___, implied),                // 106     $ 6A
+    CPU_OP(ROR, accumulator),            // 106     $ 6A
     CPU_OP(___, implied),                // 107     $ 6B
     CPU_OP(JMP, indirect),               // 108     $ 6C
     CPU_OP(ADC, absolute),               // 109     $ 6D
-    CPU_OP(___, implied),                // 110     $ 6E
+    CPU_OP(ROR, absolute),               // 110     $ 6E
     CPU_OP(___, implied),                // 111     $ 6F
     CPU_OP(BVS, relative),               // 112     $ 70
     CPU_OP(ADC, post_index_indirect_y),  // 113     $ 71
@@ -146,7 +146,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 115     $ 73
     CPU_OP(___, implied),                // 116     $ 74
     CPU_OP(ADC, index_zp_x),             // 117     $ 75
-    CPU_OP(___, implied),                // 118     $ 76
+    CPU_OP(ROR, index_zp_x),             // 118     $ 76
     CPU_OP(___, implied),                // 119     $ 77
     CPU_OP(SEI, implied),                // 120     $ 78
     CPU_OP(ADC, index_y),                // 121     $ 79
@@ -154,13 +154,13 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 123     $ 7B
     CPU_OP(___, implied),                // 124     $ 7C
     CPU_OP(ADC, index_x),                // 125     $ 7D
-    CPU_OP(___, implied),                // 126     $ 7E
+    CPU_OP(ROR, index_x),                // 126     $ 7E
     CPU_OP(___, implied),                // 127     $ 7F
     CPU_OP(___, implied),                // 128     $ 80
     CPU_OP(STA, pre_index_indirect_x),   // 129     $ 81
     CPU_OP(___, implied),                // 130     $ 82
     CPU_OP(___, implied),                // 131     $ 83
-    CPU_OP(___, implied),                // 132     $ 84
+    CPU_OP(STY, zero_page),              // 132     $ 84
     CPU_OP(STA, zero_page),              // 133     $ 85
     CPU_OP(STX, zero_page),              // 134     $ 86
     CPU_OP(___, implied),                // 135     $ 87
@@ -168,7 +168,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 137     $ 89
     CPU_OP(TXA, implied),                // 138     $ 8A
     CPU_OP(___, implied),                // 139     $ 8B
-    CPU_OP(___, implied),                // 140     $ 8C
+    CPU_OP(STY, absolute),               // 140     $ 8C
     CPU_OP(STA, absolute),               // 141     $ 8D
     CPU_OP(STX, absolute),               // 142     $ 8E
     CPU_OP(___, implied),                // 143     $ 8F
@@ -176,7 +176,7 @@ op_code_t op_codes[256] = {
     CPU_OP(STA, post_index_indirect_y),  // 145     $ 91
     CPU_OP(___, implied),                // 146     $ 92
     CPU_OP(___, implied),                // 147     $ 93
-    CPU_OP(___, implied),                // 148     $ 94
+    CPU_OP(STY, index_zp_x),             // 148     $ 94
     CPU_OP(STA, index_zp_x),             // 149     $ 95
     CPU_OP(STX, index_zp_y),             // 150     $ 96
     CPU_OP(___, implied),                // 151     $ 97
@@ -189,7 +189,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 158     $ 9E
     CPU_OP(___, implied),                // 159     $ 9F
     CPU_OP(LDY, immediate),              // 160     $ A0
-    CPU_OP(___, implied),                // 161     $ A1
+    CPU_OP(LDA, pre_index_indirect_x),   // 161     $ A1
     CPU_OP(LDX, immediate),              // 162     $ A2
     CPU_OP(___, implied),                // 163     $ A3
     CPU_OP(LDY, zero_page),              // 164     $ A4
@@ -226,7 +226,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 195     $ C3
     CPU_OP(CPY, zero_page),              // 196     $ C4
     CPU_OP(CMP, zero_page),              // 197     $ C5
-    CPU_OP(___, implied),                // 198     $ C6
+    CPU_OP(DEC, zero_page),              // 198     $ C6
     CPU_OP(___, implied),                // 199     $ C7
     CPU_OP(INY, implied),                // 200     $ C8
     CPU_OP(CMP, immediate),              // 201     $ C9
@@ -234,7 +234,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 203     $ CB
     CPU_OP(CPY, absolute),               // 204     $ CC
     CPU_OP(CMP, absolute),               // 205     $ CD
-    CPU_OP(___, implied),                // 206     $ CE
+    CPU_OP(DEC, absolute),               // 206     $ CE
     CPU_OP(___, implied),                // 207     $ CF
     CPU_OP(BNE, relative),               // 208     $ D0
     CPU_OP(CMP, post_index_indirect_y),  // 209     $ D1
@@ -242,7 +242,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 211     $ D3
     CPU_OP(___, implied),                // 212     $ D4
     CPU_OP(CMP, index_zp_x),             // 213     $ D5
-    CPU_OP(___, implied),                // 214     $ D6
+    CPU_OP(DEC, index_zp_x),             // 214     $ D6
     CPU_OP(___, implied),                // 215     $ D7
     CPU_OP(CLD, implied),                // 216     $ D8
     CPU_OP(CMP, index_y),                // 217     $ D9
@@ -250,7 +250,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 219     $ DB
     CPU_OP(___, implied),                // 220     $ DC
     CPU_OP(CMP, index_x),                // 221     $ DD
-    CPU_OP(___, implied),                // 222     $ DE
+    CPU_OP(DEC, index_x),                // 222     $ DE
     CPU_OP(___, implied),                // 223     $ DF
     CPU_OP(CPX, immediate),              // 224     $ E0
     CPU_OP(SBC, pre_index_indirect_x),   // 225     $ E1
@@ -258,7 +258,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 227     $ E3
     CPU_OP(CPX, zero_page),              // 228     $ E4
     CPU_OP(SBC, zero_page),              // 229     $ E5
-    CPU_OP(___, implied),                // 230     $ E6
+    CPU_OP(INC, zero_page),              // 230     $ E6
     CPU_OP(___, implied),                // 231     $ E7
     CPU_OP(INX, implied),                // 232     $ E8
     CPU_OP(SBC, immediate),              // 233     $ E9
@@ -266,7 +266,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 235     $ EB
     CPU_OP(CPX, absolute),               // 236     $ EC
     CPU_OP(SBC, absolute),               // 237     $ ED
-    CPU_OP(___, implied),                // 238     $ EE
+    CPU_OP(INC, absolute),               // 238     $ EE
     CPU_OP(___, implied),                // 239     $ EF
     CPU_OP(BEQ, relative),               // 240     $ F0
     CPU_OP(SBC, post_index_indirect_y),  // 241     $ F1
@@ -274,7 +274,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 243     $ F3
     CPU_OP(___, implied),                // 244     $ F4
     CPU_OP(SBC, index_zp_x),             // 245     $ F5
-    CPU_OP(___, implied),                // 246     $ F6
+    CPU_OP(INC, index_zp_x),             // 246     $ F6
     CPU_OP(___, implied),                // 247     $ F7
     CPU_OP(SED, implied),                // 248     $ F8
     CPU_OP(SBC, index_y),                // 249     $ F9
@@ -282,7 +282,7 @@ op_code_t op_codes[256] = {
     CPU_OP(___, implied),                // 251     $ FB
     CPU_OP(___, implied),                // 252     $ FC
     CPU_OP(SBC, index_x),                // 253     $ FD
-    CPU_OP(___, implied),                // 254     $ FE
+    CPU_OP(INC, index_x),                // 254     $ FE
     CPU_OP(___, implied)                 // 255     $ FF
 };          
 
@@ -296,10 +296,7 @@ ADDRESS_MODE(implied)
 
 ADDRESS_MODE(immediate)
 {
-    uint16_t address = cpu.regs.PC++;
-    //ADDR_MODE_RET( address );
-    return address;
-    //return ((&address << 16) | address);
+    return cpu.regs.PC++;
 }
 
 ADDRESS_MODE(absolute)
@@ -307,9 +304,10 @@ ADDRESS_MODE(absolute)
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
     uint16_t address = UINT16( lo, hi );
+
     if (cpu.nestest_validation)
     {
-        if (modify_memory)
+        if (!is_branch)
         {
             snprintf(cpu.nestest_validation_str, 5, "= %02X", cpu.peek_memory(address));
         }
@@ -318,6 +316,7 @@ ADDRESS_MODE(absolute)
             snprintf(cpu.nestest_validation_str, 5, "    ");
         }
     }
+    
     return address;
 }
 
@@ -325,10 +324,12 @@ ADDRESS_MODE(zero_page)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint16_t address = UINT16( lo, 0x00 );
+
     if (cpu.nestest_validation)
     {
         snprintf(cpu.nestest_validation_str, 3, "%02X", cpu.peek_memory(address));
     }
+
     return address;
 }
 
@@ -336,26 +337,32 @@ ADDRESS_MODE(index_x)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
-    uint8_t new_lo = cpu.regs.X + lo;
-    if ( new_lo < lo || modify_memory )
-    { // Page crossing
-        hi++;
+    uint8_t new_lo = lo + cpu.regs.X;
+    uint8_t new_hi = hi;
+
+    new_hi += (new_lo < lo) ? 1 : 0; // Page crossing
+    if ( (new_hi != hi) || modify_memory )
+    { // Extra cycle for page crossing
         cpu.tick_clock();
     }
-    return UINT16( new_lo, hi );
+
+    return UINT16( new_lo, new_hi );
 }
 
 ADDRESS_MODE(index_y)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     uint8_t hi = cpu.fetch_byte( cpu.regs.PC++ );
-    uint8_t new_lo = cpu.regs.Y + lo;
-    if ( new_lo < lo || modify_memory )
-    { // Page crossing
-        hi++;
+    uint8_t new_lo = lo + cpu.regs.Y;
+    uint8_t new_hi = hi;
+
+    new_hi += (new_lo < lo) ? 1 : 0; // Page crossing
+    if ( (new_hi != hi) || modify_memory )
+    { // Extra cycle for page crossing
         cpu.tick_clock();
     }
-    return UINT16( new_lo, hi );
+
+    return UINT16( new_lo, new_hi );
 }
 
 ADDRESS_MODE(index_zp_x)
@@ -386,9 +393,17 @@ ADDRESS_MODE(pre_index_indirect_x)
 {
     uint8_t tmp = cpu.fetch_byte( cpu.regs.PC++ );
     tmp += cpu.regs.X;
+    cpu.tick_clock();
     uint8_t lo = cpu.fetch_byte( tmp,     0x00 );
     uint8_t hi = cpu.fetch_byte( tmp + 1, 0x00 );
-    return UINT16( lo, hi );
+    uint16_t address = UINT16( lo, hi );
+
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 15, "%02X = %04X = %02X", tmp, address, cpu.peek_memory(address));
+    }
+
+    return address;
 }
 
 ADDRESS_MODE(post_index_indirect_y)
@@ -397,24 +412,33 @@ ADDRESS_MODE(post_index_indirect_y)
     uint8_t lo  = cpu.fetch_byte( tmp,     0x00 );
     uint8_t hi  = cpu.fetch_byte( tmp + 1, 0x00 );
     uint8_t new_lo = lo + cpu.regs.Y;
-    if ( new_lo < lo || modify_memory )
-    { // Page crossing
-        hi++;
+    uint8_t new_hi = hi;
+
+    new_hi += (new_lo < lo) ? 1 : 0; // Page crossing
+    if ( (new_hi != hi) || modify_memory )
+    { // Extra cycle for page crossing
         cpu.tick_clock();
     }
-    return UINT16( new_lo, hi );
+
+    uint16_t address = UINT16( new_lo, new_hi );
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 17, "%04X @ %04X = %02X", UINT16( lo, hi ), address, cpu.peek_memory(address));
+    }
+
+    return address;
 }
 
 ADDRESS_MODE(relative)
 {
-    // TODO(xxx): Remember to add extra clock cycle if branch
-    //            causes page movement
     int8_t offset = cpu.fetch_byte( cpu.regs.PC++ );
     uint16_t address = cpu.regs.PC + offset;
+
     if (cpu.nestest_validation)
     {
         snprintf(cpu.nestest_validation_str, 5, "%04X", address);
     }
+    
     return address;
 }
 
@@ -439,7 +463,7 @@ OP_FUNCTION(___)
 //
 OP_FUNCTION(ADC)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     uint16_t result = operand + cpu.regs.A + cpu.regs.C;
 
@@ -459,7 +483,7 @@ OP_FUNCTION(ADC)
 //
 OP_FUNCTION(AND)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     uint8_t result = cpu.regs.A & operand;
 
@@ -478,16 +502,17 @@ OP_FUNCTION(AND)
 OP_FUNCTION(ASL)
 {
     uint8_t* operand;
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
         operand = cpu.fetch_byte_ref( address );
+        cpu.tick_clock(); // Extra cycle when modifying value
     }
     else
     {
         operand = &cpu.regs.A;
     }
-    uint16_t data = (uint16_t) *operand << 1;
+    uint16_t data = *operand << 1;
     
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
@@ -512,7 +537,7 @@ OP_FUNCTION(ASL)
 //
 OP_FUNCTION(JMP)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, true );
     cpu.regs.PC = address;
 }
 
@@ -525,7 +550,7 @@ OP_FUNCTION(JMP)
 //
 OP_FUNCTION(LDX)
 {
-    uint16_t address = addr_mode( cpu, true );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.X = operand;
     CALC_Z_FLAG( operand );
@@ -541,7 +566,7 @@ OP_FUNCTION(LDX)
 //
 OP_FUNCTION(STX)
 {
-    uint16_t address = addr_mode( cpu, true );
+    uint16_t address = addr_mode( cpu, false, false );
     cpu.write_byte( cpu.regs.X, address );
 }
 
@@ -557,7 +582,7 @@ OP_FUNCTION(STX)
 OP_FUNCTION(JSR)
 {
     cpu.push_short_to_stack( cpu.regs.PC + 1 );
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, true );
     cpu.tick_clock(); // One extra cycle when buffering data
     cpu.regs.PC = address;
 }
@@ -570,7 +595,7 @@ OP_FUNCTION(JSR)
 //
 OP_FUNCTION(NOP)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
 }
 
 /////////////////////////////////////////////////////////
@@ -581,8 +606,8 @@ OP_FUNCTION(NOP)
 //
 OP_FUNCTION(LDA)
 {
-    uint16_t address = addr_mode( cpu, true );
-    uint8_t operand = cpu.fetch_byte( address );
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
     cpu.regs.A = operand;
     CALC_Z_FLAG( operand );
     CALC_N_FLAG( operand );
@@ -597,7 +622,7 @@ OP_FUNCTION(LDA)
 //
 OP_FUNCTION(SEC)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.C = 1;
     cpu.tick_clock();
 }
@@ -611,8 +636,8 @@ OP_FUNCTION(SEC)
 //
 OP_FUNCTION(BCS)
 {
-    uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t old_pc  = cpu.regs.PC;
+    uint16_t address = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.C, 1, old_pc, address );
 }
 
@@ -625,7 +650,7 @@ OP_FUNCTION(BCS)
 //
 OP_FUNCTION(CLC)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.C = 0;
     cpu.tick_clock();
 }
@@ -640,7 +665,7 @@ OP_FUNCTION(CLC)
 OP_FUNCTION(BCC)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.C, 0, old_pc, address );
 }
 
@@ -654,7 +679,7 @@ OP_FUNCTION(BCC)
 OP_FUNCTION(BEQ)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.Z, 1, old_pc, address );
 }
 
@@ -668,7 +693,7 @@ OP_FUNCTION(BEQ)
 OP_FUNCTION(BNE)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.Z, 0, old_pc, address );
 }
 
@@ -681,7 +706,7 @@ OP_FUNCTION(BNE)
 //
 OP_FUNCTION(STA)
 {
-    uint16_t address = addr_mode( cpu, true );
+    uint16_t address = addr_mode( cpu, true, false );
     cpu.write_byte( cpu.regs.A, address );
 }
 
@@ -695,7 +720,7 @@ OP_FUNCTION(STA)
 //
 OP_FUNCTION(BIT)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.N = (operand >> 7) & 0x1;
     cpu.regs.V = (operand >> 6) & 0x1;
@@ -712,7 +737,7 @@ OP_FUNCTION(BIT)
 OP_FUNCTION(BVC)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.V, 0, old_pc, address );
 }
 
@@ -726,7 +751,7 @@ OP_FUNCTION(BVC)
 OP_FUNCTION(BVS)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.V, 1, old_pc, address );
 }
 
@@ -740,7 +765,7 @@ OP_FUNCTION(BVS)
 OP_FUNCTION(BPL)
 {
     uint16_t old_pc    = cpu.regs.PC;
-    uint16_t address   = addr_mode( cpu, false );
+    uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.N, 0, old_pc, address );
 }
 
@@ -753,7 +778,7 @@ OP_FUNCTION(BPL)
 //
 OP_FUNCTION(RTS)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, true );
     uint16_t address = cpu.pull_short_from_stack();
     cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.PC = address + 1;
@@ -769,7 +794,7 @@ OP_FUNCTION(RTS)
 //
 OP_FUNCTION(SEI)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.I = 1;
     cpu.tick_clock();
 }
@@ -783,7 +808,7 @@ OP_FUNCTION(SEI)
 //
 OP_FUNCTION(SED)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.D = 1;
     cpu.tick_clock();
 }
@@ -800,7 +825,7 @@ OP_FUNCTION(SED)
 //
 OP_FUNCTION(PHP)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, true, false );
     uint8_t status = cpu.regs.SR | 0x30;
     cpu.tick_clock();
     cpu.push_byte_to_stack( status );
@@ -815,7 +840,7 @@ OP_FUNCTION(PHP)
 //
 OP_FUNCTION(PLA)
 {
-    addr_mode( cpu, true );
+    addr_mode( cpu, false, false );
     uint8_t data = cpu.pull_byte_from_stack();
     cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.A = data;
@@ -832,7 +857,7 @@ OP_FUNCTION(PLA)
 //
 OP_FUNCTION(CMP)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     uint8_t data = cpu.regs.A - operand;
     CALC_N_FLAG( data );
@@ -849,7 +874,7 @@ OP_FUNCTION(CMP)
 //
 OP_FUNCTION(CLD)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.D = 0;
     cpu.tick_clock();
 }
@@ -863,7 +888,7 @@ OP_FUNCTION(CLD)
 //
 OP_FUNCTION(PHA)
 {
-    addr_mode( cpu, true );
+    addr_mode( cpu, true, false );
     cpu.push_byte_to_stack( cpu.regs.A );
     cpu.tick_clock();
 }
@@ -880,7 +905,7 @@ OP_FUNCTION(PHA)
 //
 OP_FUNCTION(PLP)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     uint8_t status = cpu.pull_byte_from_stack() & 0xCF;
     cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.SR = status | (cpu.regs.SR & 0x30);
@@ -896,7 +921,7 @@ OP_FUNCTION(PLP)
 OP_FUNCTION(BMI)
 {
     uint16_t old_pc  = cpu.regs.PC;
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.N, 1, old_pc, address );
 }
 
@@ -909,7 +934,7 @@ OP_FUNCTION(BMI)
 //
 OP_FUNCTION(ORA)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand  = cpu.fetch_byte( address );
     cpu.regs.A = operand | cpu.regs.A;
     CALC_N_FLAG( cpu.regs.A );
@@ -925,7 +950,7 @@ OP_FUNCTION(ORA)
 //
 OP_FUNCTION(CLV)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.V = 0;
     cpu.tick_clock();
 }
@@ -939,7 +964,7 @@ OP_FUNCTION(CLV)
 //
 OP_FUNCTION(EOR)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand  = cpu.fetch_byte( address );
     cpu.regs.A = operand ^ cpu.regs.A;
     CALC_N_FLAG( cpu.regs.A );
@@ -955,7 +980,7 @@ OP_FUNCTION(EOR)
 //
 OP_FUNCTION(LDY)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand  = cpu.fetch_byte( address );
     cpu.regs.Y = operand;
     CALC_Z_FLAG( operand );
@@ -971,7 +996,7 @@ OP_FUNCTION(LDY)
 //
 OP_FUNCTION(CPY)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     uint8_t data = cpu.regs.Y - operand;
     CALC_N_FLAG( data );
@@ -988,7 +1013,7 @@ OP_FUNCTION(CPY)
 //
 OP_FUNCTION(CPX)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand  = cpu.fetch_byte( address );
     uint8_t data = cpu.regs.X - operand;
     CALC_N_FLAG( data );
@@ -1006,7 +1031,7 @@ OP_FUNCTION(CPX)
 //
 OP_FUNCTION(SBC)
 {
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, false, false );
     uint16_t data    = cpu.fetch_byte( address );
     uint8_t  operand = data ^ 0xFF;
     data = cpu.regs.A + operand + cpu.regs.C;
@@ -1027,7 +1052,7 @@ OP_FUNCTION(SBC)
 //
 OP_FUNCTION(INY)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.Y++;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
@@ -1042,7 +1067,7 @@ OP_FUNCTION(INY)
 //
 OP_FUNCTION(INX)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.X++;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
@@ -1057,7 +1082,7 @@ OP_FUNCTION(INX)
 //
 OP_FUNCTION(DEY)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.Y--;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
@@ -1072,7 +1097,7 @@ OP_FUNCTION(DEY)
 //
 OP_FUNCTION(DEX)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.X--;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
@@ -1087,7 +1112,7 @@ OP_FUNCTION(DEX)
 //
 OP_FUNCTION(TAY)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.Y = cpu.regs.A;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
@@ -1102,7 +1127,7 @@ OP_FUNCTION(TAY)
 //
 OP_FUNCTION(TAX)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.X = cpu.regs.A;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
@@ -1117,7 +1142,7 @@ OP_FUNCTION(TAX)
 //
 OP_FUNCTION(TYA)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.A = cpu.regs.Y;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
@@ -1132,7 +1157,7 @@ OP_FUNCTION(TYA)
 //
 OP_FUNCTION(TXA)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.A = cpu.regs.X;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
@@ -1147,7 +1172,7 @@ OP_FUNCTION(TXA)
 //
 OP_FUNCTION(TSX)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.X = cpu.regs.SP;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
@@ -1162,7 +1187,7 @@ OP_FUNCTION(TSX)
 //
 OP_FUNCTION(TXS)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.regs.SP = cpu.regs.X;
 }
 
@@ -1178,7 +1203,7 @@ OP_FUNCTION(TXS)
 //
 OP_FUNCTION(RTI)
 {
-    addr_mode( cpu, false );
+    addr_mode( cpu, false, false );
     cpu.tick_clock( 2 ); // Stack-pop extra cycles
     uint8_t status = cpu.pull_byte_from_stack();
     cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
@@ -1196,21 +1221,131 @@ OP_FUNCTION(RTI)
 OP_FUNCTION(LSR)
 {
     uint8_t* operand;
-    uint16_t address = addr_mode( cpu, false );
+    uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
         operand = cpu.fetch_byte_ref( address );
+        cpu.tick_clock(); // Extra cycle when modifying value
     }
     else
     {
         operand = &cpu.regs.A;
     }
-    uint16_t data = (uint16_t) *operand >> 1;
+    uint16_t data = *operand >> 1;
     
     cpu.regs.N = 0;
     CALC_Z_FLAG( data );
     cpu.regs.C = (*operand & 0x1) == 0x1;
     cpu.write_byte( data, operand );
+}
+
+/////////////////////////////////////////////////////////
+// ROR - Rotate One Bit Right (Memory or Accumulator)
+// C -> [76543210] -> C
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(ROR)
+{
+    uint8_t* operand;
+    uint16_t address = addr_mode( cpu, true, false );
+    if (addr_mode != addr_mode_accumulator)
+    {
+        operand = cpu.fetch_byte_ref( address );
+        cpu.tick_clock(); // Extra cycle when modifying value
+    }
+    else
+    {
+        operand = &cpu.regs.A;
+    }
+    uint8_t data = *operand >> 1;
+    data = (data & 0x7F) | cpu.regs.C << 7;
+
+    cpu.regs.C = (*operand & 0x1) == 0x1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    
+    cpu.write_byte( data, operand );
+}
+
+/////////////////////////////////////////////////////////
+// ROL - Rotate One Bit Left (Memory or Accumulator)
+// C <- [76543210] <- C
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(ROL)
+{
+    uint8_t* operand;
+    uint16_t address = addr_mode( cpu, true, false );
+    if (addr_mode != addr_mode_accumulator)
+    {
+        operand = cpu.fetch_byte_ref( address );
+        cpu.tick_clock(); // Extra cycle when modifying value
+    }
+    else
+    {
+        operand = &cpu.regs.A;
+    }
+    uint16_t data = (uint16_t)*operand << 1;
+    data = (data & 0xFFFE) | cpu.regs.C;
+
+    cpu.regs.C = data > 0xFF ? 1 : 0;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    
+    cpu.write_byte( data, operand );
+}
+
+/////////////////////////////////////////////////////////
+// STY - Store Index Y in Memory
+// Y -> M
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(STY)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    cpu.write_byte( cpu.regs.Y, address );
+}
+
+/////////////////////////////////////////////////////////
+// INC - Increment Memory by One
+// M + 1 -> M
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(INC)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t data = cpu.fetch_byte( address );
+    data = data + 0x1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.tick_clock();
+    cpu.write_byte( data, address );
+}
+
+/////////////////////////////////////////////////////////
+// DEC - Decrement Memory by One
+// M - 1 -> M
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(DEC)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t data = cpu.fetch_byte( address );
+    data = data - 0x1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.tick_clock();
+    cpu.write_byte( data, address );
 }
 
 } // nes

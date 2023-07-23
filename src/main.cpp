@@ -21,7 +21,7 @@ int main()
     emu.init(rom);
     
     if (true)
-    {
+    { // NesTest Validation
         nes::validator validator{};
         ret = validator.init(&emu, nes_test_log);
 
@@ -31,11 +31,13 @@ int main()
         }
         printf("\nValidated \033[0;34m%u\033[0;0m lines\n", validator.validated_lines);
     }
-    /*
-    while (ret > 0)
-    {
-        ret = emu.step(1);
-    }*/
+    else
+    { // Regular Execution
+        while (ret > 0)
+        {
+            ret = emu.step(1);
+        }
+    }
 
     printf("--- Shutting Down ---\n");
 

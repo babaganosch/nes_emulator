@@ -6,7 +6,7 @@
 namespace nes
 {
 
-void cpu_t::init(callback_t cb, mem_t &mem)
+void cpu_t::init(cpu_callback_t cb, mem_t &mem)
 {
     callback = cb;
     memory = &mem;
