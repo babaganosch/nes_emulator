@@ -26,265 +26,268 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t PC, uint1
     }
 }
 
+const bool I = false;
+const bool O = true;
+
 } // anonymous
 
 op_code_t op_codes[256] = {
-    CPU_OP(___, implied),                //   0     $ 00
-    CPU_OP(ORA, pre_index_indirect_x),   //   1     $ 01
-    CPU_OP(___, implied),                //   2     $ 02
-    CPU_OP(___, implied),                //   3     $ 03
-    CPU_OP(___, implied),                //   4     $ 04
-    CPU_OP(ORA, zero_page),              //   5     $ 05
-    CPU_OP(ASL, zero_page),              //   6     $ 06
-    CPU_OP(___, implied),                //   7     $ 07
-    CPU_OP(PHP, implied),                //   8     $ 08
-    CPU_OP(ORA, immediate),              //   9     $ 09
-    CPU_OP(ASL, accumulator),            //  10     $ 0A
-    CPU_OP(___, implied),                //  11     $ 0B
-    CPU_OP(___, implied),                //  12     $ 0C
-    CPU_OP(ORA, absolute),               //  13     $ 0D
-    CPU_OP(ASL, absolute),               //  14     $ 0E
-    CPU_OP(___, implied),                //  15     $ 0F
-    CPU_OP(BPL, relative),               //  16     $ 10
-    CPU_OP(ORA, post_index_indirect_y),  //  17     $ 11
-    CPU_OP(___, implied),                //  18     $ 12
-    CPU_OP(___, implied),                //  19     $ 13
-    CPU_OP(___, implied),                //  20     $ 14
-    CPU_OP(ORA, index_zp_x),             //  21     $ 15
-    CPU_OP(ASL, index_zp_x),             //  22     $ 16
-    CPU_OP(___, implied),                //  23     $ 17
-    CPU_OP(CLC, implied),                //  24     $ 18
-    CPU_OP(ORA, index_y),                //  25     $ 19
-    CPU_OP(___, implied),                //  26     $ 1A
-    CPU_OP(___, implied),                //  27     $ 1B
-    CPU_OP(___, implied),                //  28     $ 1C
-    CPU_OP(ORA, index_x),                //  29     $ 1D
-    CPU_OP(ASL, index_x),                //  30     $ 1E
-    CPU_OP(___, implied),                //  31     $ 1F
-    CPU_OP(JSR, absolute),               //  32     $ 20
-    CPU_OP(AND, pre_index_indirect_x),   //  33     $ 21
-    CPU_OP(___, implied),                //  34     $ 22
-    CPU_OP(___, implied),                //  35     $ 23
-    CPU_OP(BIT, zero_page),              //  36     $ 24
-    CPU_OP(AND, zero_page),              //  37     $ 25
-    CPU_OP(ROL, zero_page),              //  38     $ 26
-    CPU_OP(___, implied),                //  39     $ 27
-    CPU_OP(PLP, implied),                //  40     $ 28
-    CPU_OP(AND, immediate),              //  41     $ 29
-    CPU_OP(ROL, accumulator),            //  42     $ 2A
-    CPU_OP(___, implied),                //  43     $ 2B
-    CPU_OP(BIT, absolute),               //  44     $ 2C
-    CPU_OP(AND, absolute),               //  45     $ 2D
-    CPU_OP(ROL, absolute),               //  46     $ 2E
-    CPU_OP(___, implied),                //  47     $ 2F
-    CPU_OP(BMI, relative),               //  48     $ 30
-    CPU_OP(AND, post_index_indirect_y),  //  49     $ 31
-    CPU_OP(___, implied),                //  50     $ 32
-    CPU_OP(___, implied),                //  51     $ 33
-    CPU_OP(___, implied),                //  52     $ 34
-    CPU_OP(AND, index_zp_x),             //  53     $ 35
-    CPU_OP(ROL, index_zp_x),             //  54     $ 36
-    CPU_OP(___, implied),                //  55     $ 37
-    CPU_OP(SEC, implied),                //  56     $ 38
-    CPU_OP(AND, index_y),                //  57     $ 39
-    CPU_OP(___, implied),                //  58     $ 3A
-    CPU_OP(___, implied),                //  59     $ 3B
-    CPU_OP(___, implied),                //  60     $ 3C
-    CPU_OP(AND, index_x),                //  61     $ 3D
-    CPU_OP(ROL, index_x),                //  62     $ 3E
-    CPU_OP(___, implied),                //  63     $ 3F
-    CPU_OP(RTI, implied),                //  64     $ 40
-    CPU_OP(EOR, pre_index_indirect_x),   //  65     $ 41
-    CPU_OP(___, implied),                //  66     $ 42
-    CPU_OP(___, implied),                //  67     $ 43
-    CPU_OP(___, implied),                //  68     $ 44
-    CPU_OP(EOR, zero_page),              //  69     $ 45
-    CPU_OP(LSR, zero_page),              //  70     $ 46
-    CPU_OP(___, implied),                //  71     $ 47
-    CPU_OP(PHA, implied),                //  72     $ 48
-    CPU_OP(EOR, immediate),              //  73     $ 49
-    CPU_OP(LSR, accumulator),            //  74     $ 4A
-    CPU_OP(___, implied),                //  75     $ 4B
-    CPU_OP(JMP, absolute),               //  76     $ 4C
-    CPU_OP(EOR, absolute),               //  77     $ 4D
-    CPU_OP(LSR, absolute),               //  78     $ 4E
-    CPU_OP(___, implied),                //  79     $ 4F
-    CPU_OP(BVC, relative),               //  80     $ 50
-    CPU_OP(EOR, post_index_indirect_y),  //  81     $ 51
-    CPU_OP(___, implied),                //  82     $ 52
-    CPU_OP(___, implied),                //  83     $ 53
-    CPU_OP(___, implied),                //  84     $ 54
-    CPU_OP(EOR, index_zp_x),             //  85     $ 55
-    CPU_OP(LSR, index_zp_x),             //  86     $ 56
-    CPU_OP(___, implied),                //  87     $ 57
-    CPU_OP(___, implied),                //  88     $ 58
-    CPU_OP(EOR, index_y),                //  89     $ 59
-    CPU_OP(___, implied),                //  90     $ 5A
-    CPU_OP(___, implied),                //  91     $ 5B
-    CPU_OP(___, implied),                //  92     $ 5C
-    CPU_OP(EOR, index_x),                //  93     $ 5D
-    CPU_OP(LSR, index_x),                //  94     $ 5E
-    CPU_OP(___, implied),                //  95     $ 5F
-    CPU_OP(RTS, implied),                //  96     $ 60
-    CPU_OP(ADC, pre_index_indirect_x),   //  97     $ 61
-    CPU_OP(___, implied),                //  98     $ 62
-    CPU_OP(___, implied),                //  99     $ 63
-    CPU_OP(___, implied),                // 100     $ 64
-    CPU_OP(ADC, zero_page),              // 101     $ 65
-    CPU_OP(ROR, zero_page),              // 102     $ 66
-    CPU_OP(___, implied),                // 103     $ 67
-    CPU_OP(PLA, implied),                // 104     $ 68
-    CPU_OP(ADC, immediate),              // 105     $ 69
-    CPU_OP(ROR, accumulator),            // 106     $ 6A
-    CPU_OP(___, implied),                // 107     $ 6B
-    CPU_OP(JMP, indirect),               // 108     $ 6C
-    CPU_OP(ADC, absolute),               // 109     $ 6D
-    CPU_OP(ROR, absolute),               // 110     $ 6E
-    CPU_OP(___, implied),                // 111     $ 6F
-    CPU_OP(BVS, relative),               // 112     $ 70
-    CPU_OP(ADC, post_index_indirect_y),  // 113     $ 71
-    CPU_OP(___, implied),                // 114     $ 72
-    CPU_OP(___, implied),                // 115     $ 73
-    CPU_OP(___, implied),                // 116     $ 74
-    CPU_OP(ADC, index_zp_x),             // 117     $ 75
-    CPU_OP(ROR, index_zp_x),             // 118     $ 76
-    CPU_OP(___, implied),                // 119     $ 77
-    CPU_OP(SEI, implied),                // 120     $ 78
-    CPU_OP(ADC, index_y),                // 121     $ 79
-    CPU_OP(___, implied),                // 122     $ 7A
-    CPU_OP(___, implied),                // 123     $ 7B
-    CPU_OP(___, implied),                // 124     $ 7C
-    CPU_OP(ADC, index_x),                // 125     $ 7D
-    CPU_OP(ROR, index_x),                // 126     $ 7E
-    CPU_OP(___, implied),                // 127     $ 7F
-    CPU_OP(___, implied),                // 128     $ 80
-    CPU_OP(STA, pre_index_indirect_x),   // 129     $ 81
-    CPU_OP(___, implied),                // 130     $ 82
-    CPU_OP(___, implied),                // 131     $ 83
-    CPU_OP(STY, zero_page),              // 132     $ 84
-    CPU_OP(STA, zero_page),              // 133     $ 85
-    CPU_OP(STX, zero_page),              // 134     $ 86
-    CPU_OP(___, implied),                // 135     $ 87
-    CPU_OP(DEY, implied),                // 136     $ 88
-    CPU_OP(___, implied),                // 137     $ 89
-    CPU_OP(TXA, implied),                // 138     $ 8A
-    CPU_OP(___, implied),                // 139     $ 8B
-    CPU_OP(STY, absolute),               // 140     $ 8C
-    CPU_OP(STA, absolute),               // 141     $ 8D
-    CPU_OP(STX, absolute),               // 142     $ 8E
-    CPU_OP(___, implied),                // 143     $ 8F
-    CPU_OP(BCC, relative),               // 144     $ 90
-    CPU_OP(STA, post_index_indirect_y),  // 145     $ 91
-    CPU_OP(___, implied),                // 146     $ 92
-    CPU_OP(___, implied),                // 147     $ 93
-    CPU_OP(STY, index_zp_x),             // 148     $ 94
-    CPU_OP(STA, index_zp_x),             // 149     $ 95
-    CPU_OP(STX, index_zp_y),             // 150     $ 96
-    CPU_OP(___, implied),                // 151     $ 97
-    CPU_OP(TYA, implied),                // 152     $ 98
-    CPU_OP(STA, index_y),                // 153     $ 99
-    CPU_OP(TXS, implied),                // 154     $ 9A
-    CPU_OP(___, implied),                // 155     $ 9B
-    CPU_OP(___, implied),                // 156     $ 9C
-    CPU_OP(STA, index_x),                // 157     $ 9D
-    CPU_OP(___, implied),                // 158     $ 9E
-    CPU_OP(___, implied),                // 159     $ 9F
-    CPU_OP(LDY, immediate),              // 160     $ A0
-    CPU_OP(LDA, pre_index_indirect_x),   // 161     $ A1
-    CPU_OP(LDX, immediate),              // 162     $ A2
-    CPU_OP(___, implied),                // 163     $ A3
-    CPU_OP(LDY, zero_page),              // 164     $ A4
-    CPU_OP(LDA, zero_page),              // 165     $ A5
-    CPU_OP(LDX, zero_page),              // 166     $ A6
-    CPU_OP(___, implied),                // 167     $ A7
-    CPU_OP(TAY, implied),                // 168     $ A8
-    CPU_OP(LDA, immediate),              // 169     $ A9
-    CPU_OP(TAX, implied),                // 170     $ AA
-    CPU_OP(___, implied),                // 171     $ AB
-    CPU_OP(LDY, absolute),               // 172     $ AC
-    CPU_OP(LDA, absolute),               // 173     $ AD
-    CPU_OP(LDX, absolute),               // 174     $ AE
-    CPU_OP(___, implied),                // 175     $ AF
-    CPU_OP(BCS, relative),               // 176     $ B0
-    CPU_OP(LDA, post_index_indirect_y),  // 177     $ B1
-    CPU_OP(___, implied),                // 178     $ B2
-    CPU_OP(___, implied),                // 179     $ B3
-    CPU_OP(LDY, index_zp_x),             // 180     $ B4
-    CPU_OP(LDA, index_zp_x),             // 181     $ B5
-    CPU_OP(LDX, index_zp_y),             // 182     $ B6
-    CPU_OP(___, implied),                // 183     $ B7
-    CPU_OP(CLV, implied),                // 184     $ B8
-    CPU_OP(LDA, index_y),                // 185     $ B9
-    CPU_OP(TSX, implied),                // 186     $ BA
-    CPU_OP(___, implied),                // 187     $ BB
-    CPU_OP(LDY, index_x),                // 188     $ BC
-    CPU_OP(LDA, index_x),                // 189     $ BD
-    CPU_OP(LDX, index_y),                // 190     $ BE
-    CPU_OP(___, implied),                // 191     $ BF
-    CPU_OP(CPY, immediate),              // 192     $ C0
-    CPU_OP(CMP, pre_index_indirect_x),   // 193     $ C1
-    CPU_OP(___, implied),                // 194     $ C2
-    CPU_OP(___, implied),                // 195     $ C3
-    CPU_OP(CPY, zero_page),              // 196     $ C4
-    CPU_OP(CMP, zero_page),              // 197     $ C5
-    CPU_OP(DEC, zero_page),              // 198     $ C6
-    CPU_OP(___, implied),                // 199     $ C7
-    CPU_OP(INY, implied),                // 200     $ C8
-    CPU_OP(CMP, immediate),              // 201     $ C9
-    CPU_OP(DEX, implied),                // 202     $ CA
-    CPU_OP(___, implied),                // 203     $ CB
-    CPU_OP(CPY, absolute),               // 204     $ CC
-    CPU_OP(CMP, absolute),               // 205     $ CD
-    CPU_OP(DEC, absolute),               // 206     $ CE
-    CPU_OP(___, implied),                // 207     $ CF
-    CPU_OP(BNE, relative),               // 208     $ D0
-    CPU_OP(CMP, post_index_indirect_y),  // 209     $ D1
-    CPU_OP(___, implied),                // 210     $ D2
-    CPU_OP(___, implied),                // 211     $ D3
-    CPU_OP(___, implied),                // 212     $ D4
-    CPU_OP(CMP, index_zp_x),             // 213     $ D5
-    CPU_OP(DEC, index_zp_x),             // 214     $ D6
-    CPU_OP(___, implied),                // 215     $ D7
-    CPU_OP(CLD, implied),                // 216     $ D8
-    CPU_OP(CMP, index_y),                // 217     $ D9
-    CPU_OP(___, implied),                // 218     $ DA
-    CPU_OP(___, implied),                // 219     $ DB
-    CPU_OP(___, implied),                // 220     $ DC
-    CPU_OP(CMP, index_x),                // 221     $ DD
-    CPU_OP(DEC, index_x),                // 222     $ DE
-    CPU_OP(___, implied),                // 223     $ DF
-    CPU_OP(CPX, immediate),              // 224     $ E0
-    CPU_OP(SBC, pre_index_indirect_x),   // 225     $ E1
-    CPU_OP(___, implied),                // 226     $ E2
-    CPU_OP(___, implied),                // 227     $ E3
-    CPU_OP(CPX, zero_page),              // 228     $ E4
-    CPU_OP(SBC, zero_page),              // 229     $ E5
-    CPU_OP(INC, zero_page),              // 230     $ E6
-    CPU_OP(___, implied),                // 231     $ E7
-    CPU_OP(INX, implied),                // 232     $ E8
-    CPU_OP(SBC, immediate),              // 233     $ E9
-    CPU_OP(NOP, implied),                // 234     $ EA
-    CPU_OP(___, implied),                // 235     $ EB
-    CPU_OP(CPX, absolute),               // 236     $ EC
-    CPU_OP(SBC, absolute),               // 237     $ ED
-    CPU_OP(INC, absolute),               // 238     $ EE
-    CPU_OP(___, implied),                // 239     $ EF
-    CPU_OP(BEQ, relative),               // 240     $ F0
-    CPU_OP(SBC, post_index_indirect_y),  // 241     $ F1
-    CPU_OP(___, implied),                // 242     $ F2
-    CPU_OP(___, implied),                // 243     $ F3
-    CPU_OP(___, implied),                // 244     $ F4
-    CPU_OP(SBC, index_zp_x),             // 245     $ F5
-    CPU_OP(INC, index_zp_x),             // 246     $ F6
-    CPU_OP(___, implied),                // 247     $ F7
-    CPU_OP(SED, implied),                // 248     $ F8
-    CPU_OP(SBC, index_y),                // 249     $ F9
-    CPU_OP(___, implied),                // 250     $ FA
-    CPU_OP(___, implied),                // 251     $ FB
-    CPU_OP(___, implied),                // 252     $ FC
-    CPU_OP(SBC, index_x),                // 253     $ FD
-    CPU_OP(INC, index_x),                // 254     $ FE
-    CPU_OP(___, implied)                 // 255     $ FF
+    CPU_OP(___, O, implied),                //   0     $ 00
+    CPU_OP(ORA, O, pre_index_indirect_x),   //   1     $ 01
+    CPU_OP(___, O, implied),                //   2     $ 02
+    CPU_OP(___, O, implied),                //   3     $ 03
+    CPU_OP(NOP, I, zero_page),              //   4     $ 04
+    CPU_OP(ORA, O, zero_page),              //   5     $ 05
+    CPU_OP(ASL, O, zero_page),              //   6     $ 06
+    CPU_OP(___, O, implied),                //   7     $ 07
+    CPU_OP(PHP, O, implied),                //   8     $ 08
+    CPU_OP(ORA, O, immediate),              //   9     $ 09
+    CPU_OP(ASL, O, accumulator),            //  10     $ 0A
+    CPU_OP(___, O, implied),                //  11     $ 0B
+    CPU_OP(___, O, implied),                //  12     $ 0C
+    CPU_OP(ORA, O, absolute),               //  13     $ 0D
+    CPU_OP(ASL, O, absolute),               //  14     $ 0E
+    CPU_OP(___, O, implied),                //  15     $ 0F
+    CPU_OP(BPL, O, relative),               //  16     $ 10
+    CPU_OP(ORA, O, post_index_indirect_y),  //  17     $ 11
+    CPU_OP(___, O, implied),                //  18     $ 12
+    CPU_OP(___, O, implied),                //  19     $ 13
+    CPU_OP(___, O, implied),                //  20     $ 14
+    CPU_OP(ORA, O, index_zp_x),             //  21     $ 15
+    CPU_OP(ASL, O, index_zp_x),             //  22     $ 16
+    CPU_OP(___, O, implied),                //  23     $ 17
+    CPU_OP(CLC, O, implied),                //  24     $ 18
+    CPU_OP(ORA, O, index_y),                //  25     $ 19
+    CPU_OP(___, O, implied),                //  26     $ 1A
+    CPU_OP(___, O, implied),                //  27     $ 1B
+    CPU_OP(___, O, implied),                //  28     $ 1C
+    CPU_OP(ORA, O, index_x),                //  29     $ 1D
+    CPU_OP(ASL, O, index_x),                //  30     $ 1E
+    CPU_OP(___, O, implied),                //  31     $ 1F
+    CPU_OP(JSR, O, absolute),               //  32     $ 20
+    CPU_OP(AND, O, pre_index_indirect_x),   //  33     $ 21
+    CPU_OP(___, O, implied),                //  34     $ 22
+    CPU_OP(___, O, implied),                //  35     $ 23
+    CPU_OP(BIT, O, zero_page),              //  36     $ 24
+    CPU_OP(AND, O, zero_page),              //  37     $ 25
+    CPU_OP(ROL, O, zero_page),              //  38     $ 26
+    CPU_OP(___, O, implied),                //  39     $ 27
+    CPU_OP(PLP, O, implied),                //  40     $ 28
+    CPU_OP(AND, O, immediate),              //  41     $ 29
+    CPU_OP(ROL, O, accumulator),            //  42     $ 2A
+    CPU_OP(___, O, implied),                //  43     $ 2B
+    CPU_OP(BIT, O, absolute),               //  44     $ 2C
+    CPU_OP(AND, O, absolute),               //  45     $ 2D
+    CPU_OP(ROL, O, absolute),               //  46     $ 2E
+    CPU_OP(___, O, implied),                //  47     $ 2F
+    CPU_OP(BMI, O, relative),               //  48     $ 30
+    CPU_OP(AND, O, post_index_indirect_y),  //  49     $ 31
+    CPU_OP(___, O, implied),                //  50     $ 32
+    CPU_OP(___, O, implied),                //  51     $ 33
+    CPU_OP(___, O, implied),                //  52     $ 34
+    CPU_OP(AND, O, index_zp_x),             //  53     $ 35
+    CPU_OP(ROL, O, index_zp_x),             //  54     $ 36
+    CPU_OP(___, O, implied),                //  55     $ 37
+    CPU_OP(SEC, O, implied),                //  56     $ 38
+    CPU_OP(AND, O, index_y),                //  57     $ 39
+    CPU_OP(___, O, implied),                //  58     $ 3A
+    CPU_OP(___, O, implied),                //  59     $ 3B
+    CPU_OP(___, O, implied),                //  60     $ 3C
+    CPU_OP(AND, O, index_x),                //  61     $ 3D
+    CPU_OP(ROL, O, index_x),                //  62     $ 3E
+    CPU_OP(___, O, implied),                //  63     $ 3F
+    CPU_OP(RTI, O, implied),                //  64     $ 40
+    CPU_OP(EOR, O, pre_index_indirect_x),   //  65     $ 41
+    CPU_OP(___, O, implied),                //  66     $ 42
+    CPU_OP(___, O, implied),                //  67     $ 43
+    CPU_OP(___, O, implied),                //  68     $ 44
+    CPU_OP(EOR, O, zero_page),              //  69     $ 45
+    CPU_OP(LSR, O, zero_page),              //  70     $ 46
+    CPU_OP(___, O, implied),                //  71     $ 47
+    CPU_OP(PHA, O, implied),                //  72     $ 48
+    CPU_OP(EOR, O, immediate),              //  73     $ 49
+    CPU_OP(LSR, O, accumulator),            //  74     $ 4A
+    CPU_OP(___, O, implied),                //  75     $ 4B
+    CPU_OP(JMP, O, absolute),               //  76     $ 4C
+    CPU_OP(EOR, O, absolute),               //  77     $ 4D
+    CPU_OP(LSR, O, absolute),               //  78     $ 4E
+    CPU_OP(___, O, implied),                //  79     $ 4F
+    CPU_OP(BVC, O, relative),               //  80     $ 50
+    CPU_OP(EOR, O, post_index_indirect_y),  //  81     $ 51
+    CPU_OP(___, O, implied),                //  82     $ 52
+    CPU_OP(___, O, implied),                //  83     $ 53
+    CPU_OP(___, O, implied),                //  84     $ 54
+    CPU_OP(EOR, O, index_zp_x),             //  85     $ 55
+    CPU_OP(LSR, O, index_zp_x),             //  86     $ 56
+    CPU_OP(___, O, implied),                //  87     $ 57
+    CPU_OP(___, O, implied),                //  88     $ 58
+    CPU_OP(EOR, O, index_y),                //  89     $ 59
+    CPU_OP(___, O, implied),                //  90     $ 5A
+    CPU_OP(___, O, implied),                //  91     $ 5B
+    CPU_OP(___, O, implied),                //  92     $ 5C
+    CPU_OP(EOR, O, index_x),                //  93     $ 5D
+    CPU_OP(LSR, O, index_x),                //  94     $ 5E
+    CPU_OP(___, O, implied),                //  95     $ 5F
+    CPU_OP(RTS, O, implied),                //  96     $ 60
+    CPU_OP(ADC, O, pre_index_indirect_x),   //  97     $ 61
+    CPU_OP(___, O, implied),                //  98     $ 62
+    CPU_OP(___, O, implied),                //  99     $ 63
+    CPU_OP(___, O, implied),                // 100     $ 64
+    CPU_OP(ADC, O, zero_page),              // 101     $ 65
+    CPU_OP(ROR, O, zero_page),              // 102     $ 66
+    CPU_OP(___, O, implied),                // 103     $ 67
+    CPU_OP(PLA, O, implied),                // 104     $ 68
+    CPU_OP(ADC, O, immediate),              // 105     $ 69
+    CPU_OP(ROR, O, accumulator),            // 106     $ 6A
+    CPU_OP(___, O, implied),                // 107     $ 6B
+    CPU_OP(JMP, O, indirect),               // 108     $ 6C
+    CPU_OP(ADC, O, absolute),               // 109     $ 6D
+    CPU_OP(ROR, O, absolute),               // 110     $ 6E
+    CPU_OP(___, O, implied),                // 111     $ 6F
+    CPU_OP(BVS, O, relative),               // 112     $ 70
+    CPU_OP(ADC, O, post_index_indirect_y),  // 113     $ 71
+    CPU_OP(___, O, implied),                // 114     $ 72
+    CPU_OP(___, O, implied),                // 115     $ 73
+    CPU_OP(___, O, implied),                // 116     $ 74
+    CPU_OP(ADC, O, index_zp_x),             // 117     $ 75
+    CPU_OP(ROR, O, index_zp_x),             // 118     $ 76
+    CPU_OP(___, O, implied),                // 119     $ 77
+    CPU_OP(SEI, O, implied),                // 120     $ 78
+    CPU_OP(ADC, O, index_y),                // 121     $ 79
+    CPU_OP(___, O, implied),                // 122     $ 7A
+    CPU_OP(___, O, implied),                // 123     $ 7B
+    CPU_OP(___, O, implied),                // 124     $ 7C
+    CPU_OP(ADC, O, index_x),                // 125     $ 7D
+    CPU_OP(ROR, O, index_x),                // 126     $ 7E
+    CPU_OP(___, O, implied),                // 127     $ 7F
+    CPU_OP(___, O, implied),                // 128     $ 80
+    CPU_OP(STA, O, pre_index_indirect_x),   // 129     $ 81
+    CPU_OP(___, O, implied),                // 130     $ 82
+    CPU_OP(___, O, implied),                // 131     $ 83
+    CPU_OP(STY, O, zero_page),              // 132     $ 84
+    CPU_OP(STA, O, zero_page),              // 133     $ 85
+    CPU_OP(STX, O, zero_page),              // 134     $ 86
+    CPU_OP(___, O, implied),                // 135     $ 87
+    CPU_OP(DEY, O, implied),                // 136     $ 88
+    CPU_OP(___, O, implied),                // 137     $ 89
+    CPU_OP(TXA, O, implied),                // 138     $ 8A
+    CPU_OP(___, O, implied),                // 139     $ 8B
+    CPU_OP(STY, O, absolute),               // 140     $ 8C
+    CPU_OP(STA, O, absolute),               // 141     $ 8D
+    CPU_OP(STX, O, absolute),               // 142     $ 8E
+    CPU_OP(___, O, implied),                // 143     $ 8F
+    CPU_OP(BCC, O, relative),               // 144     $ 90
+    CPU_OP(STA, O, post_index_indirect_y),  // 145     $ 91
+    CPU_OP(___, O, implied),                // 146     $ 92
+    CPU_OP(___, O, implied),                // 147     $ 93
+    CPU_OP(STY, O, index_zp_x),             // 148     $ 94
+    CPU_OP(STA, O, index_zp_x),             // 149     $ 95
+    CPU_OP(STX, O, index_zp_y),             // 150     $ 96
+    CPU_OP(___, O, implied),                // 151     $ 97
+    CPU_OP(TYA, O, implied),                // 152     $ 98
+    CPU_OP(STA, O, index_y),                // 153     $ 99
+    CPU_OP(TXS, O, implied),                // 154     $ 9A
+    CPU_OP(___, O, implied),                // 155     $ 9B
+    CPU_OP(___, O, implied),                // 156     $ 9C
+    CPU_OP(STA, O, index_x),                // 157     $ 9D
+    CPU_OP(___, O, implied),                // 158     $ 9E
+    CPU_OP(___, O, implied),                // 159     $ 9F
+    CPU_OP(LDY, O, immediate),              // 160     $ A0
+    CPU_OP(LDA, O, pre_index_indirect_x),   // 161     $ A1
+    CPU_OP(LDX, O, immediate),              // 162     $ A2
+    CPU_OP(___, O, implied),                // 163     $ A3
+    CPU_OP(LDY, O, zero_page),              // 164     $ A4
+    CPU_OP(LDA, O, zero_page),              // 165     $ A5
+    CPU_OP(LDX, O, zero_page),              // 166     $ A6
+    CPU_OP(___, O, implied),                // 167     $ A7
+    CPU_OP(TAY, O, implied),                // 168     $ A8
+    CPU_OP(LDA, O, immediate),              // 169     $ A9
+    CPU_OP(TAX, O, implied),                // 170     $ AA
+    CPU_OP(___, O, implied),                // 171     $ AB
+    CPU_OP(LDY, O, absolute),               // 172     $ AC
+    CPU_OP(LDA, O, absolute),               // 173     $ AD
+    CPU_OP(LDX, O, absolute),               // 174     $ AE
+    CPU_OP(___, O, implied),                // 175     $ AF
+    CPU_OP(BCS, O, relative),               // 176     $ B0
+    CPU_OP(LDA, O, post_index_indirect_y),  // 177     $ B1
+    CPU_OP(___, O, implied),                // 178     $ B2
+    CPU_OP(___, O, implied),                // 179     $ B3
+    CPU_OP(LDY, O, index_zp_x),             // 180     $ B4
+    CPU_OP(LDA, O, index_zp_x),             // 181     $ B5
+    CPU_OP(LDX, O, index_zp_y),             // 182     $ B6
+    CPU_OP(___, O, implied),                // 183     $ B7
+    CPU_OP(CLV, O, implied),                // 184     $ B8
+    CPU_OP(LDA, O, index_y),                // 185     $ B9
+    CPU_OP(TSX, O, implied),                // 186     $ BA
+    CPU_OP(___, O, implied),                // 187     $ BB
+    CPU_OP(LDY, O, index_x),                // 188     $ BC
+    CPU_OP(LDA, O, index_x),                // 189     $ BD
+    CPU_OP(LDX, O, index_y),                // 190     $ BE
+    CPU_OP(___, O, implied),                // 191     $ BF
+    CPU_OP(CPY, O, immediate),              // 192     $ C0
+    CPU_OP(CMP, O, pre_index_indirect_x),   // 193     $ C1
+    CPU_OP(___, O, implied),                // 194     $ C2
+    CPU_OP(___, O, implied),                // 195     $ C3
+    CPU_OP(CPY, O, zero_page),              // 196     $ C4
+    CPU_OP(CMP, O, zero_page),              // 197     $ C5
+    CPU_OP(DEC, O, zero_page),              // 198     $ C6
+    CPU_OP(___, O, implied),                // 199     $ C7
+    CPU_OP(INY, O, implied),                // 200     $ C8
+    CPU_OP(CMP, O, immediate),              // 201     $ C9
+    CPU_OP(DEX, O, implied),                // 202     $ CA
+    CPU_OP(___, O, implied),                // 203     $ CB
+    CPU_OP(CPY, O, absolute),               // 204     $ CC
+    CPU_OP(CMP, O, absolute),               // 205     $ CD
+    CPU_OP(DEC, O, absolute),               // 206     $ CE
+    CPU_OP(___, O, implied),                // 207     $ CF
+    CPU_OP(BNE, O, relative),               // 208     $ D0
+    CPU_OP(CMP, O, post_index_indirect_y),  // 209     $ D1
+    CPU_OP(___, O, implied),                // 210     $ D2
+    CPU_OP(___, O, implied),                // 211     $ D3
+    CPU_OP(___, O, implied),                // 212     $ D4
+    CPU_OP(CMP, O, index_zp_x),             // 213     $ D5
+    CPU_OP(DEC, O, index_zp_x),             // 214     $ D6
+    CPU_OP(___, O, implied),                // 215     $ D7
+    CPU_OP(CLD, O, implied),                // 216     $ D8
+    CPU_OP(CMP, O, index_y),                // 217     $ D9
+    CPU_OP(___, O, implied),                // 218     $ DA
+    CPU_OP(___, O, implied),                // 219     $ DB
+    CPU_OP(___, O, implied),                // 220     $ DC
+    CPU_OP(CMP, O, index_x),                // 221     $ DD
+    CPU_OP(DEC, O, index_x),                // 222     $ DE
+    CPU_OP(___, O, implied),                // 223     $ DF
+    CPU_OP(CPX, O, immediate),              // 224     $ E0
+    CPU_OP(SBC, O, pre_index_indirect_x),   // 225     $ E1
+    CPU_OP(___, O, implied),                // 226     $ E2
+    CPU_OP(___, O, implied),                // 227     $ E3
+    CPU_OP(CPX, O, zero_page),              // 228     $ E4
+    CPU_OP(SBC, O, zero_page),              // 229     $ E5
+    CPU_OP(INC, O, zero_page),              // 230     $ E6
+    CPU_OP(___, O, implied),                // 231     $ E7
+    CPU_OP(INX, O, implied),                // 232     $ E8
+    CPU_OP(SBC, O, immediate),              // 233     $ E9
+    CPU_OP(NOP, O, implied),                // 234     $ EA
+    CPU_OP(___, O, implied),                // 235     $ EB
+    CPU_OP(CPX, O, absolute),               // 236     $ EC
+    CPU_OP(SBC, O, absolute),               // 237     $ ED
+    CPU_OP(INC, O, absolute),               // 238     $ EE
+    CPU_OP(___, O, implied),                // 239     $ EF
+    CPU_OP(BEQ, O, relative),               // 240     $ F0
+    CPU_OP(SBC, O, post_index_indirect_y),  // 241     $ F1
+    CPU_OP(___, O, implied),                // 242     $ F2
+    CPU_OP(___, O, implied),                // 243     $ F3
+    CPU_OP(___, O, implied),                // 244     $ F4
+    CPU_OP(SBC, O, index_zp_x),             // 245     $ F5
+    CPU_OP(INC, O, index_zp_x),             // 246     $ F6
+    CPU_OP(___, O, implied),                // 247     $ F7
+    CPU_OP(SED, O, implied),                // 248     $ F8
+    CPU_OP(SBC, O, index_y),                // 249     $ F9
+    CPU_OP(___, O, implied),                // 250     $ FA
+    CPU_OP(___, O, implied),                // 251     $ FB
+    CPU_OP(___, O, implied),                // 252     $ FC
+    CPU_OP(SBC, O, index_x),                // 253     $ FD
+    CPU_OP(INC, O, index_x),                // 254     $ FE
+    CPU_OP(___, O, implied)                 // 255     $ FF
 };          
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -347,7 +350,13 @@ ADDRESS_MODE(index_x)
         cpu.tick_clock();
     }
 
-    return UINT16( new_lo, new_hi );
+    uint16_t address = UINT16( new_lo, new_hi );
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 10, "%04X = %02X", address, cpu.peek_memory(address));
+    }
+
+    return address;
 }
 
 ADDRESS_MODE(index_y)
@@ -363,21 +372,43 @@ ADDRESS_MODE(index_y)
         cpu.tick_clock();
     }
 
-    return UINT16( new_lo, new_hi );
+    uint16_t address = UINT16( new_lo, new_hi );
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 10, "%04X = %02X", address, cpu.peek_memory(address));
+    }
+
+    return address;
 }
 
 ADDRESS_MODE(index_zp_x)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     lo += cpu.regs.X;
-    return UINT16( lo, 0x00 );
+    cpu.tick_clock();
+
+    uint16_t address = UINT16( lo, 0x00 );
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 8, "%02X = %02X", lo, cpu.peek_memory(address));
+    }
+
+    return address;
 }
 
 ADDRESS_MODE(index_zp_y)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
     lo += cpu.regs.Y;
-    return UINT16( lo, 0x00 );
+    cpu.tick_clock();
+
+    uint16_t address = UINT16( lo, 0x00 );
+    if (cpu.nestest_validation)
+    {
+        snprintf(cpu.nestest_validation_str, 8, "%02X = %02X", lo, cpu.peek_memory(address));
+    }
+
+    return address;
 }
 
 ADDRESS_MODE(indirect)

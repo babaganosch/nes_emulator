@@ -10,9 +10,11 @@ namespace nes
 
 namespace
 {
-#define CPU_OP(OPC, ADDR_MODE) {       \
-    .addr_mode = addr_mode_##ADDR_MODE, \
-    .function = OP_##OPC, .name = #OPC }
+#define CPU_OP(OPC, OFFICIAL, ADDR_MODE) { \
+    .addr_mode = addr_mode_##ADDR_MODE,    \
+    .function  = OP_##OPC,                 \
+    .official  = OFFICIAL,                 \
+    .name      = #OPC }
 #define ADDRESS_MODE(MODE) uint16_t addr_mode_##MODE(cpu_t &cpu, bool modify_memory, bool is_branch)
 #define OP_FUNCTION(NAME) void OP_##NAME(cpu_t &cpu, addr_mode_t addr_mode)
 } // anonymous
@@ -24,6 +26,7 @@ struct op_code_t
 {
     addr_mode_t addr_mode;
     op_code_function_t function;
+    const bool official;
     const char name[4];
 };
 
@@ -102,6 +105,7 @@ OP_FUNCTION(ROL);
 OP_FUNCTION(STY);
 OP_FUNCTION(INC);
 OP_FUNCTION(DEC);
+OP_FUNCTION(NOP);
 
 extern op_code_t op_codes[256];
 

@@ -8,7 +8,7 @@
 namespace nes
 {
 
-const size_t emu_output_len = 95;
+const size_t emu_output_len = 96;
 
 class validator
 {
