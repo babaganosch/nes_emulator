@@ -47,9 +47,9 @@ void cpu_t::tick_clock()
     }
 }
 
-void cpu_t::tick_clock( uint8_t cycles )
+void cpu_t::tick_clock( uint8_t ticks )
 {
-    while ( cycles-- > 0 )
+    while ( ticks-- > 0 )
     {
         tick_clock();
     }

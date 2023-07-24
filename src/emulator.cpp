@@ -37,6 +37,13 @@ RESULT emu_t::init(ines_rom_t &rom)
 
     // Map CHR ROM
 
+    // Try to grab the interrupt vectors
+    cpu.vectors.NMI = cpu.peek_memory( 0xFFFA );
+    cpu.vectors.RESET = cpu.peek_memory( 0xFFFC );
+    cpu.vectors.IRQBRK = cpu.peek_memory( 0xFFFE );
+
+    // Reset program counter to reset vector
+    cpu.regs.PC = cpu.vectors.RESET;
 
     return RESULT_OK;
 }

@@ -32,7 +32,7 @@ const bool O = true;  // Official OP
 } // anonymous
 
 op_code_t op_codes[256] = {
-    CPU_OP(___, O, implied),                //   0     $ 00
+    CPU_OP(BRK, O, implied),                //   0     $ 00
     CPU_OP(ORA, O, pre_index_indirect_x),   //   1     $ 01
     CPU_OP(___, O, implied),                //   2     $ 02
     CPU_OP(SLO, I, pre_index_indirect_x),   //   3     $ 03
@@ -120,7 +120,7 @@ op_code_t op_codes[256] = {
     CPU_OP(EOR, O, index_zp_x),             //  85     $ 55
     CPU_OP(LSR, O, index_zp_x),             //  86     $ 56
     CPU_OP(SRE, I, index_zp_x),             //  87     $ 57
-    CPU_OP(___, O, implied),                //  88     $ 58
+    CPU_OP(CLI, O, implied),                //  88     $ 58
     CPU_OP(EOR, O, index_y),                //  89     $ 59
     CPU_OP(NOP, I, implied),                //  90     $ 5A
     CPU_OP(SRE, I, index_y),                //  91     $ 5B

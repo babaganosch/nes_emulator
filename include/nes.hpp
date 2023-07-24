@@ -27,10 +27,10 @@ struct mem_t
 
     +---------------+ (0x10000)
     |    PRG ROM    |
-    |  (upper bank) |          char* prgrom_upper;
+    |  (upper bank) | 
     +---------------+ 0xC000
     |    PRG ROM    |
-    |  (lower bank) |          char* prgrom_lower;
+    |  (lower bank) | 
     +---------------+ 0x8000
     |      SRAM     |
     +---------------+ 0x6000
@@ -147,7 +147,7 @@ struct cpu_t
         uint16_t IRQBRK;
     } vectors;
 
-    uint16_t   cycles{0};
+    uint16_t cycles{0};
     cpu_callback_t callback{nullptr};
 
     mem_t* memory{nullptr};
