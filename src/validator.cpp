@@ -50,7 +50,6 @@ RESULT validator::execute()
     if (ret != RESULT_OK) return ret; 
 
     ret = validate_line();
-
     return ret;
 }
 
@@ -251,6 +250,8 @@ RESULT validator::validate_line()
         printf("\033[0;34mKEY:\033[0;0m %s\n", key_cline);
         return RESULT_ERROR;
     }
+
+    if (key.peek() == '\n' || key.eof()) return RESULT_VALIDATION_SUCCESS;
 
     return RESULT_OK;
 }

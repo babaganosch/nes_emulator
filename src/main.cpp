@@ -30,6 +30,12 @@ int main()
             ret = validator.execute();
         }
         printf("\nValidated \033[0;34m%u\033[0;0m lines\n", validator.validated_lines);
+        
+        if (ret == nes::RESULT_VALIDATION_SUCCESS)
+        {
+            printf("\033[1;32mVALIDATION SUCCESS\033[0;0m\n\n");
+            ret = nes::RESULT_OK;
+        }
     }
     else
     { // Regular Execution

@@ -9,10 +9,12 @@ namespace nes
 
 enum RESULT
 {
-    RESULT_INVALID_INES_HEADER = -1,
-    RESULT_ERROR = 0,
+    RESULT_VALIDATION_SUCCESS  = -10,
 
-    RESULT_OK    = 1
+    RESULT_INVALID_INES_HEADER = -1,
+    RESULT_ERROR               = 0,
+
+    RESULT_OK                  = 1,
 };
 
 typedef void (* cpu_callback_t)(void * cookie);
@@ -102,6 +104,9 @@ struct mem_t
     uint8_t &operator[] (uint32_t address)       { return data[address]; };
 
     void init();
+
+    uint8_t memory_read( uint16_t address );
+    void    memory_write( uint8_t data, uint16_t address );
 };
 
 struct cpu_t
@@ -201,7 +206,7 @@ struct ppu_t
 {
     uint16_t x{0};
     uint16_t y{0};
-    uint16_t cycles{0};
+    uint32_t cycles{0};
 
     RESULT init();
     RESULT execute();

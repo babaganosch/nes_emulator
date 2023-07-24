@@ -13,12 +13,12 @@ namespace nes
 
 namespace
 {
-void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t PC, uint16_t target )
+void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t old_PC, uint16_t target )
 {
     if (condition == expected)
     { // Branch occurs
         cpu.tick_clock();
-        if ( (PC & 0xFF00) != (PC & 0xFF00) )
+        if ( (old_PC & 0xFF00) != (target & 0xFF00) )
         { // Branch caused page change
             cpu.tick_clock();
         }
@@ -26,8 +26,8 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t PC, uint1
     }
 }
 
-const bool I = false;
-const bool O = true;
+const bool I = false; // Illegal  OP
+const bool O = true;  // Official OP
 
 } // anonymous
 
@@ -35,11 +35,11 @@ op_code_t op_codes[256] = {
     CPU_OP(___, O, implied),                //   0     $ 00
     CPU_OP(ORA, O, pre_index_indirect_x),   //   1     $ 01
     CPU_OP(___, O, implied),                //   2     $ 02
-    CPU_OP(___, O, implied),                //   3     $ 03
+    CPU_OP(SLO, I, pre_index_indirect_x),   //   3     $ 03
     CPU_OP(NOP, I, zero_page),              //   4     $ 04
     CPU_OP(ORA, O, zero_page),              //   5     $ 05
     CPU_OP(ASL, O, zero_page),              //   6     $ 06
-    CPU_OP(___, O, implied),                //   7     $ 07
+    CPU_OP(SLO, I, zero_page),              //   7     $ 07
     CPU_OP(PHP, O, implied),                //   8     $ 08
     CPU_OP(ORA, O, immediate),              //   9     $ 09
     CPU_OP(ASL, O, accumulator),            //  10     $ 0A
@@ -47,31 +47,31 @@ op_code_t op_codes[256] = {
     CPU_OP(NOP, I, absolute),               //  12     $ 0C
     CPU_OP(ORA, O, absolute),               //  13     $ 0D
     CPU_OP(ASL, O, absolute),               //  14     $ 0E
-    CPU_OP(___, O, implied),                //  15     $ 0F
+    CPU_OP(SLO, I, absolute),               //  15     $ 0F
     CPU_OP(BPL, O, relative),               //  16     $ 10
     CPU_OP(ORA, O, post_index_indirect_y),  //  17     $ 11
     CPU_OP(___, O, implied),                //  18     $ 12
-    CPU_OP(___, O, implied),                //  19     $ 13
+    CPU_OP(SLO, I, post_index_indirect_y),  //  19     $ 13
     CPU_OP(NOP, I, index_zp_x),             //  20     $ 14
     CPU_OP(ORA, O, index_zp_x),             //  21     $ 15
     CPU_OP(ASL, O, index_zp_x),             //  22     $ 16
-    CPU_OP(___, O, implied),                //  23     $ 17
+    CPU_OP(SLO, I, index_zp_x),             //  23     $ 17
     CPU_OP(CLC, O, implied),                //  24     $ 18
     CPU_OP(ORA, O, index_y),                //  25     $ 19
     CPU_OP(NOP, I, implied),                //  26     $ 1A
-    CPU_OP(___, O, implied),                //  27     $ 1B
+    CPU_OP(SLO, I, index_y),                //  27     $ 1B
     CPU_OP(NOP, I, index_x),                //  28     $ 1C
     CPU_OP(ORA, O, index_x),                //  29     $ 1D
     CPU_OP(ASL, O, index_x),                //  30     $ 1E
-    CPU_OP(___, O, implied),                //  31     $ 1F
+    CPU_OP(SLO, I, index_x),                //  31     $ 1F
     CPU_OP(JSR, O, absolute),               //  32     $ 20
     CPU_OP(AND, O, pre_index_indirect_x),   //  33     $ 21
     CPU_OP(___, O, implied),                //  34     $ 22
-    CPU_OP(___, O, implied),                //  35     $ 23
+    CPU_OP(RLA, I, pre_index_indirect_x),   //  35     $ 23
     CPU_OP(BIT, O, zero_page),              //  36     $ 24
     CPU_OP(AND, O, zero_page),              //  37     $ 25
     CPU_OP(ROL, O, zero_page),              //  38     $ 26
-    CPU_OP(___, O, implied),                //  39     $ 27
+    CPU_OP(RLA, I, zero_page),              //  39     $ 27
     CPU_OP(PLP, O, implied),                //  40     $ 28
     CPU_OP(AND, O, immediate),              //  41     $ 29
     CPU_OP(ROL, O, accumulator),            //  42     $ 2A
@@ -79,31 +79,31 @@ op_code_t op_codes[256] = {
     CPU_OP(BIT, O, absolute),               //  44     $ 2C
     CPU_OP(AND, O, absolute),               //  45     $ 2D
     CPU_OP(ROL, O, absolute),               //  46     $ 2E
-    CPU_OP(___, O, implied),                //  47     $ 2F
+    CPU_OP(RLA, I, absolute),               //  47     $ 2F
     CPU_OP(BMI, O, relative),               //  48     $ 30
     CPU_OP(AND, O, post_index_indirect_y),  //  49     $ 31
     CPU_OP(___, O, implied),                //  50     $ 32
-    CPU_OP(___, O, implied),                //  51     $ 33
+    CPU_OP(RLA, I, post_index_indirect_y),  //  51     $ 33
     CPU_OP(NOP, I, index_zp_x),             //  52     $ 34
     CPU_OP(AND, O, index_zp_x),             //  53     $ 35
     CPU_OP(ROL, O, index_zp_x),             //  54     $ 36
-    CPU_OP(___, O, implied),                //  55     $ 37
+    CPU_OP(RLA, I, index_zp_x),             //  55     $ 37
     CPU_OP(SEC, O, implied),                //  56     $ 38
     CPU_OP(AND, O, index_y),                //  57     $ 39
     CPU_OP(NOP, I, implied),                //  58     $ 3A
-    CPU_OP(___, O, implied),                //  59     $ 3B
+    CPU_OP(RLA, I, index_y),                //  59     $ 3B
     CPU_OP(NOP, I, index_x),                //  60     $ 3C
     CPU_OP(AND, O, index_x),                //  61     $ 3D
     CPU_OP(ROL, O, index_x),                //  62     $ 3E
-    CPU_OP(___, O, implied),                //  63     $ 3F
+    CPU_OP(RLA, I, index_x),                //  63     $ 3F
     CPU_OP(RTI, O, implied),                //  64     $ 40
     CPU_OP(EOR, O, pre_index_indirect_x),   //  65     $ 41
     CPU_OP(___, O, implied),                //  66     $ 42
-    CPU_OP(___, O, implied),                //  67     $ 43
+    CPU_OP(SRE, I, pre_index_indirect_x),   //  67     $ 43
     CPU_OP(NOP, I, zero_page),              //  68     $ 44
     CPU_OP(EOR, O, zero_page),              //  69     $ 45
     CPU_OP(LSR, O, zero_page),              //  70     $ 46
-    CPU_OP(___, O, implied),                //  71     $ 47
+    CPU_OP(SRE, I, zero_page),              //  71     $ 47
     CPU_OP(PHA, O, implied),                //  72     $ 48
     CPU_OP(EOR, O, immediate),              //  73     $ 49
     CPU_OP(LSR, O, accumulator),            //  74     $ 4A
@@ -111,31 +111,31 @@ op_code_t op_codes[256] = {
     CPU_OP(JMP, O, absolute),               //  76     $ 4C
     CPU_OP(EOR, O, absolute),               //  77     $ 4D
     CPU_OP(LSR, O, absolute),               //  78     $ 4E
-    CPU_OP(___, O, implied),                //  79     $ 4F
+    CPU_OP(SRE, I, absolute),               //  79     $ 4F
     CPU_OP(BVC, O, relative),               //  80     $ 50
     CPU_OP(EOR, O, post_index_indirect_y),  //  81     $ 51
     CPU_OP(___, O, implied),                //  82     $ 52
-    CPU_OP(___, O, implied),                //  83     $ 53
+    CPU_OP(SRE, I, post_index_indirect_y),  //  83     $ 53
     CPU_OP(NOP, I, index_zp_x),             //  84     $ 54
     CPU_OP(EOR, O, index_zp_x),             //  85     $ 55
     CPU_OP(LSR, O, index_zp_x),             //  86     $ 56
-    CPU_OP(___, O, implied),                //  87     $ 57
+    CPU_OP(SRE, I, index_zp_x),             //  87     $ 57
     CPU_OP(___, O, implied),                //  88     $ 58
     CPU_OP(EOR, O, index_y),                //  89     $ 59
     CPU_OP(NOP, I, implied),                //  90     $ 5A
-    CPU_OP(___, O, implied),                //  91     $ 5B
+    CPU_OP(SRE, I, index_y),                //  91     $ 5B
     CPU_OP(NOP, I, index_x),                //  92     $ 5C
     CPU_OP(EOR, O, index_x),                //  93     $ 5D
     CPU_OP(LSR, O, index_x),                //  94     $ 5E
-    CPU_OP(___, O, implied),                //  95     $ 5F
+    CPU_OP(SRE, I, index_x),                //  95     $ 5F
     CPU_OP(RTS, O, implied),                //  96     $ 60
     CPU_OP(ADC, O, pre_index_indirect_x),   //  97     $ 61
     CPU_OP(___, O, implied),                //  98     $ 62
-    CPU_OP(___, O, implied),                //  99     $ 63
+    CPU_OP(RRA, I, pre_index_indirect_x),   //  99     $ 63
     CPU_OP(NOP, I, zero_page),              // 100     $ 64
     CPU_OP(ADC, O, zero_page),              // 101     $ 65
     CPU_OP(ROR, O, zero_page),              // 102     $ 66
-    CPU_OP(___, O, implied),                // 103     $ 67
+    CPU_OP(RRA, I, zero_page),              // 103     $ 67
     CPU_OP(PLA, O, implied),                // 104     $ 68
     CPU_OP(ADC, O, immediate),              // 105     $ 69
     CPU_OP(ROR, O, accumulator),            // 106     $ 6A
@@ -143,23 +143,23 @@ op_code_t op_codes[256] = {
     CPU_OP(JMP, O, indirect),               // 108     $ 6C
     CPU_OP(ADC, O, absolute),               // 109     $ 6D
     CPU_OP(ROR, O, absolute),               // 110     $ 6E
-    CPU_OP(___, O, implied),                // 111     $ 6F
+    CPU_OP(RRA, I, absolute),               // 111     $ 6F
     CPU_OP(BVS, O, relative),               // 112     $ 70
     CPU_OP(ADC, O, post_index_indirect_y),  // 113     $ 71
     CPU_OP(___, O, implied),                // 114     $ 72
-    CPU_OP(___, O, implied),                // 115     $ 73
+    CPU_OP(RRA, I, post_index_indirect_y),  // 115     $ 73
     CPU_OP(NOP, I, index_zp_x),             // 116     $ 74
     CPU_OP(ADC, O, index_zp_x),             // 117     $ 75
     CPU_OP(ROR, O, index_zp_x),             // 118     $ 76
-    CPU_OP(___, O, implied),                // 119     $ 77
+    CPU_OP(RRA, I, index_zp_x),             // 119     $ 77
     CPU_OP(SEI, O, implied),                // 120     $ 78
     CPU_OP(ADC, O, index_y),                // 121     $ 79
     CPU_OP(NOP, I, implied),                // 122     $ 7A
-    CPU_OP(___, O, implied),                // 123     $ 7B
+    CPU_OP(RRA, I, index_y),                // 123     $ 7B
     CPU_OP(NOP, I, index_x),                // 124     $ 7C
     CPU_OP(ADC, O, index_x),                // 125     $ 7D
     CPU_OP(ROR, O, index_x),                // 126     $ 7E
-    CPU_OP(___, O, implied),                // 127     $ 7F
+    CPU_OP(RRA, I, index_x),                // 127     $ 7F
     CPU_OP(NOP, I, immediate),              // 128     $ 80
     CPU_OP(STA, O, pre_index_indirect_x),   // 129     $ 81
     CPU_OP(NOP, I, immediate),              // 130     $ 82
@@ -692,9 +692,8 @@ OP_FUNCTION(SEC)
 //
 OP_FUNCTION(BCS)
 {
-    uint16_t old_pc  = cpu.regs.PC;
     uint16_t address = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.C, 1, old_pc, address );
+    branch( cpu, cpu.regs.C, 1, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -720,9 +719,8 @@ OP_FUNCTION(CLC)
 //
 OP_FUNCTION(BCC)
 {
-    uint16_t old_pc    = cpu.regs.PC;
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.C, 0, old_pc, address );
+    branch( cpu, cpu.regs.C, 0, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -734,9 +732,8 @@ OP_FUNCTION(BCC)
 //
 OP_FUNCTION(BEQ)
 {
-    uint16_t old_pc    = cpu.regs.PC;
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.Z, 1, old_pc, address );
+    branch( cpu, cpu.regs.Z, 1, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -748,9 +745,8 @@ OP_FUNCTION(BEQ)
 //
 OP_FUNCTION(BNE)
 {
-    uint16_t old_pc    = cpu.regs.PC;
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.Z, 0, old_pc, address );
+    branch( cpu, cpu.regs.Z, 0, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -792,9 +788,8 @@ OP_FUNCTION(BIT)
 //
 OP_FUNCTION(BVC)
 {
-    uint16_t old_pc    = cpu.regs.PC;
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.V, 0, old_pc, address );
+    branch( cpu, cpu.regs.V, 0, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -806,9 +801,8 @@ OP_FUNCTION(BVC)
 //
 OP_FUNCTION(BVS)
 {
-    uint16_t old_pc    = cpu.regs.PC;
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.V, 1, old_pc, address );
+    branch( cpu, cpu.regs.V, 1, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -820,9 +814,8 @@ OP_FUNCTION(BVS)
 //
 OP_FUNCTION(BPL)
 {
-    uint16_t old_pc    = cpu.regs.PC;
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.N, 0, old_pc, address );
+    branch( cpu, cpu.regs.N, 0, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -976,9 +969,8 @@ OP_FUNCTION(PLP)
 //
 OP_FUNCTION(BMI)
 {
-    uint16_t old_pc  = cpu.regs.PC;
     uint16_t address = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.N, 1, old_pc, address );
+    branch( cpu, cpu.regs.N, 1, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1492,6 +1484,106 @@ OP_FUNCTION(ISB)
     CALC_N_FLAG( res );
     CALC_V_FLAG( cpu.regs.A, data0, res );
     cpu.regs.A = res;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// SLO (ASO)
+// ASL oper + ORA oper
+//
+// M = C <- [76543210] <- 0, A OR M -> A
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(SLO)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint16_t data    = cpu.fetch_byte( address );
+    // M = C <- [76543210] <- 0
+    data = data << 1;
+    CALC_C_FLAG( data );
+    cpu.write_byte( data, address );
+    // A OR M -> A
+    cpu.regs.A = cpu.regs.A | data;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// RLA
+// ROL oper + AND oper
+//
+// M = C <- [76543210] <- C, A AND M -> A
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(RLA)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint16_t data    = cpu.fetch_byte( address );
+    // M = C <- [76543210] <- C
+    data = (data << 1) | cpu.regs.C;
+    CALC_C_FLAG( data );
+    cpu.write_byte( data, address );
+    // A AND M -> A
+    cpu.regs.A = cpu.regs.A & data;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// SRE (LSE)
+// LSR oper + EOR oper
+//
+// M = 0 -> [76543210] -> C, A EOR M -> A
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(SRE)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t  data    = cpu.fetch_byte( address );
+    // M = 0 -> [76543210] -> C
+    cpu.regs.C = data & 0x01;
+    data = data >> 1;
+    cpu.write_byte( data, address );
+    // A EOR M -> A
+    cpu.regs.A = cpu.regs.A ^ data;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// RRA
+// ROR oper + ADC oper
+//
+// M = C -> [76543210] -> C, A + M + C -> A, C
+//
+// N Z C I D V
+// + + + - - +
+//
+OP_FUNCTION(RRA)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t  data    = cpu.fetch_byte( address );
+    // M = C -> [76543210] -> C
+    bool old_C = cpu.regs.C;
+    cpu.regs.C = data & 0x01;
+    data = (data >> 1) | old_C << 7;
+    cpu.write_byte( data, address );
+    // A + M + C -> A, C
+    uint16_t res = cpu.regs.A + data + cpu.regs.C;
+    cpu.regs.A = res;
+    CALC_N_FLAG( res );
+    CALC_Z_FLAG( res );
+    CALC_C_FLAG( res );
+    CALC_V_FLAG( cpu.regs.A, data, res );
     cpu.tick_clock();
 }
 

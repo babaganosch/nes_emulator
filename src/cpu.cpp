@@ -57,12 +57,12 @@ void cpu_t::tick_clock( uint8_t cycles )
 
 uint16_t cpu_t::peek_memory( uint16_t address )
 {
-    return (*memory)[ address ];
+    return memory->memory_read( address );
 }
 
 uint8_t cpu_t::fetch_byte( uint16_t address )
 {
-    uint8_t data = (*memory)[ address ];
+    uint8_t data = memory->memory_read( address );
     tick_clock();
     return data;
 }
@@ -70,7 +70,7 @@ uint8_t cpu_t::fetch_byte( uint16_t address )
 uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
 {
     uint16_t address = ((uint16_t)hi << 8) | lo;
-    uint8_t data = (*memory)[ address ];
+    uint8_t data = memory->memory_read( address );
     tick_clock();
     return data;
 }
@@ -89,14 +89,14 @@ void cpu_t::write_byte( uint8_t data, uint8_t* ref )
 
 void cpu_t::write_byte( uint8_t data, uint16_t address )
 {
-    (*memory)[ address ] = data;
+    memory->memory_write( data, address );
     tick_clock();
 }
 
 void cpu_t::write_byte( uint8_t data, uint8_t lo, uint8_t hi )
 {
     uint16_t address = ((uint16_t)hi << 8) | lo;
-    (*memory)[ address ] = data;
+    memory->memory_write( data, address );
     tick_clock();
 }
 
