@@ -20,8 +20,16 @@ RESULT validator::init(emu_t* emu_ref, const char* key_path)
     emu = emu_ref;
     emu->cpu.nestest_validation = true;
     emu->cpu.cycles = 7;
+    emu->cpu.regs.PC = 0xC000;
+    emu->cpu.regs.SP = 0xFD;
+    emu->cpu.regs.SR = 0x24;
+    emu->cpu.regs.A  = 0x0;
+    emu->cpu.regs.X  = 0x0;
+    emu->cpu.regs.Y  = 0x0;
+
     emu->ppu.cycles = 7 * 3;
     emu->ppu.x      = 7 * 3;
+    emu->ppu.y      = 0;
 
     key.open(key_path, std::ios::in |  std::ios::ate);
     auto file_size = key.tellg();
@@ -79,6 +87,13 @@ RESULT validator::construct_output_pre_line()
                  cpu.regs.PC, inst, op_name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
     }
 
+    else if (op.addr_mode == addr_mode_immediate)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X    %s #$%02X                        A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+    }
+
     else if (op.addr_mode == addr_mode_absolute)
     {
         snprintf(emu_output, emu_output_len,
@@ -86,13 +101,6 @@ RESULT validator::construct_output_pre_line()
                  cpu.regs.PC, inst, data0, data1, op_name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
         post_fix_cursor  = 26;
         post_fix_letters = 4;
-    }
-
-    else if (op.addr_mode == addr_mode_immediate)
-    {
-        snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X    %s #$%02X                        A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-                 cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
     }
 
     else if (op.addr_mode == addr_mode_zero_page)
@@ -104,62 +112,19 @@ RESULT validator::construct_output_pre_line()
         post_fix_letters = 2;
     }
 
-    else if (op.addr_mode == addr_mode_relative)
+    else if (op.addr_mode == addr_mode_index_x)
     {
         snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X    %s $....                       A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-                 cpu.regs.PC, inst, data0, op_name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
-        post_fix_cursor  = 21;
-        post_fix_letters = 4;
-    }
-
-    else if (op.addr_mode == addr_mode_accumulator)
-    {
-        snprintf(emu_output, emu_output_len,
-                 "%04X  %02X       %s A                           A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-                 cpu.regs.PC, inst, op_name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
-    }
-
-    else if (op.addr_mode == addr_mode_pre_index_indirect_x)
-    {
-        snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X    %s ($%02X,X) @ ..............    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-                 cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
-        post_fix_cursor  = 30;
-        post_fix_letters = 14;
-    }
-
-    else if (op.addr_mode == addr_mode_post_index_indirect_y)
-    {
-        snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X    %s ($%02X),Y = ................  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-                 cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
-        post_fix_cursor  = 30;
-        post_fix_letters = 16;
-    }
-
-    else if (op.addr_mode == addr_mode_indirect)
-    {
-        snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X %02X %s ($%02X%02X) = ....              A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 "%04X  %02X %02X %02X %s $%02X%02X,X @ .........         A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
                  cpu.regs.PC, inst, data0, data1, op_name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
         post_fix_cursor  = 30;
-        post_fix_letters = 4;
+        post_fix_letters = 9;
     }
 
     else if (op.addr_mode == addr_mode_index_y)
     {
         snprintf(emu_output, emu_output_len,
                  "%04X  %02X %02X %02X %s $%02X%02X,Y @ .........         A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
-                 cpu.regs.PC, inst, data0, data1, op_name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
-        post_fix_cursor  = 30;
-        post_fix_letters = 9;
-    }
-
-    else if (op.addr_mode == addr_mode_index_x)
-    {
-        snprintf(emu_output, emu_output_len,
-                 "%04X  %02X %02X %02X %s $%02X%02X,X @ .........         A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
                  cpu.regs.PC, inst, data0, data1, op_name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
         post_fix_cursor  = 30;
         post_fix_letters = 9;
@@ -181,6 +146,49 @@ RESULT validator::construct_output_pre_line()
                  cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
         post_fix_cursor  = 28;
         post_fix_letters = 7;
+    }
+
+    else if (op.addr_mode == addr_mode_indirect)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X %02X %s ($%02X%02X) = ....              A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, data1, op_name, data1, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 30;
+        post_fix_letters = 4;
+    }
+
+    else if (op.addr_mode == addr_mode_pre_index_indirect_x)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X    %s ($%02X,X) @ ..............    A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 30;
+        post_fix_letters = 14;
+    }
+
+    else if (op.addr_mode == addr_mode_post_index_indirect_y)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X    %s ($%02X),Y = ................  A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op_name, data0, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 30;
+        post_fix_letters = 16;
+    }
+
+    else if (op.addr_mode == addr_mode_relative)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X %02X    %s $....                       A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, data0, op_name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
+        post_fix_cursor  = 21;
+        post_fix_letters = 4;
+    }
+
+    else if (op.addr_mode == addr_mode_accumulator)
+    {
+        snprintf(emu_output, emu_output_len,
+                 "%04X  %02X       %s A                           A:%02X X:%02X Y:%02X P:%02X SP:%02X PPU:%3u,%3u CYC:%u",
+                 cpu.regs.PC, inst, op_name, cpu.regs.A, cpu.regs.X, cpu.regs.Y, cpu.regs.SR, cpu.regs.SP, ppu_y, ppu_x, cycles);
     }
 
     else

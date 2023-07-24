@@ -569,118 +569,17 @@ OP_FUNCTION(ASL)
     cpu.write_byte( data, operand );
 }
 
-
-
-
-
-
-///////// ------------------------ NOT SORTED ------------------------
-
 /////////////////////////////////////////////////////////
-// JMP - Jump to New Location
-// (PC+1) -> PCL
-// (PC+2) -> PCH
+// BCC - Branch on Carry Clear
+// branch on C = 0
 //
 // N Z C I D V
 // - - - - - -
 //
-OP_FUNCTION(JMP)
+OP_FUNCTION(BCC)
 {
-    uint16_t address = addr_mode( cpu, false, true );
-    cpu.regs.PC = address;
-}
-
-/////////////////////////////////////////////////////////
-// LDX - Load Index X with Memory
-// M -> X
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(LDX)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand = cpu.fetch_byte( address );
-    cpu.regs.X = operand;
-    CALC_Z_FLAG( operand );
-    CALC_N_FLAG( operand );
-}
-
-/////////////////////////////////////////////////////////
-// STX - Store Index X in Memory
-// X -> M
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(STX)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    cpu.write_byte( cpu.regs.X, address );
-}
-
-/////////////////////////////////////////////////////////
-// JSR - Jump to New Location Saving Return Address
-// push (PC+2)
-// (PC+1) -> PCL
-// (PC+2) -> PCH
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(JSR)
-{
-    cpu.push_short_to_stack( cpu.regs.PC + 1 );
-    uint16_t address = addr_mode( cpu, false, true );
-    cpu.tick_clock(); // One extra cycle when buffering data
-    cpu.regs.PC = address;
-}
-
-/////////////////////////////////////////////////////////
-// NOP, DOP, TOP
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(NOP)
-{
-    uint16_t old_pc = cpu.regs.PC;
-    addr_mode( cpu, false, false );
-
-    // DOP and TOP
-    if (cpu.regs.PC - old_pc > 0)
-    {
-        cpu.tick_clock();
-    }
-}
-
-/////////////////////////////////////////////////////////
-// LDA - Load Accumulator with Memory
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(LDA)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t  operand = cpu.fetch_byte( address );
-    cpu.regs.A = operand;
-    CALC_Z_FLAG( operand );
-    CALC_N_FLAG( operand );
-}
-
-/////////////////////////////////////////////////////////
-// SEC - Set Carry Flag
-// 1 -> C
-//
-// N Z C I D V
-// - - 1 - - -
-//
-OP_FUNCTION(SEC)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.C = 1;
-    cpu.tick_clock();
+    uint16_t address   = addr_mode( cpu, false, true );
+    branch( cpu, cpu.regs.C, 0, cpu.regs.PC, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -697,33 +596,6 @@ OP_FUNCTION(BCS)
 }
 
 /////////////////////////////////////////////////////////
-// CLC - Clear Carry Flag
-// 0 -> C
-//
-// N Z C I D V
-// - - 0 - - -
-//
-OP_FUNCTION(CLC)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.C = 0;
-    cpu.tick_clock();
-}
-
-/////////////////////////////////////////////////////////
-// BCC - Branch on Carry Clear
-// branch on C = 0
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(BCC)
-{
-    uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.C, 0, cpu.regs.PC, address );
-}
-
-/////////////////////////////////////////////////////////
 // BEQ - Branch on Result Zero
 // branch on Z = 1
 //
@@ -734,32 +606,6 @@ OP_FUNCTION(BEQ)
 {
     uint16_t address   = addr_mode( cpu, false, true );
     branch( cpu, cpu.regs.Z, 1, cpu.regs.PC, address );
-}
-
-/////////////////////////////////////////////////////////
-// BNE - Branch on Result not Zero
-// branch on Z = 0
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(BNE)
-{
-    uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.Z, 0, cpu.regs.PC, address );
-}
-
-/////////////////////////////////////////////////////////
-// STA - Store Accumulator in Memory
-// A -> M
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(STA)
-{
-    uint16_t address = addr_mode( cpu, true, false );
-    cpu.write_byte( cpu.regs.A, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -777,6 +623,50 @@ OP_FUNCTION(BIT)
     cpu.regs.N = (operand >> 7) & 0x1;
     cpu.regs.V = (operand >> 6) & 0x1;
     cpu.regs.Z = CALC_Z_FLAG( operand & cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// BMI - Branch on Result Minus
+// branch on N = 1
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BMI)
+{
+    uint16_t address = addr_mode( cpu, false, true );
+    branch( cpu, cpu.regs.N, 1, cpu.regs.PC, address );
+}
+
+/////////////////////////////////////////////////////////
+// BNE - Branch on Result not Zero
+// branch on Z = 0
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BNE)
+{
+    uint16_t address   = addr_mode( cpu, false, true );
+    branch( cpu, cpu.regs.Z, 0, cpu.regs.PC, address );
+}
+
+/////////////////////////////////////////////////////////
+// BPL - Branch on Result Plus
+// branch on N = 0
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(BPL)
+{
+    uint16_t address   = addr_mode( cpu, false, true );
+    branch( cpu, cpu.regs.N, 0, cpu.regs.PC, address );
+}
+
+OP_FUNCTION(BRK)
+{
+    printf("OP BRK NOT IMPLEMENTED!\n");
 }
 
 /////////////////////////////////////////////////////////
@@ -806,59 +696,366 @@ OP_FUNCTION(BVS)
 }
 
 /////////////////////////////////////////////////////////
-// BPL - Branch on Result Plus
-// branch on N = 0
+// CLC - Clear Carry Flag
+// 0 -> C
 //
 // N Z C I D V
-// - - - - - -
+// - - 0 - - -
 //
-OP_FUNCTION(BPL)
-{
-    uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.N, 0, cpu.regs.PC, address );
-}
-
-/////////////////////////////////////////////////////////
-// RTS - Return from Subroutine
-// pull PC, PC+1 -> PC
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(RTS)
-{
-    addr_mode( cpu, false, true );
-    uint16_t address = cpu.pull_short_from_stack();
-    cpu.tick_clock( 2 ); // Stack-pop extra cycles
-    cpu.regs.PC = address + 1;
-    cpu.tick_clock(); // One extra cycle to post-increment PC
-}
-
-/////////////////////////////////////////////////////////
-// SEI - Set Interrupt Disable Status
-// 1 -> I
-//
-// N Z C I D V
-// - - - 1 - -
-//
-OP_FUNCTION(SEI)
+OP_FUNCTION(CLC)
 {
     addr_mode( cpu, false, false );
-    cpu.regs.I = 1;
+    cpu.regs.C = 0;
     cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
-// SED - Set Decimal Flag
-// 1 -> D
+// CLD - Clear Decimal Mode
+// 0 -> D
 //
 // N Z C I D V
-// - - - - 1 -
+// - - - - 0 -
 //
-OP_FUNCTION(SED)
+OP_FUNCTION(CLD)
 {
     addr_mode( cpu, false, false );
-    cpu.regs.D = 1;
+    cpu.regs.D = 0;
+    cpu.tick_clock();
+}
+
+OP_FUNCTION(CLI)
+{
+    printf("OP CLI NOT IMPLEMENTED!\n");
+}
+
+/////////////////////////////////////////////////////////
+// CLV - Clear Overflow Flag
+// 0 -> V
+//
+// N Z C I D V
+// - - - - - 0
+//
+OP_FUNCTION(CLV)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.V = 0;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// CMP - Compare Memory with Accumulator
+// A - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(CMP)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand = cpu.fetch_byte( address );
+    uint8_t data = cpu.regs.A - operand;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
+}
+
+/////////////////////////////////////////////////////////
+// CPX - Compare Memory and Index X
+// X - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(CPX)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    uint8_t data = cpu.regs.X - operand;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.X >= operand) ? 1 : 0;
+}
+
+/////////////////////////////////////////////////////////
+// CPY - Compare Memory and Index Y
+// Y - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(CPY)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand = cpu.fetch_byte( address );
+    uint8_t data = cpu.regs.Y - operand;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.Y >= operand) ? 1 : 0;
+}
+
+/////////////////////////////////////////////////////////
+// DEC - Decrement Memory by One
+// M - 1 -> M
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(DEC)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t data = cpu.fetch_byte( address );
+    data = data - 0x1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.tick_clock();
+    cpu.write_byte( data, address );
+}
+
+/////////////////////////////////////////////////////////
+// DEX - Decrement Index X by One
+// X - 1 -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(DEX)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.X--;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// DEY - Decrement Index Y by One
+// Y - 1 -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(DEY)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.Y--;
+    CALC_N_FLAG( cpu.regs.Y );
+    CALC_Z_FLAG( cpu.regs.Y );
+}
+
+/////////////////////////////////////////////////////////
+// EOR - Exclusive-OR Memory with Accumulator
+// A EOR M -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(EOR)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    cpu.regs.A = operand ^ cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// INC - Increment Memory by One
+// M + 1 -> M
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(INC)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t data = cpu.fetch_byte( address );
+    data = data + 0x1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.tick_clock();
+    cpu.write_byte( data, address );
+}
+
+/////////////////////////////////////////////////////////
+// INX - Increment Index X by One
+// X + 1 -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(INX)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.X++;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// INY - Increment Index Y by One
+// Y + 1 -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(INY)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.Y++;
+    CALC_N_FLAG( cpu.regs.Y );
+    CALC_Z_FLAG( cpu.regs.Y );
+}
+
+/////////////////////////////////////////////////////////
+// JMP - Jump to New Location
+// (PC+1) -> PCL
+// (PC+2) -> PCH
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(JMP)
+{
+    uint16_t address = addr_mode( cpu, false, true );
+    cpu.regs.PC = address;
+}
+
+/////////////////////////////////////////////////////////
+// JSR - Jump to New Location Saving Return Address
+// push (PC+2)
+// (PC+1) -> PCL
+// (PC+2) -> PCH
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(JSR)
+{
+    cpu.push_short_to_stack( cpu.regs.PC + 1 );
+    uint16_t address = addr_mode( cpu, false, true );
+    cpu.tick_clock(); // One extra cycle when buffering data
+    cpu.regs.PC = address;
+}
+
+/////////////////////////////////////////////////////////
+// LDA - Load Accumulator with Memory
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(LDA)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    cpu.regs.A = operand;
+    CALC_Z_FLAG( operand );
+    CALC_N_FLAG( operand );
+}
+
+/////////////////////////////////////////////////////////
+// LDX - Load Index X with Memory
+// M -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(LDX)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand = cpu.fetch_byte( address );
+    cpu.regs.X = operand;
+    CALC_Z_FLAG( operand );
+    CALC_N_FLAG( operand );
+}
+
+/////////////////////////////////////////////////////////
+// LDY - Load Index Y with Memory
+// M -> Y
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(LDY)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    cpu.regs.Y = operand;
+    CALC_Z_FLAG( operand );
+    CALC_N_FLAG( operand );
+}
+
+/////////////////////////////////////////////////////////
+// LSR - Shift One Bit Right (Memory or Accumulator)
+// 0 -> [76543210] -> C
+//
+// N Z C I D V
+// 0 + + - - -
+//
+OP_FUNCTION(LSR)
+{
+    uint8_t* operand;
+    uint16_t address = addr_mode( cpu, true, false );
+    if (addr_mode != addr_mode_accumulator)
+    {
+        operand = cpu.fetch_byte_ref( address );
+        cpu.tick_clock(); // Extra cycle when modifying value
+    }
+    else
+    {
+        operand = &cpu.regs.A;
+    }
+    uint16_t data = *operand >> 1;
+    
+    cpu.regs.N = 0;
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (*operand & 0x1) == 0x1;
+    cpu.write_byte( data, operand );
+}
+
+/////////////////////////////////////////////////////////
+// NOP, DOP, TOP
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(NOP)
+{
+    uint16_t old_pc = cpu.regs.PC;
+    addr_mode( cpu, false, false );
+
+    // DOP and TOP
+    if (cpu.regs.PC - old_pc > 0)
+    {
+        cpu.tick_clock();
+    }
+}
+
+/////////////////////////////////////////////////////////
+// ORA - OR Memory with Accumulator
+// A OR M -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(ORA)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t operand  = cpu.fetch_byte( address );
+    cpu.regs.A = operand | cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// PHA - Push Accumulator on Stack
+// push A
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(PHA)
+{
+    addr_mode( cpu, true, false );
+    cpu.push_byte_to_stack( cpu.regs.A );
     cpu.tick_clock();
 }
 
@@ -898,51 +1095,6 @@ OP_FUNCTION(PLA)
 }
 
 /////////////////////////////////////////////////////////
-// CMP - Compare Memory with Accumulator
-// A - M
-//
-// N Z C I D V
-// + + + - - -
-//
-OP_FUNCTION(CMP)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand = cpu.fetch_byte( address );
-    uint8_t data = cpu.regs.A - operand;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
-}
-
-/////////////////////////////////////////////////////////
-// CLD - Clear Decimal Mode
-// 0 -> D
-//
-// N Z C I D V
-// - - - - 0 -
-//
-OP_FUNCTION(CLD)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.D = 0;
-    cpu.tick_clock();
-}
-
-/////////////////////////////////////////////////////////
-// PHA - Push Accumulator on Stack
-// push A
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(PHA)
-{
-    addr_mode( cpu, true, false );
-    cpu.push_byte_to_stack( cpu.regs.A );
-    cpu.tick_clock();
-}
-
-/////////////////////////////////////////////////////////
 // PLP - Pull Processor Status from Stack
 // The status register will be pulled with the break
 // flag and bit 5 ignored.
@@ -961,312 +1113,13 @@ OP_FUNCTION(PLP)
 }
 
 /////////////////////////////////////////////////////////
-// BMI - Branch on Result Minus
-// branch on N = 1
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(BMI)
-{
-    uint16_t address = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.N, 1, cpu.regs.PC, address );
-}
-
-/////////////////////////////////////////////////////////
-// ORA - OR Memory with Accumulator
-// A OR M -> A
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(ORA)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand  = cpu.fetch_byte( address );
-    cpu.regs.A = operand | cpu.regs.A;
-    CALC_N_FLAG( cpu.regs.A );
-    CALC_Z_FLAG( cpu.regs.A );
-}
-
-/////////////////////////////////////////////////////////
-// CLV - Clear Overflow Flag
-// 0 -> V
-//
-// N Z C I D V
-// - - - - - 0
-//
-OP_FUNCTION(CLV)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.V = 0;
-    cpu.tick_clock();
-}
-
-/////////////////////////////////////////////////////////
-// EOR - Exclusive-OR Memory with Accumulator
-// A EOR M -> A
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(EOR)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand  = cpu.fetch_byte( address );
-    cpu.regs.A = operand ^ cpu.regs.A;
-    CALC_N_FLAG( cpu.regs.A );
-    CALC_Z_FLAG( cpu.regs.A );
-}
-
-/////////////////////////////////////////////////////////
-// LDY - Load Index Y with Memory
-// M -> Y
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(LDY)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand  = cpu.fetch_byte( address );
-    cpu.regs.Y = operand;
-    CALC_Z_FLAG( operand );
-    CALC_N_FLAG( operand );
-}
-
-/////////////////////////////////////////////////////////
-// CPY - Compare Memory and Index Y
-// Y - M
+// ROL - Rotate One Bit Left (Memory or Accumulator)
+// C <- [76543210] <- C
 //
 // N Z C I D V
 // + + + - - -
 //
-OP_FUNCTION(CPY)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand = cpu.fetch_byte( address );
-    uint8_t data = cpu.regs.Y - operand;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    cpu.regs.C = (cpu.regs.Y >= operand) ? 1 : 0;
-}
-
-/////////////////////////////////////////////////////////
-// CPX - Compare Memory and Index X
-// X - M
-//
-// N Z C I D V
-// + + + - - -
-//
-OP_FUNCTION(CPX)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t operand  = cpu.fetch_byte( address );
-    uint8_t data = cpu.regs.X - operand;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    cpu.regs.C = (cpu.regs.X >= operand) ? 1 : 0;
-}
-
-/////////////////////////////////////////////////////////
-// SBC - Subtract Memory from Accumulator with Borrow
-//         _
-// A - M - C -> A
-//
-// N Z C I D V
-// + + + - - +
-//
-OP_FUNCTION(SBC)
-{
-    uint16_t address = addr_mode( cpu, false, false );
-    uint8_t  data0    = cpu.fetch_byte( address );
-    uint8_t  data1 = ~data0;
-    uint16_t res = cpu.regs.A + data1 + cpu.regs.C;
-
-    CALC_C_FLAG( res );
-    CALC_Z_FLAG( res );
-    CALC_N_FLAG( res );
-    CALC_V_FLAG( cpu.regs.A, data1, res );
-    cpu.regs.A = res;
-}
-
-/////////////////////////////////////////////////////////
-// INY - Increment Index Y by One
-// Y + 1 -> Y
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(INY)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.Y++;
-    CALC_N_FLAG( cpu.regs.Y );
-    CALC_Z_FLAG( cpu.regs.Y );
-}
-
-/////////////////////////////////////////////////////////
-// INX - Increment Index X by One
-// X + 1 -> X
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(INX)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.X++;
-    CALC_N_FLAG( cpu.regs.X );
-    CALC_Z_FLAG( cpu.regs.X );
-}
-
-/////////////////////////////////////////////////////////
-// DEY - Decrement Index Y by One
-// Y - 1 -> Y
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(DEY)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.Y--;
-    CALC_N_FLAG( cpu.regs.Y );
-    CALC_Z_FLAG( cpu.regs.Y );
-}
-
-/////////////////////////////////////////////////////////
-// DEX - Decrement Index X by One
-// X - 1 -> X
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(DEX)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.X--;
-    CALC_N_FLAG( cpu.regs.X );
-    CALC_Z_FLAG( cpu.regs.X );
-}
-
-/////////////////////////////////////////////////////////
-// TAY - Transfer Accumulator to Index Y
-// A -> Y
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(TAY)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.Y = cpu.regs.A;
-    CALC_N_FLAG( cpu.regs.Y );
-    CALC_Z_FLAG( cpu.regs.Y );
-}
-
-/////////////////////////////////////////////////////////
-// TAX - Transfer Accumulator to Index X
-// A -> X
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(TAX)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.X = cpu.regs.A;
-    CALC_N_FLAG( cpu.regs.X );
-    CALC_Z_FLAG( cpu.regs.X );
-}
-
-/////////////////////////////////////////////////////////
-// TYA - Transfer Index Y to Accumulator
-// Y -> A
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(TYA)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.A = cpu.regs.Y;
-    CALC_N_FLAG( cpu.regs.A );
-    CALC_Z_FLAG( cpu.regs.A );
-}
-
-/////////////////////////////////////////////////////////
-// TXA - Transfer Index X to Accumulator
-// X -> A
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(TXA)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.A = cpu.regs.X;
-    CALC_N_FLAG( cpu.regs.A );
-    CALC_Z_FLAG( cpu.regs.A );
-}
-
-/////////////////////////////////////////////////////////
-// TSX - Transfer Stack Pointer to Index X
-// SP -> X
-//
-// N Z C I D V
-// + + - - - -
-//
-OP_FUNCTION(TSX)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.X = cpu.regs.SP;
-    CALC_N_FLAG( cpu.regs.X );
-    CALC_Z_FLAG( cpu.regs.X );
-}
-
-/////////////////////////////////////////////////////////
-// TXS - Transfer Index X to Stack Pointer
-// X -> SP
-//
-// N Z C I D V
-// - - - - - -
-//
-OP_FUNCTION(TXS)
-{
-    addr_mode( cpu, false, false );
-    cpu.regs.SP = cpu.regs.X;
-}
-
-/////////////////////////////////////////////////////////
-// RTI - Return from Interrupt
-// The status register is pulled with the break flag
-// and bit 5 ignored. Then PC is pulled from the stack.
-//
-// pull SR, pull PC
-//
-// N Z C I D V
-// from stack
-//
-OP_FUNCTION(RTI)
-{
-    addr_mode( cpu, false, false );
-    cpu.tick_clock( 2 ); // Stack-pop extra cycles
-    uint8_t status = cpu.pull_byte_from_stack();
-    cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
-    uint16_t new_pc = cpu.pull_short_from_stack();
-    cpu.regs.PC = new_pc;    
-}
-
-/////////////////////////////////////////////////////////
-// LSR - Shift One Bit Right (Memory or Accumulator)
-// 0 -> [76543210] -> C
-//
-// N Z C I D V
-// 0 + + - - -
-//
-OP_FUNCTION(LSR)
+OP_FUNCTION(ROL)
 {
     uint8_t* operand;
     uint16_t address = addr_mode( cpu, true, false );
@@ -1279,11 +1132,13 @@ OP_FUNCTION(LSR)
     {
         operand = &cpu.regs.A;
     }
-    uint16_t data = *operand >> 1;
-    
-    cpu.regs.N = 0;
+    uint16_t data = (uint16_t)*operand << 1;
+    data = (data & 0xFFFE) | cpu.regs.C;
+
+    cpu.regs.C = data > 0xFF ? 1 : 0;
+    CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
-    cpu.regs.C = (*operand & 0x1) == 0x1;
+    
     cpu.write_byte( data, operand );
 }
 
@@ -1318,33 +1173,129 @@ OP_FUNCTION(ROR)
 }
 
 /////////////////////////////////////////////////////////
-// ROL - Rotate One Bit Left (Memory or Accumulator)
-// C <- [76543210] <- C
+// RTI - Return from Interrupt
+// The status register is pulled with the break flag
+// and bit 5 ignored. Then PC is pulled from the stack.
+//
+// pull SR, pull PC
 //
 // N Z C I D V
-// + + + - - -
+// from stack
 //
-OP_FUNCTION(ROL)
+OP_FUNCTION(RTI)
 {
-    uint8_t* operand;
-    uint16_t address = addr_mode( cpu, true, false );
-    if (addr_mode != addr_mode_accumulator)
-    {
-        operand = cpu.fetch_byte_ref( address );
-        cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    else
-    {
-        operand = &cpu.regs.A;
-    }
-    uint16_t data = (uint16_t)*operand << 1;
-    data = (data & 0xFFFE) | cpu.regs.C;
+    addr_mode( cpu, false, false );
+    cpu.tick_clock( 2 ); // Stack-pop extra cycles
+    uint8_t status = cpu.pull_byte_from_stack();
+    cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
+    uint16_t new_pc = cpu.pull_short_from_stack();
+    cpu.regs.PC = new_pc;    
+}
 
-    cpu.regs.C = data > 0xFF ? 1 : 0;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    
-    cpu.write_byte( data, operand );
+/////////////////////////////////////////////////////////
+// RTS - Return from Subroutine
+// pull PC, PC+1 -> PC
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(RTS)
+{
+    addr_mode( cpu, false, true );
+    uint16_t address = cpu.pull_short_from_stack();
+    cpu.tick_clock( 2 ); // Stack-pop extra cycles
+    cpu.regs.PC = address + 1;
+    cpu.tick_clock(); // One extra cycle to post-increment PC
+}
+
+/////////////////////////////////////////////////////////
+// SBC - Subtract Memory from Accumulator with Borrow
+//         _
+// A - M - C -> A
+//
+// N Z C I D V
+// + + + - - +
+//
+OP_FUNCTION(SBC)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  data0    = cpu.fetch_byte( address );
+    uint8_t  data1 = ~data0;
+    uint16_t res = cpu.regs.A + data1 + cpu.regs.C;
+
+    CALC_C_FLAG( res );
+    CALC_Z_FLAG( res );
+    CALC_N_FLAG( res );
+    CALC_V_FLAG( cpu.regs.A, data1, res );
+    cpu.regs.A = res;
+}
+
+/////////////////////////////////////////////////////////
+// SEC - Set Carry Flag
+// 1 -> C
+//
+// N Z C I D V
+// - - 1 - - -
+//
+OP_FUNCTION(SEC)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.C = 1;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// SED - Set Decimal Flag
+// 1 -> D
+//
+// N Z C I D V
+// - - - - 1 -
+//
+OP_FUNCTION(SED)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.D = 1;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// SEI - Set Interrupt Disable Status
+// 1 -> I
+//
+// N Z C I D V
+// - - - 1 - -
+//
+OP_FUNCTION(SEI)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.I = 1;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// STA - Store Accumulator in Memory
+// A -> M
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(STA)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    cpu.write_byte( cpu.regs.A, address );
+}
+
+/////////////////////////////////////////////////////////
+// STX - Store Index X in Memory
+// X -> M
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(STX)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    cpu.write_byte( cpu.regs.X, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1361,40 +1312,94 @@ OP_FUNCTION(STY)
 }
 
 /////////////////////////////////////////////////////////
-// INC - Increment Memory by One
-// M + 1 -> M
+// TAX - Transfer Accumulator to Index X
+// A -> X
 //
 // N Z C I D V
 // + + - - - -
 //
-OP_FUNCTION(INC)
+OP_FUNCTION(TAX)
 {
-    uint16_t address = addr_mode( cpu, true, false );
-    uint8_t data = cpu.fetch_byte( address );
-    data = data + 0x1;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    cpu.tick_clock();
-    cpu.write_byte( data, address );
+    addr_mode( cpu, false, false );
+    cpu.regs.X = cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
 }
 
 /////////////////////////////////////////////////////////
-// DEC - Decrement Memory by One
-// M - 1 -> M
+// TAY - Transfer Accumulator to Index Y
+// A -> Y
 //
 // N Z C I D V
 // + + - - - -
 //
-OP_FUNCTION(DEC)
+OP_FUNCTION(TAY)
 {
-    uint16_t address = addr_mode( cpu, true, false );
-    uint8_t data = cpu.fetch_byte( address );
-    data = data - 0x1;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    cpu.tick_clock();
-    cpu.write_byte( data, address );
+    addr_mode( cpu, false, false );
+    cpu.regs.Y = cpu.regs.A;
+    CALC_N_FLAG( cpu.regs.Y );
+    CALC_Z_FLAG( cpu.regs.Y );
 }
+
+/////////////////////////////////////////////////////////
+// TSX - Transfer Stack Pointer to Index X
+// SP -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TSX)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.X = cpu.regs.SP;
+    CALC_N_FLAG( cpu.regs.X );
+    CALC_Z_FLAG( cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// TXA - Transfer Index X to Accumulator
+// X -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TXA)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.A = cpu.regs.X;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+/////////////////////////////////////////////////////////
+// TXS - Transfer Index X to Stack Pointer
+// X -> SP
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(TXS)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.SP = cpu.regs.X;
+}
+
+/////////////////////////////////////////////////////////
+// TYA - Transfer Index Y to Accumulator
+// Y -> A
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(TYA)
+{
+    addr_mode( cpu, false, false );
+    cpu.regs.A = cpu.regs.Y;
+    CALC_N_FLAG( cpu.regs.A );
+    CALC_Z_FLAG( cpu.regs.A );
+}
+
+///////// ------------------------ Illegal Operations ------------------------
 
 /////////////////////////////////////////////////////////
 // LAX - LDA oper + LDX oper
