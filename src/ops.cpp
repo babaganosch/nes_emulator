@@ -44,7 +44,7 @@ op_code_t op_codes[256] = {
     CPU_OP(ORA, O, immediate),              //   9     $ 09
     CPU_OP(ASL, O, accumulator),            //  10     $ 0A
     CPU_OP(___, O, implied),                //  11     $ 0B
-    CPU_OP(___, O, implied),                //  12     $ 0C
+    CPU_OP(NOP, I, absolute),               //  12     $ 0C
     CPU_OP(ORA, O, absolute),               //  13     $ 0D
     CPU_OP(ASL, O, absolute),               //  14     $ 0E
     CPU_OP(___, O, implied),                //  15     $ 0F
@@ -52,15 +52,15 @@ op_code_t op_codes[256] = {
     CPU_OP(ORA, O, post_index_indirect_y),  //  17     $ 11
     CPU_OP(___, O, implied),                //  18     $ 12
     CPU_OP(___, O, implied),                //  19     $ 13
-    CPU_OP(___, O, implied),                //  20     $ 14
+    CPU_OP(NOP, I, index_zp_x),             //  20     $ 14
     CPU_OP(ORA, O, index_zp_x),             //  21     $ 15
     CPU_OP(ASL, O, index_zp_x),             //  22     $ 16
     CPU_OP(___, O, implied),                //  23     $ 17
     CPU_OP(CLC, O, implied),                //  24     $ 18
     CPU_OP(ORA, O, index_y),                //  25     $ 19
-    CPU_OP(___, O, implied),                //  26     $ 1A
+    CPU_OP(NOP, I, implied),                //  26     $ 1A
     CPU_OP(___, O, implied),                //  27     $ 1B
-    CPU_OP(___, O, implied),                //  28     $ 1C
+    CPU_OP(NOP, I, index_x),                //  28     $ 1C
     CPU_OP(ORA, O, index_x),                //  29     $ 1D
     CPU_OP(ASL, O, index_x),                //  30     $ 1E
     CPU_OP(___, O, implied),                //  31     $ 1F
@@ -84,15 +84,15 @@ op_code_t op_codes[256] = {
     CPU_OP(AND, O, post_index_indirect_y),  //  49     $ 31
     CPU_OP(___, O, implied),                //  50     $ 32
     CPU_OP(___, O, implied),                //  51     $ 33
-    CPU_OP(___, O, implied),                //  52     $ 34
+    CPU_OP(NOP, I, index_zp_x),             //  52     $ 34
     CPU_OP(AND, O, index_zp_x),             //  53     $ 35
     CPU_OP(ROL, O, index_zp_x),             //  54     $ 36
     CPU_OP(___, O, implied),                //  55     $ 37
     CPU_OP(SEC, O, implied),                //  56     $ 38
     CPU_OP(AND, O, index_y),                //  57     $ 39
-    CPU_OP(___, O, implied),                //  58     $ 3A
+    CPU_OP(NOP, I, implied),                //  58     $ 3A
     CPU_OP(___, O, implied),                //  59     $ 3B
-    CPU_OP(___, O, implied),                //  60     $ 3C
+    CPU_OP(NOP, I, index_x),                //  60     $ 3C
     CPU_OP(AND, O, index_x),                //  61     $ 3D
     CPU_OP(ROL, O, index_x),                //  62     $ 3E
     CPU_OP(___, O, implied),                //  63     $ 3F
@@ -100,7 +100,7 @@ op_code_t op_codes[256] = {
     CPU_OP(EOR, O, pre_index_indirect_x),   //  65     $ 41
     CPU_OP(___, O, implied),                //  66     $ 42
     CPU_OP(___, O, implied),                //  67     $ 43
-    CPU_OP(___, O, implied),                //  68     $ 44
+    CPU_OP(NOP, I, zero_page),              //  68     $ 44
     CPU_OP(EOR, O, zero_page),              //  69     $ 45
     CPU_OP(LSR, O, zero_page),              //  70     $ 46
     CPU_OP(___, O, implied),                //  71     $ 47
@@ -116,15 +116,15 @@ op_code_t op_codes[256] = {
     CPU_OP(EOR, O, post_index_indirect_y),  //  81     $ 51
     CPU_OP(___, O, implied),                //  82     $ 52
     CPU_OP(___, O, implied),                //  83     $ 53
-    CPU_OP(___, O, implied),                //  84     $ 54
+    CPU_OP(NOP, I, index_zp_x),             //  84     $ 54
     CPU_OP(EOR, O, index_zp_x),             //  85     $ 55
     CPU_OP(LSR, O, index_zp_x),             //  86     $ 56
     CPU_OP(___, O, implied),                //  87     $ 57
     CPU_OP(___, O, implied),                //  88     $ 58
     CPU_OP(EOR, O, index_y),                //  89     $ 59
-    CPU_OP(___, O, implied),                //  90     $ 5A
+    CPU_OP(NOP, I, implied),                //  90     $ 5A
     CPU_OP(___, O, implied),                //  91     $ 5B
-    CPU_OP(___, O, implied),                //  92     $ 5C
+    CPU_OP(NOP, I, index_x),                //  92     $ 5C
     CPU_OP(EOR, O, index_x),                //  93     $ 5D
     CPU_OP(LSR, O, index_x),                //  94     $ 5E
     CPU_OP(___, O, implied),                //  95     $ 5F
@@ -132,7 +132,7 @@ op_code_t op_codes[256] = {
     CPU_OP(ADC, O, pre_index_indirect_x),   //  97     $ 61
     CPU_OP(___, O, implied),                //  98     $ 62
     CPU_OP(___, O, implied),                //  99     $ 63
-    CPU_OP(___, O, implied),                // 100     $ 64
+    CPU_OP(NOP, I, zero_page),              // 100     $ 64
     CPU_OP(ADC, O, zero_page),              // 101     $ 65
     CPU_OP(ROR, O, zero_page),              // 102     $ 66
     CPU_OP(___, O, implied),                // 103     $ 67
@@ -148,34 +148,34 @@ op_code_t op_codes[256] = {
     CPU_OP(ADC, O, post_index_indirect_y),  // 113     $ 71
     CPU_OP(___, O, implied),                // 114     $ 72
     CPU_OP(___, O, implied),                // 115     $ 73
-    CPU_OP(___, O, implied),                // 116     $ 74
+    CPU_OP(NOP, I, index_zp_x),             // 116     $ 74
     CPU_OP(ADC, O, index_zp_x),             // 117     $ 75
     CPU_OP(ROR, O, index_zp_x),             // 118     $ 76
     CPU_OP(___, O, implied),                // 119     $ 77
     CPU_OP(SEI, O, implied),                // 120     $ 78
     CPU_OP(ADC, O, index_y),                // 121     $ 79
-    CPU_OP(___, O, implied),                // 122     $ 7A
+    CPU_OP(NOP, I, implied),                // 122     $ 7A
     CPU_OP(___, O, implied),                // 123     $ 7B
-    CPU_OP(___, O, implied),                // 124     $ 7C
+    CPU_OP(NOP, I, index_x),                // 124     $ 7C
     CPU_OP(ADC, O, index_x),                // 125     $ 7D
     CPU_OP(ROR, O, index_x),                // 126     $ 7E
     CPU_OP(___, O, implied),                // 127     $ 7F
-    CPU_OP(___, O, implied),                // 128     $ 80
+    CPU_OP(NOP, I, immediate),              // 128     $ 80
     CPU_OP(STA, O, pre_index_indirect_x),   // 129     $ 81
-    CPU_OP(___, O, implied),                // 130     $ 82
-    CPU_OP(___, O, implied),                // 131     $ 83
+    CPU_OP(NOP, I, immediate),              // 130     $ 82
+    CPU_OP(SAX, I, pre_index_indirect_x),   // 131     $ 83
     CPU_OP(STY, O, zero_page),              // 132     $ 84
     CPU_OP(STA, O, zero_page),              // 133     $ 85
     CPU_OP(STX, O, zero_page),              // 134     $ 86
-    CPU_OP(___, O, implied),                // 135     $ 87
+    CPU_OP(SAX, I, zero_page),              // 135     $ 87
     CPU_OP(DEY, O, implied),                // 136     $ 88
-    CPU_OP(___, O, implied),                // 137     $ 89
+    CPU_OP(NOP, I, immediate),              // 137     $ 89
     CPU_OP(TXA, O, implied),                // 138     $ 8A
     CPU_OP(___, O, implied),                // 139     $ 8B
     CPU_OP(STY, O, absolute),               // 140     $ 8C
     CPU_OP(STA, O, absolute),               // 141     $ 8D
     CPU_OP(STX, O, absolute),               // 142     $ 8E
-    CPU_OP(___, O, implied),                // 143     $ 8F
+    CPU_OP(SAX, I, absolute),               // 143     $ 8F
     CPU_OP(BCC, O, relative),               // 144     $ 90
     CPU_OP(STA, O, post_index_indirect_y),  // 145     $ 91
     CPU_OP(___, O, implied),                // 146     $ 92
@@ -183,7 +183,7 @@ op_code_t op_codes[256] = {
     CPU_OP(STY, O, index_zp_x),             // 148     $ 94
     CPU_OP(STA, O, index_zp_x),             // 149     $ 95
     CPU_OP(STX, O, index_zp_y),             // 150     $ 96
-    CPU_OP(___, O, implied),                // 151     $ 97
+    CPU_OP(SAX, I, index_zp_y),             // 151     $ 97
     CPU_OP(TYA, O, implied),                // 152     $ 98
     CPU_OP(STA, O, index_y),                // 153     $ 99
     CPU_OP(TXS, O, implied),                // 154     $ 9A
@@ -195,11 +195,11 @@ op_code_t op_codes[256] = {
     CPU_OP(LDY, O, immediate),              // 160     $ A0
     CPU_OP(LDA, O, pre_index_indirect_x),   // 161     $ A1
     CPU_OP(LDX, O, immediate),              // 162     $ A2
-    CPU_OP(___, O, implied),                // 163     $ A3
+    CPU_OP(LAX, I, pre_index_indirect_x),   // 163     $ A3
     CPU_OP(LDY, O, zero_page),              // 164     $ A4
     CPU_OP(LDA, O, zero_page),              // 165     $ A5
     CPU_OP(LDX, O, zero_page),              // 166     $ A6
-    CPU_OP(___, O, implied),                // 167     $ A7
+    CPU_OP(LAX, I, zero_page),              // 167     $ A7
     CPU_OP(TAY, O, implied),                // 168     $ A8
     CPU_OP(LDA, O, immediate),              // 169     $ A9
     CPU_OP(TAX, O, implied),                // 170     $ AA
@@ -207,15 +207,15 @@ op_code_t op_codes[256] = {
     CPU_OP(LDY, O, absolute),               // 172     $ AC
     CPU_OP(LDA, O, absolute),               // 173     $ AD
     CPU_OP(LDX, O, absolute),               // 174     $ AE
-    CPU_OP(___, O, implied),                // 175     $ AF
+    CPU_OP(LAX, I, absolute),               // 175     $ AF
     CPU_OP(BCS, O, relative),               // 176     $ B0
     CPU_OP(LDA, O, post_index_indirect_y),  // 177     $ B1
     CPU_OP(___, O, implied),                // 178     $ B2
-    CPU_OP(___, O, implied),                // 179     $ B3
+    CPU_OP(LAX, I, post_index_indirect_y),  // 179     $ B3
     CPU_OP(LDY, O, index_zp_x),             // 180     $ B4
     CPU_OP(LDA, O, index_zp_x),             // 181     $ B5
     CPU_OP(LDX, O, index_zp_y),             // 182     $ B6
-    CPU_OP(___, O, implied),                // 183     $ B7
+    CPU_OP(LAX, I, index_zp_y),             // 183     $ B7
     CPU_OP(CLV, O, implied),                // 184     $ B8
     CPU_OP(LDA, O, index_y),                // 185     $ B9
     CPU_OP(TSX, O, implied),                // 186     $ BA
@@ -223,15 +223,15 @@ op_code_t op_codes[256] = {
     CPU_OP(LDY, O, index_x),                // 188     $ BC
     CPU_OP(LDA, O, index_x),                // 189     $ BD
     CPU_OP(LDX, O, index_y),                // 190     $ BE
-    CPU_OP(___, O, implied),                // 191     $ BF
+    CPU_OP(LAX, I, index_y),                // 191     $ BF
     CPU_OP(CPY, O, immediate),              // 192     $ C0
     CPU_OP(CMP, O, pre_index_indirect_x),   // 193     $ C1
-    CPU_OP(___, O, implied),                // 194     $ C2
-    CPU_OP(___, O, implied),                // 195     $ C3
+    CPU_OP(NOP, I, immediate),              // 194     $ C2
+    CPU_OP(DCP, I, pre_index_indirect_x),   // 195     $ C3
     CPU_OP(CPY, O, zero_page),              // 196     $ C4
     CPU_OP(CMP, O, zero_page),              // 197     $ C5
     CPU_OP(DEC, O, zero_page),              // 198     $ C6
-    CPU_OP(___, O, implied),                // 199     $ C7
+    CPU_OP(DCP, I, zero_page),              // 199     $ C7
     CPU_OP(INY, O, implied),                // 200     $ C8
     CPU_OP(CMP, O, immediate),              // 201     $ C9
     CPU_OP(DEX, O, implied),                // 202     $ CA
@@ -239,55 +239,55 @@ op_code_t op_codes[256] = {
     CPU_OP(CPY, O, absolute),               // 204     $ CC
     CPU_OP(CMP, O, absolute),               // 205     $ CD
     CPU_OP(DEC, O, absolute),               // 206     $ CE
-    CPU_OP(___, O, implied),                // 207     $ CF
+    CPU_OP(DCP, I, absolute),               // 207     $ CF
     CPU_OP(BNE, O, relative),               // 208     $ D0
     CPU_OP(CMP, O, post_index_indirect_y),  // 209     $ D1
     CPU_OP(___, O, implied),                // 210     $ D2
-    CPU_OP(___, O, implied),                // 211     $ D3
-    CPU_OP(___, O, implied),                // 212     $ D4
+    CPU_OP(DCP, I, post_index_indirect_y),  // 211     $ D3
+    CPU_OP(NOP, I, index_zp_x),             // 212     $ D4
     CPU_OP(CMP, O, index_zp_x),             // 213     $ D5
     CPU_OP(DEC, O, index_zp_x),             // 214     $ D6
-    CPU_OP(___, O, implied),                // 215     $ D7
+    CPU_OP(DCP, I, index_zp_x),             // 215     $ D7
     CPU_OP(CLD, O, implied),                // 216     $ D8
     CPU_OP(CMP, O, index_y),                // 217     $ D9
-    CPU_OP(___, O, implied),                // 218     $ DA
-    CPU_OP(___, O, implied),                // 219     $ DB
-    CPU_OP(___, O, implied),                // 220     $ DC
+    CPU_OP(NOP, I, implied),                // 218     $ DA
+    CPU_OP(DCP, I, index_y),                // 219     $ DB
+    CPU_OP(NOP, I, index_x),                // 220     $ DC
     CPU_OP(CMP, O, index_x),                // 221     $ DD
     CPU_OP(DEC, O, index_x),                // 222     $ DE
-    CPU_OP(___, O, implied),                // 223     $ DF
+    CPU_OP(DCP, I, index_x),                // 223     $ DF
     CPU_OP(CPX, O, immediate),              // 224     $ E0
     CPU_OP(SBC, O, pre_index_indirect_x),   // 225     $ E1
-    CPU_OP(___, O, implied),                // 226     $ E2
-    CPU_OP(___, O, implied),                // 227     $ E3
+    CPU_OP(NOP, I, immediate),              // 226     $ E2
+    CPU_OP(ISB, I, pre_index_indirect_x),   // 227     $ E3
     CPU_OP(CPX, O, zero_page),              // 228     $ E4
     CPU_OP(SBC, O, zero_page),              // 229     $ E5
     CPU_OP(INC, O, zero_page),              // 230     $ E6
-    CPU_OP(___, O, implied),                // 231     $ E7
+    CPU_OP(ISB, I, zero_page),              // 231     $ E7
     CPU_OP(INX, O, implied),                // 232     $ E8
     CPU_OP(SBC, O, immediate),              // 233     $ E9
     CPU_OP(NOP, O, implied),                // 234     $ EA
-    CPU_OP(___, O, implied),                // 235     $ EB
+    CPU_OP(SBC, I, immediate),              // 235     $ EB
     CPU_OP(CPX, O, absolute),               // 236     $ EC
     CPU_OP(SBC, O, absolute),               // 237     $ ED
     CPU_OP(INC, O, absolute),               // 238     $ EE
-    CPU_OP(___, O, implied),                // 239     $ EF
+    CPU_OP(ISB, I, absolute),               // 239     $ EF
     CPU_OP(BEQ, O, relative),               // 240     $ F0
     CPU_OP(SBC, O, post_index_indirect_y),  // 241     $ F1
     CPU_OP(___, O, implied),                // 242     $ F2
-    CPU_OP(___, O, implied),                // 243     $ F3
-    CPU_OP(___, O, implied),                // 244     $ F4
+    CPU_OP(ISB, I, post_index_indirect_y),  // 243     $ F3
+    CPU_OP(NOP, I, index_zp_x),             // 244     $ F4
     CPU_OP(SBC, O, index_zp_x),             // 245     $ F5
     CPU_OP(INC, O, index_zp_x),             // 246     $ F6
-    CPU_OP(___, O, implied),                // 247     $ F7
+    CPU_OP(ISB, I, index_zp_x),             // 247     $ F7
     CPU_OP(SED, O, implied),                // 248     $ F8
     CPU_OP(SBC, O, index_y),                // 249     $ F9
-    CPU_OP(___, O, implied),                // 250     $ FA
-    CPU_OP(___, O, implied),                // 251     $ FB
-    CPU_OP(___, O, implied),                // 252     $ FC
+    CPU_OP(NOP, I, implied),                // 250     $ FA
+    CPU_OP(ISB, I, index_y),                // 251     $ FB
+    CPU_OP(NOP, I, index_x),                // 252     $ FC
     CPU_OP(SBC, O, index_x),                // 253     $ FD
     CPU_OP(INC, O, index_x),                // 254     $ FE
-    CPU_OP(___, O, implied)                 // 255     $ FF
+    CPU_OP(ISB, I, index_x)                 // 255     $ FF
 };          
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -637,14 +637,21 @@ OP_FUNCTION(JSR)
 }
 
 /////////////////////////////////////////////////////////
-// NOP
+// NOP, DOP, TOP
 //
 // N Z C I D V
 // - - - - - -
 //
 OP_FUNCTION(NOP)
 {
+    uint16_t old_pc = cpu.regs.PC;
     addr_mode( cpu, false, false );
+
+    // DOP and TOP
+    if (cpu.regs.PC - old_pc > 0)
+    {
+        cpu.tick_clock();
+    }
 }
 
 /////////////////////////////////////////////////////////
@@ -1081,15 +1088,15 @@ OP_FUNCTION(CPX)
 OP_FUNCTION(SBC)
 {
     uint16_t address = addr_mode( cpu, false, false );
-    uint16_t data    = cpu.fetch_byte( address );
-    uint8_t  operand = data ^ 0xFF;
-    data = cpu.regs.A + operand + cpu.regs.C;
+    uint8_t  data0    = cpu.fetch_byte( address );
+    uint8_t  data1 = ~data0;
+    uint16_t res = cpu.regs.A + data1 + cpu.regs.C;
 
-    CALC_C_FLAG( data );
-    CALC_Z_FLAG( data );
-    CALC_N_FLAG( data );
-    CALC_V_FLAG( cpu.regs.A, operand, data );
-    cpu.regs.A = data;
+    CALC_C_FLAG( res );
+    CALC_Z_FLAG( res );
+    CALC_N_FLAG( res );
+    CALC_V_FLAG( cpu.regs.A, data1, res );
+    cpu.regs.A = res;
 }
 
 /////////////////////////////////////////////////////////
@@ -1395,6 +1402,97 @@ OP_FUNCTION(DEC)
     CALC_Z_FLAG( data );
     cpu.tick_clock();
     cpu.write_byte( data, address );
+}
+
+/////////////////////////////////////////////////////////
+// LAX - LDA oper + LDX oper
+// M -> A -> X
+//
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(LAX)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t data = cpu.fetch_byte( address );
+    cpu.regs.A = data;
+    cpu.regs.X = data;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+}
+
+/////////////////////////////////////////////////////////
+// SAX (AXS, AAX)
+// A and X are put on the bus at the same time (resulting 
+// effectively in an AND operation) and stored in M
+//
+// A AND X -> M
+//
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(SAX)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t data = cpu.regs.A & cpu.regs.X;
+    cpu.write_byte( data, address );
+}
+
+/////////////////////////////////////////////////////////
+// DCP  (DCM)
+// DEC oper + CMP oper
+//
+// M - 1 -> M, A - M
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(DCP)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    // M - 1 -> M
+    uint8_t data = operand - 0x1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    CALC_C_FLAG( data );
+    cpu.write_byte( data, address );
+    // A - M
+    data = cpu.regs.A - data;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
+    cpu.tick_clock();
+}
+
+/////////////////////////////////////////////////////////
+// ISB (ISC, INS)
+// INC oper + SBC oper
+//                     _
+// M + 1 -> M, A - M - C -> A
+//
+// N Z C I D V
+// + + + - - +
+//
+OP_FUNCTION(ISB)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t  data0 = cpu.fetch_byte( address );
+    // M + 1 -> M
+    uint8_t  data1 = data0 + 0x1;
+    CALC_N_FLAG( data1 );
+    CALC_Z_FLAG( data1 );
+    cpu.write_byte( data1, address );
+    //         _
+    // A - M - C -> A
+    data0 = ~data1;
+    uint16_t res = cpu.regs.A + data0 + cpu.regs.C;
+    CALC_C_FLAG( res );
+    CALC_Z_FLAG( res );
+    CALC_N_FLAG( res );
+    CALC_V_FLAG( cpu.regs.A, data0, res );
+    cpu.regs.A = res;
+    cpu.tick_clock();
 }
 
 } // nes
