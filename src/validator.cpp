@@ -66,9 +66,9 @@ RESULT validator::construct_output_pre_line()
     line_number++;
     emu_output[0] = '\0';
     cpu_t& cpu    = emu->cpu;
-    uint8_t inst  = emu->memory[cpu.regs.PC    ];
-    uint8_t data0 = emu->memory[cpu.regs.PC + 1];
-    uint8_t data1 = emu->memory[cpu.regs.PC + 2];
+    uint8_t inst  = cpu.peek_memory(cpu.regs.PC    );
+    uint8_t data0 = cpu.peek_memory(cpu.regs.PC + 1);
+    uint8_t data1 = cpu.peek_memory(cpu.regs.PC + 2);
     op_code_t op  = op_codes[inst];
     uint16_t cycles = cpu.cycles;
     uint16_t ppu_x = emu->ppu.x;

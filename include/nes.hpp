@@ -49,64 +49,50 @@ struct mem_t
     +---------------+ 0x0000
 
     */
-    union
-    {
-        struct
+
+    struct cpu_mem_t
+    { // $0000 - $1FFF
+        union
         {
-            union
+            struct
             {
-                struct
-                {
-                    uint8_t zero_page         [0x0100]; // $0000 - $00FF
-                    uint8_t stack             [0x0100]; // $0100 - $01FF
-                    uint8_t ram               [0x0600]; // $0200 - $07FF
-                };
-                uint8_t internal_ram          [0x0800]; // $0000 - $07FF
+                uint8_t zero_page         [0x0100]; // $0000 - $00FF
+                uint8_t stack             [0x0100]; // $0100 - $01FF
+                uint8_t ram               [0x0600]; // $0200 - $07FF
             };
-            
-            uint8_t ram_mirrors               [0x1800]; // $0800 - $1FFF (repeats every $800 bytes)
-
-            uint8_t ppu_regs                  [0x0008]; // $2000 - $2007
-            uint8_t ppu_mirrors               [0x1FF8]; // $2008 – $3FFF (repeats every 8 bytes)
-
-            union
-            {
-                struct
-                {
-                    uint8_t apu_pulse1        [0x0004]; // $4000 – $4003
-                    uint8_t apu_pulse2        [0x0004]; // $4004 – $4007
-                    uint8_t apu_triangle      [0x0004]; // $4008 – $400B
-                    uint8_t apu_noise         [0x0004]; // $400C – $400F
-                    uint8_t apu_dmc           [0x0004]; // $4010 – $4013
-                    uint8_t apu_status        [0x0002]; // $4015 - $4016?
-                    uint8_t apu_frame_counter [0x0001]; // $4017
-                };
-                uint8_t apu_regs              [0x0018]; // $4000 – $4017
-            };
-            uint8_t cpu_test_mode             [0x0008]; // $4018 – $401F
-
-            union
-            {
-                struct
-                {
-                    uint8_t expansion_rom    [0x1FE0];  // $4020 - $5FFF
-                    uint8_t sram             [0x2000];  // $6000 - $7FFF
-                    uint8_t prg_lower_bank   [0x4000];  // $8000 - $BFFF
-                    uint8_t prg_upper_bank   [0x4000];  // $C000 - $FFFF
-                };
-                uint8_t cartridge_space      [0xBFE0];  // $4020 – $FFFF
-            };
+            uint8_t internal_ram          [0x0800]; // $0000 - $07FF
+            // Mirroring $0800 - $1FFF of $0000 - $07FF
+            // (repeats every $800 bytes)
         };
-        uint8_t data[0x10000];
-    };
 
-    uint8_t  operator[] (uint32_t address) const { return data[address]; };
-    uint8_t &operator[] (uint32_t address)       { return data[address]; };
+    } cpu_mem;
+
+    struct ppu_mem_t
+    { // $2000 - $3FFF
+        uint8_t* regs{nullptr};    // $2000 - $2007
+        // Mirroring $2008 – $3FFF of $2000 - $2007 
+        // (repeats every 8 bytes)
+    } ppu_mem;
+
+    struct apu_mem_t
+    { // $4000 - $401F
+        uint8_t* regs{nullptr};    // $4000 – $4017
+        // cpu_test_mode              $4018 – $401F
+    } apu_mem;
+
+    struct cartridge_mem_t
+    { // $4020 - $FFFF
+        uint8_t* expansion_rom;    // $4020 - $5FFF
+        uint8_t* sram;             // $6000 - $7FFF
+        uint8_t* prg_lower_bank;   // $8000 - $BFFF
+        uint8_t* prg_upper_bank;   // $C000 - $FFFF
+
+    } cartridge_mem;
 
     void init();
 
-    uint8_t memory_read( uint16_t address );
-    void    memory_write( uint8_t data, uint16_t address );
+    uint8_t* memory_read( uint16_t address );
+    void     memory_write( uint8_t data, uint16_t address );
 };
 
 struct cpu_t

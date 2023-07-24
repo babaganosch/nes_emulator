@@ -723,9 +723,18 @@ OP_FUNCTION(CLD)
     cpu.tick_clock();
 }
 
+/////////////////////////////////////////////////////////
+// CLI - Clear Interrupt Disable Bit
+// 0 -> I
+//
+// N Z C I D V
+// - - - 0 - -
+//
 OP_FUNCTION(CLI)
 {
-    printf("OP CLI NOT IMPLEMENTED!\n");
+    addr_mode( cpu, false, false );
+    cpu.regs.I = 0;
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
