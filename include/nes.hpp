@@ -51,7 +51,7 @@ struct mem_t
     */
 
     struct cpu_mem_t
-    { // $0000 - $1FFF
+    { // $0000 - $401F
         union
         {
             struct
@@ -65,34 +65,70 @@ struct mem_t
             // (repeats every $800 bytes)
         };
 
+        // $2000 - $2007
+        struct
+        {
+            uint8_t* PPUCTRL;
+            uint8_t* PPUMASK;
+            uint8_t* PPUSTATUS;
+            uint8_t* OAMADDR;
+            uint8_t* OAMDATA;
+            uint8_t* PPUSCROLL;
+            uint8_t* PPUADDR;
+            uint8_t* PPUDATA;
+            uint8_t* OAMDMA;
+        } ppu_regs;
+        // Mirroring $2008 – $3FFF of $2000 - $2007 
+        // (repeats every 8 bytes)
+
+        // $4000 – $4017
+        uint8_t* apu_regs{nullptr};
+
+        // $4018 – $401F
+        uint8_t* cpu_test_mode{nullptr}; 
+
     } cpu_mem;
 
     struct ppu_mem_t
-    { // $2000 - $3FFF
-        uint8_t* regs{nullptr};    // $2000 - $2007
-        // Mirroring $2008 – $3FFF of $2000 - $2007 
-        // (repeats every 8 bytes)
+    {
+        uint8_t vram[0x800];
+        uint8_t oam[64 * 4];
     } ppu_mem;
 
     struct apu_mem_t
-    { // $4000 - $401F
-        uint8_t* regs{nullptr};    // $4000 – $4017
-        // cpu_test_mode              $4018 – $401F
+    {
+             
     } apu_mem;
 
     struct cartridge_mem_t
-    { // $4020 - $FFFF
-        uint8_t* expansion_rom;    // $4020 - $5FFF
-        uint8_t* sram;             // $6000 - $7FFF
-        uint8_t* prg_lower_bank;   // $8000 - $BFFF
-        uint8_t* prg_upper_bank;   // $C000 - $FFFF
+    {
+        // PPU: $0000 - $1FFF
+        uint8_t* chr_rom;          // PPU: $0000 - $1FFF
 
+        // CPU: $4020 - $FFFF
+        uint8_t* expansion_rom;    // CPU: $4020 - $5FFF
+        uint8_t* sram;             // CPU: $6000 - $7FFF
+        uint8_t* prg_lower_bank;   // CPU: $8000 - $BFFF
+        uint8_t* prg_upper_bank;   // CPU: $C000 - $FFFF
     } cartridge_mem;
 
-    void init();
+    enum MEMORY_BUS
+    {
+        CPU,
+        PPU,
+        APU
+    };
 
-    uint8_t* memory_read( uint16_t address );
-    void     memory_write( uint8_t data, uint16_t address );
+    void     init();
+
+    uint8_t* memory_read( MEMORY_BUS bus, uint16_t address );
+    void     memory_write( MEMORY_BUS bus, uint8_t data, uint16_t address );
+
+    uint8_t* cpu_memory_read( uint16_t address );
+    void     cpu_memory_write( uint8_t data, uint16_t address );
+
+    uint8_t* ppu_memory_read( uint16_t address );
+    void     ppu_memory_write( uint8_t data, uint16_t address );
 };
 
 struct cpu_t
@@ -143,12 +179,13 @@ struct cpu_t
     void init(cpu_callback_t cb, mem_t &mem);
     void execute();
 
+    uint8_t  peek_byte( uint16_t address );
+    uint16_t peek_short( uint16_t address );
     uint8_t  fetch_byte( uint16_t address );
     uint8_t  fetch_byte( uint8_t lo, uint8_t hi );
     uint8_t* fetch_byte_ref( uint16_t address );
     uint8_t  pull_byte_from_stack();
     uint16_t pull_short_from_stack();
-    uint16_t peek_memory( uint16_t address );
     void     write_byte( uint8_t data, uint8_t* ref );
     void     write_byte( uint8_t data, uint16_t address );
     void     write_byte( uint8_t data, uint8_t lo, uint8_t hi );
@@ -188,13 +225,33 @@ struct ines_rom_t
     RESULT load_from_data(const uint8_t* data, const uint32_t size);
 };
 
+struct apu_t
+{
+
+};
+
 struct ppu_t
 {
     uint16_t x{0};
     uint16_t y{0};
     uint32_t cycles{0};
 
-    RESULT init();
+    mem_t* memory{nullptr};
+
+    struct regs_t
+    {
+        uint8_t PPUCTRL;
+        uint8_t PPUMASK;
+        uint8_t PPUSTATUS;
+        uint8_t OAMADDR;
+        uint8_t OAMDATA;
+        uint8_t PPUSCROLL;
+        uint8_t PPUADDR;
+        uint8_t PPUDATA;
+        uint8_t OAMDMA;
+    } regs;
+
+    RESULT init(mem_t &mem);
     RESULT execute();
 };
 

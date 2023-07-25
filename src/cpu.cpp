@@ -11,10 +11,11 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
     callback = cb;
     memory = &mem;
 
-    regs.PC = 0xC000;
+    regs.SR = 0x34;
+    regs.A  = regs.X = regs.Y = 0x0;
     regs.SP = 0xFD;
-    regs.SR = 0x24;
-    regs.A = regs.X = regs.Y = 0x0;
+    regs.PC = 0xFFFC;
+
     cycles = 0;
 }
 
@@ -55,15 +56,25 @@ void cpu_t::tick_clock( uint8_t ticks )
     }
 }
 
-uint16_t cpu_t::peek_memory( uint16_t address )
+uint8_t cpu_t::peek_byte( uint16_t address )
 {
-    uint8_t* ptr = memory->memory_read( address );
+    uint8_t* ptr = memory->memory_read( mem_t::CPU, address );
     return ptr == nullptr ? 0xFF : *ptr;
+}
+
+uint16_t cpu_t::peek_short( uint16_t address )
+{
+    uint8_t* ptr = memory->memory_read( mem_t::CPU, address );
+    if (ptr == nullptr) return 0xFFFF;
+    uint16_t ret = *ptr;
+    ptr = memory->memory_read( mem_t::CPU, address + 1 );
+    if (ptr == nullptr) return 0xFFFF;
+    return *ptr << 8 | ret;
 }
 
 uint8_t cpu_t::fetch_byte( uint16_t address )
 {
-    uint8_t* ptr = memory->memory_read( address );
+    uint8_t* ptr = memory->memory_read( mem_t::CPU, address );
     uint8_t data = ptr == nullptr ? 0xFF : *ptr;
     tick_clock();
     return data;
@@ -78,7 +89,7 @@ uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
 uint8_t* cpu_t::fetch_byte_ref( uint16_t address )
 {
     tick_clock();
-    return memory->memory_read( address );
+    return memory->memory_read( mem_t::CPU, address );
 }
 
 void cpu_t::write_byte( uint8_t data, uint8_t* ref )
@@ -89,19 +100,24 @@ void cpu_t::write_byte( uint8_t data, uint8_t* ref )
 
 void cpu_t::write_byte( uint8_t data, uint16_t address )
 {
-    memory->memory_write( data, address );
+    memory->memory_write( mem_t::CPU, data, address );
     tick_clock();
 }
 
 void cpu_t::write_byte( uint8_t data, uint8_t lo, uint8_t hi )
 {
     uint16_t address = ((uint16_t)hi << 8) | lo;
-    memory->memory_write( data, address );
+    memory->memory_write( mem_t::CPU, data, address );
     tick_clock();
 }
 
 void cpu_t::push_byte_to_stack( uint8_t data )
 {
+    if ( regs.SP == 0x00 )
+    {
+        printf("--- ERROR: Stack Overflow! ---\n");
+        throw;
+    }
     uint8_t address = regs.SP--;
     tick_clock();
     (*memory).cpu_mem.stack[ address ] = data;

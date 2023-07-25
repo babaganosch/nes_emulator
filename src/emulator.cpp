@@ -16,9 +16,9 @@ void cpu_clock_callback(void *cookie)
 RESULT emu_t::init(ines_rom_t &rom)
 {
     emulator_ref = this;
-    memory.init();
     cpu.init(&cpu_clock_callback, memory);
-    ppu.init();
+    ppu.init(memory);
+    memory.init();
 
     // Map PRG ROM
     if (rom.header.prg_size == 1) {
@@ -28,16 +28,24 @@ RESULT emu_t::init(ines_rom_t &rom)
         memory.cartridge_mem.prg_lower_bank = rom.prg_pages[0];
         memory.cartridge_mem.prg_upper_bank = rom.prg_pages[1];
     } else {
-        printf("TODO: Solve mapping for more than two PRG ROM bank.");
+        printf("TODO: Solve mapping for more than two PRG ROM bank.\n");
+        return RESULT_ERROR;
+    }
+
+    // Map CHR ROM
+    if (rom.header.chr_size == 1) {
+        memory.cartridge_mem.chr_rom = rom.chr_pages[0];
+    } else {
+        printf("TODO: Solve mapping for zero or more than one CHR ROM bank.\n");
         return RESULT_ERROR;
     }
 
     // Map CHR ROM
 
     // Try to grab the interrupt vectors
-    cpu.vectors.NMI = cpu.peek_memory( 0xFFFA );
-    cpu.vectors.RESET = cpu.peek_memory( 0xFFFC );
-    cpu.vectors.IRQBRK = cpu.peek_memory( 0xFFFE );
+    cpu.vectors.NMI = cpu.peek_short( 0xFFFA );
+    cpu.vectors.RESET = cpu.peek_short( 0xFFFC );
+    cpu.vectors.IRQBRK = cpu.peek_short( 0xFFFE );
 
     // Reset program counter to reset vector
     cpu.regs.PC = cpu.vectors.RESET;

@@ -313,7 +313,7 @@ ADDRESS_MODE(absolute)
     {
         if (!is_branch)
         {
-            snprintf(cpu.nestest_validation_str, 5, "= %02X", cpu.peek_memory(address));
+            snprintf(cpu.nestest_validation_str, 5, "= %02X", cpu.peek_byte(address));
         }
         else
         {
@@ -331,7 +331,7 @@ ADDRESS_MODE(zero_page)
 
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 3, "%02X", cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 3, "%02X", cpu.peek_byte(address));
     }
 
     return address;
@@ -353,7 +353,7 @@ ADDRESS_MODE(index_x)
     uint16_t address = UINT16( new_lo, new_hi );
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 10, "%04X = %02X", address, cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 10, "%04X = %02X", address, cpu.peek_byte(address));
     }
 
     return address;
@@ -375,7 +375,7 @@ ADDRESS_MODE(index_y)
     uint16_t address = UINT16( new_lo, new_hi );
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 10, "%04X = %02X", address, cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 10, "%04X = %02X", address, cpu.peek_byte(address));
     }
 
     return address;
@@ -390,7 +390,7 @@ ADDRESS_MODE(index_zp_x)
     uint16_t address = UINT16( lo, 0x00 );
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 8, "%02X = %02X", lo, cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 8, "%02X = %02X", lo, cpu.peek_byte(address));
     }
 
     return address;
@@ -405,7 +405,7 @@ ADDRESS_MODE(index_zp_y)
     uint16_t address = UINT16( lo, 0x00 );
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 8, "%02X = %02X", lo, cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 8, "%02X = %02X", lo, cpu.peek_byte(address));
     }
 
     return address;
@@ -449,7 +449,7 @@ ADDRESS_MODE(pre_index_indirect_x)
 
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 15, "%02X = %04X = %02X", tmp, address, cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 15, "%02X = %04X = %02X", tmp, address, cpu.peek_byte(address));
     }
 
     return address;
@@ -472,7 +472,7 @@ ADDRESS_MODE(post_index_indirect_y)
     uint16_t address = UINT16( new_lo, new_hi );
     if (cpu.nestest_validation)
     {
-        snprintf(cpu.nestest_validation_str, 17, "%04X @ %04X = %02X", UINT16( lo, hi ), address, cpu.peek_memory(address));
+        snprintf(cpu.nestest_validation_str, 17, "%04X @ %04X = %02X", UINT16( lo, hi ), address, cpu.peek_byte(address));
     }
 
     return address;
@@ -664,9 +664,29 @@ OP_FUNCTION(BPL)
     branch( cpu, cpu.regs.N, 0, cpu.regs.PC, address );
 }
 
+/////////////////////////////////////////////////////////
+// BRK - Force Break
+// BRK initiates a software interrupt similar to a hardware
+// interrupt (IRQ). The return address pushed to the stack is
+// PC+2, providing an extra byte of spacing for a break mark
+// (identifying a reason for the break.)
+// The status register will be pushed to the stack with the break
+// flag set to 1. However, when retrieved during RTI or by a PLP
+// instruction, the break flag will be ignored.
+// The interrupt disable flag is not set automatically.
+//
+// interrupt, push PC+2, push SR
+//
+// N Z C I D V
+// - - - 1 - -
+//
 OP_FUNCTION(BRK)
 {
-    printf("OP BRK NOT IMPLEMENTED!\n");
+    addr_mode( cpu, true, false );
+    cpu.push_short_to_stack( cpu.regs.PC + 1 );
+    cpu.push_byte_to_stack( cpu.regs.SR | 0x10 );
+    cpu.regs.I  = 1;
+    cpu.regs.PC = cpu.vectors.NMI;
 }
 
 /////////////////////////////////////////////////////////
@@ -833,6 +853,7 @@ OP_FUNCTION(DEX)
     cpu.regs.X--;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -848,6 +869,7 @@ OP_FUNCTION(DEY)
     cpu.regs.Y--;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -897,6 +919,7 @@ OP_FUNCTION(INX)
     cpu.regs.X++;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -912,6 +935,7 @@ OP_FUNCTION(INY)
     cpu.regs.Y++;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1028,14 +1052,8 @@ OP_FUNCTION(LSR)
 //
 OP_FUNCTION(NOP)
 {
-    uint16_t old_pc = cpu.regs.PC;
     addr_mode( cpu, false, false );
-
-    // DOP and TOP
-    if (cpu.regs.PC - old_pc > 0)
-    {
-        cpu.tick_clock();
-    }
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1212,6 +1230,7 @@ OP_FUNCTION(RTS)
 {
     addr_mode( cpu, false, true );
     uint16_t address = cpu.pull_short_from_stack();
+    //printf("%04x\n", address);
     cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.PC = address + 1;
     cpu.tick_clock(); // One extra cycle to post-increment PC
@@ -1333,6 +1352,7 @@ OP_FUNCTION(TAX)
     cpu.regs.X = cpu.regs.A;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1348,6 +1368,7 @@ OP_FUNCTION(TAY)
     cpu.regs.Y = cpu.regs.A;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1406,6 +1427,7 @@ OP_FUNCTION(TYA)
     cpu.regs.A = cpu.regs.Y;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
+    cpu.tick_clock();
 }
 
 ///////// ------------------------ Illegal Operations ------------------------
