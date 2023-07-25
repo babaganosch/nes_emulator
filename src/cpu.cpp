@@ -21,20 +21,12 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
 
 void cpu_t::execute()
 {
-    uint16_t start_cycles = cycles;
-
     // Fetch instruction
     uint8_t ins_num = fetch_byte( regs.PC++ );
 
     // Perform instruction
     op_code_t& op_code = op_codes[ins_num];
     op_code.function(*this, op_code.addr_mode );
-
-    // Minimum cycles is 2 per instruction
-    while (cycles - start_cycles < 2)
-    {
-        tick_clock();
-    }
 }
 
 void cpu_t::tick_clock()

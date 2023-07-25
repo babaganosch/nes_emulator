@@ -1384,6 +1384,7 @@ OP_FUNCTION(TSX)
     cpu.regs.X = cpu.regs.SP;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1399,6 +1400,7 @@ OP_FUNCTION(TXA)
     cpu.regs.A = cpu.regs.X;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1412,6 +1414,7 @@ OP_FUNCTION(TXS)
 {
     addr_mode( cpu, false, false );
     cpu.regs.SP = cpu.regs.X;
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
