@@ -45,7 +45,7 @@ void ines_rom_t::clear_contents()
     memset(&header, 0, INES_HEADER_SIZE);
 }
 
-RESULT ines_rom_t::load_from_file(const char* filepath)
+void ines_rom_t::load_from_file(const char* filepath)
 {
     std::ifstream file;
     file.open(filepath, std::ios::in | std::ios::binary | std::ios::ate );
@@ -55,26 +55,33 @@ RESULT ines_rom_t::load_from_file(const char* filepath)
     if (!file.good() || file_size == 0)
     {
         printf("Failed to open '%s'\n", filepath); // TODO(xxx): Proper logging;
-        return RESULT_ERROR;
+        throw RESULT_ERROR;
     }
 
     uint8_t* data = (uint8_t*)malloc(file_size * sizeof(uint8_t));
     file.read((char*)data, file_size);
     file.close();
 
-    load_from_data(data, file_size);
+    try
+    {
+        load_from_data(data, file_size);
+    }
+    catch(const RESULT& e)
+    {
+        free(data);
+        throw e;
+    }
     free(data);
 
     printf("ROM '%s' (%u bytes) loaded successfully.\n", filepath, file_size); // TODO(xxx): Proper logging;
-    return RESULT_OK;
 }
 
-RESULT ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
+void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
 {
     if (size < INES_HEADER_SIZE)
     {
         printf("Size too small to contain iNES header.\n"); // TODO(xxx): Proper logging;
-        return RESULT_INVALID_INES_HEADER;
+        throw RESULT_INVALID_INES_HEADER;
     }
 
     // Initialize ROM
@@ -86,7 +93,7 @@ RESULT ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
     if (strncmp((const char*)header.magic, INES_MAGIC, 4) != 0)
     {
         printf("iNES header magic not valid.\n"); // TODO(xxx): Proper logging;
-        return RESULT_INVALID_INES_HEADER;
+        throw RESULT_INVALID_INES_HEADER;
     }
 
     prg_pages = new uint8_t*[header.prg_size];
@@ -114,10 +121,8 @@ RESULT ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
     if (loaded_data_size != expected_data_size)
     {
         printf("Error, written data not the same as specified.\n"); // TODO(xxx): Proper logging;
-        return RESULT_ERROR;
+        throw RESULT_ERROR;
     }
-
-    return RESULT_OK;
 }
 
 

@@ -2,8 +2,6 @@
 #include "nes_ops.hpp"
 #include "nes.hpp"
 
-
-
 namespace nes
 {
 
@@ -36,8 +34,8 @@ RESULT validator::init(emu_t* emu_ref, const char* key_path)
     key.seekg(0, key.beg);
     if (!key.good() || file_size == 0)
     {
-        printf("Failed to open '%s'\n", key_path);
-        return RESULT_ERROR;
+        printf("Failed to open validation log '%s'\n", key_path);
+        throw RESULT_ERROR;
     }
 
     return RESULT_OK;

@@ -9,9 +9,9 @@ namespace nes
 
 enum RESULT
 {
-    RESULT_VALIDATION_SUCCESS  = -10,
-
-    RESULT_INVALID_INES_HEADER = -1,
+    RESULT_VALIDATION_SUCCESS  = -20,
+    RESULT_INVALID_INES_HEADER = -10,
+    RESULT_INVALID_ARGUMENTS   = -1,
     RESULT_ERROR               = 0,
 
     RESULT_OK                  = 1,
@@ -221,8 +221,8 @@ struct ines_rom_t
     ~ines_rom_t();
 
     void clear_contents();
-    RESULT load_from_file(const char* filepath);
-    RESULT load_from_data(const uint8_t* data, const uint32_t size);
+    void load_from_file(const char* filepath);
+    void load_from_data(const uint8_t* data, const uint32_t size);
 };
 
 struct apu_t
