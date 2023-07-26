@@ -52,7 +52,7 @@ void ines_rom_t::load_from_file(const char* filepath)
     const uint32_t file_size = file.tellg();
     file.seekg(0, file.beg);
     
-    if (!file.good() || file_size == 0)
+    if (!file.good() || file_size == 0 || !file.is_open())
     {
         printf("Failed to open '%s'\n", filepath); // TODO(xxx): Proper logging;
         throw RESULT_ERROR;

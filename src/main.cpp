@@ -42,8 +42,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("%s : %s\n", rom_filepath, validate_log_filepath);
-
     printf("--- NESscape ---\n");
     nes::RESULT ret = nes::RESULT_OK;
 
