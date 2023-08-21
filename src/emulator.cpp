@@ -52,12 +52,11 @@ RESULT emu_t::init(ines_rom_t &rom)
     return RESULT_OK;
 }
 
-RESULT emu_t::step(uint16_t cycles)
+RESULT emu_t::step(int32_t cycles)
 {
     while (cycles > 0)
     {
-        cpu.execute();
-        cycles--;
+        cycles -= cpu.execute();
     }
     return RESULT_OK;
 }

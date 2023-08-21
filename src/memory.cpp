@@ -133,8 +133,8 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
     }
 
     else if ( address < 0x4020 )
-    { // apu registers
-        return 0xFF;
+    { // apu and IO registers
+        return 0x00;
     }
 
     else
@@ -304,11 +304,8 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 {
                     addr = addr % 0x3F00;
                 }
-                LOG_D("DATA: %02X", value);
-                LOG_D("BEFORE: %02X %02X", ppu->regs.PPUADDR[0], ppu->regs.PPUADDR[1]);
                 ppu->regs.PPUADDR[0] = (addr & 0xFF00) >> 8;
                 ppu->regs.PPUADDR[1] = (addr & 0x00FF);
-                LOG_D("AFTER: %02X %02X", ppu->regs.PPUADDR[0], ppu->regs.PPUADDR[1]);
                 ppu->regs.PPUDATA = value;
                 ppu->write_latch = value;
             } break;

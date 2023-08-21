@@ -18,12 +18,14 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
     regs.SP = 0xFD;
     regs.PC = 0xFFFC;
 
-    cycles = 0;
+    cycles = 0u;
     queue_nmi = false;
 }
 
-void cpu_t::execute()
+uint16_t cpu_t::execute()
 {
+    delta_cycles = 0u;
+
     // Fetch instruction
     uint8_t ins_num = fetch_byte( regs.PC++ );
 
@@ -33,11 +35,14 @@ void cpu_t::execute()
 
     // Has NMI occurred?
     if (queue_nmi) nmi();
+
+    return delta_cycles;
 }
 
 void cpu_t::tick_clock()
 {
-    cycles++; 
+    delta_cycles++;
+    cycles++;
     memory->cpu_cycles = cycles;
     if (callback) 
     { // PPU should run at tripple the CPU clock speed

@@ -174,6 +174,7 @@ struct cpu_t
     } vectors;
 
     uint32_t cycles{0};
+    uint16_t delta_cycles{0};
     cpu_callback_t callback{nullptr};
     bool queue_nmi{false};
 
@@ -182,8 +183,8 @@ struct cpu_t
     void tick_clock();
     void tick_clock( uint8_t cycles );
     void init(cpu_callback_t cb, mem_t &mem);
-    void execute();
     void nmi();
+    uint16_t execute();
 
     uint8_t  peek_byte( uint16_t address );
     uint16_t peek_short( uint16_t address );
@@ -271,7 +272,7 @@ struct emu_t
     mem_t memory;
 
     RESULT init(ines_rom_t &rom);
-    RESULT step(uint16_t cycles);
+    RESULT step(int32_t cycles);
 };
 
 } // nes

@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <chrono>
 #include <MiniFB.h>
 
 #include "nes.hpp"
@@ -94,11 +95,23 @@ int main(int argc, char *argv[])
             window = mfb_open_ex( "NesScape", NES_WIDTH, NES_HEIGHT, WF_RESIZABLE );
             mfb_set_user_data( window, (void*)&emu );
 
+            float delta_time;
+            uint16_t cycles_per_frame;
+            std::chrono::steady_clock::time_point last_update;
+            std::chrono::steady_clock::time_point now;
+            last_update = std::chrono::steady_clock::now();
+
             do
             {
+                now = std::chrono::steady_clock::now();
+                delta_time = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000000.0f;
+                last_update = now;
+                // 29786 around 60 NES frames per 60 "real" frames
+                cycles_per_frame = 29786.0f / ((1.0f / 60.0f) / delta_time);
+
                 nes::clear_window_buffer( 255, 0, 0 );
 
-                ret = emu.step( 29781 ); // around 60 NES frames per 60 "real" frames
+                ret = emu.step( cycles_per_frame ); 
                 if ( ret != nes::RESULT_OK ) break;
 
                 if (debug)
