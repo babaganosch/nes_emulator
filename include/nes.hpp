@@ -1,5 +1,5 @@
-#ifndef NES_H
-#define NES_H
+#ifndef NES_HPP
+#define NES_HPP
 
 #include <cstdint>
 #include <memory>
@@ -7,17 +7,24 @@
 namespace nes
 {
 
+#define NES_WIDTH  256
+#define NES_HEIGHT 240
+
 enum RESULT
 {
-    RESULT_VALIDATION_SUCCESS  = -20,
     RESULT_INVALID_INES_HEADER = -10,
-    RESULT_INVALID_ARGUMENTS   = -1,
-    RESULT_ERROR               = 0,
 
-    RESULT_OK                  = 1,
+    RESULT_MFB_ERROR           = -3,
+    RESULT_INVALID_ARGUMENTS   = -2,
+    RESULT_ERROR               = -1,
+
+    RESULT_OK                  = 0,
+    RESULT_VALIDATION_SUCCESS  = 1
 };
 
 typedef void (* cpu_callback_t)(void * cookie);
+struct cpu_t;
+struct ppu_t;
 
 struct mem_t
 {
@@ -50,6 +57,7 @@ struct mem_t
 
     */
 
+    cpu_t* cpu;
     struct cpu_mem_t
     { // $0000 - $401F
         union
@@ -66,18 +74,7 @@ struct mem_t
         };
 
         // $2000 - $2007
-        struct
-        {
-            uint8_t* PPUCTRL;
-            uint8_t* PPUMASK;
-            uint8_t* PPUSTATUS;
-            uint8_t* OAMADDR;
-            uint8_t* OAMDATA;
-            uint8_t* PPUSCROLL;
-            uint8_t* PPUADDR;
-            uint8_t* PPUDATA;
-            uint8_t* OAMDMA;
-        } ppu_regs;
+        // PPU Registers
         // Mirroring $2008 – $3FFF of $2000 - $2007 
         // (repeats every 8 bytes)
 
@@ -89,15 +86,20 @@ struct mem_t
 
     } cpu_mem;
 
+    ppu_t* ppu;
     struct ppu_mem_t
     {
-        uint8_t vram[0x800];
-        uint8_t oam[64 * 4];
+        uint8_t palette [0xFF];
+        uint8_t vram    [0x800];
+        uint8_t oam     [0x100];
+
+        bool ppuscroll_y_byte_flag{false};
+        bool ppuaddr_lo_byte_flag{false};
     } ppu_mem;
 
     struct apu_mem_t
     {
-             
+        
     } apu_mem;
 
     struct cartridge_mem_t
@@ -106,8 +108,8 @@ struct mem_t
         uint8_t* chr_rom;          // PPU: $0000 - $1FFF
 
         // CPU: $4020 - $FFFF
-        uint8_t* expansion_rom;    // CPU: $4020 - $5FFF
-        uint8_t* sram;             // CPU: $6000 - $7FFF
+        uint8_t expansion_rom[0x1FE0];    // CPU: $4020 - $5FFF
+        uint8_t sram[0x2000];             // CPU: $6000 - $7FFF
         uint8_t* prg_lower_bank;   // CPU: $8000 - $BFFF
         uint8_t* prg_upper_bank;   // CPU: $C000 - $FFFF
     } cartridge_mem;
@@ -119,15 +121,17 @@ struct mem_t
         APU
     };
 
+    uint32_t cpu_cycles{0};
+
     void     init();
 
-    uint8_t* memory_read( MEMORY_BUS bus, uint16_t address );
+    uint8_t  memory_read( MEMORY_BUS bus, uint16_t address, bool peek );
     void     memory_write( MEMORY_BUS bus, uint8_t data, uint16_t address );
 
-    uint8_t* cpu_memory_read( uint16_t address );
+    uint8_t  cpu_memory_read( uint16_t address, bool peek );
     void     cpu_memory_write( uint8_t data, uint16_t address );
 
-    uint8_t* ppu_memory_read( uint16_t address );
+    uint8_t  ppu_memory_read( uint16_t address, bool peek );
     void     ppu_memory_write( uint8_t data, uint16_t address );
 };
 
@@ -169,8 +173,9 @@ struct cpu_t
         uint16_t IRQBRK;
     } vectors;
 
-    uint16_t cycles{0};
+    uint32_t cycles{0};
     cpu_callback_t callback{nullptr};
+    bool queue_nmi{false};
 
     mem_t* memory{nullptr};
     
@@ -178,6 +183,7 @@ struct cpu_t
     void tick_clock( uint8_t cycles );
     void init(cpu_callback_t cb, mem_t &mem);
     void execute();
+    void nmi();
 
     uint8_t  peek_byte( uint16_t address );
     uint16_t peek_short( uint16_t address );
@@ -237,6 +243,9 @@ struct ppu_t
     uint32_t cycles{0};
 
     mem_t* memory{nullptr};
+    uint8_t write_latch{0};
+    bool recently_power_on{false};
+    bool odd_frame{false};
 
     struct regs_t
     {
@@ -245,8 +254,8 @@ struct ppu_t
         uint8_t PPUSTATUS;
         uint8_t OAMADDR;
         uint8_t OAMDATA;
-        uint8_t PPUSCROLL;
-        uint8_t PPUADDR;
+        uint8_t PPUSCROLL[2];
+        uint8_t PPUADDR[2];
         uint8_t PPUDATA;
         uint8_t OAMDMA;
     } regs;
@@ -267,4 +276,4 @@ struct emu_t
 
 } // nes
 
-#endif /* NES_H */
+#endif /* NES_HPP */

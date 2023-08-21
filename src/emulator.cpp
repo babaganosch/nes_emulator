@@ -1,4 +1,5 @@
 #include "nes.hpp"
+#include "logging.hpp"
 
 namespace nes
 {
@@ -28,7 +29,7 @@ RESULT emu_t::init(ines_rom_t &rom)
         memory.cartridge_mem.prg_lower_bank = rom.prg_pages[0];
         memory.cartridge_mem.prg_upper_bank = rom.prg_pages[1];
     } else {
-        printf("TODO: Solve mapping for more than two PRG ROM bank.\n");
+        LOG_E("TODO: Solve mapping for more than two PRG ROM bank.");
         return RESULT_ERROR;
     }
 
@@ -36,11 +37,9 @@ RESULT emu_t::init(ines_rom_t &rom)
     if (rom.header.chr_size == 1) {
         memory.cartridge_mem.chr_rom = rom.chr_pages[0];
     } else {
-        printf("TODO: Solve mapping for zero or more than one CHR ROM bank.\n");
+        LOG_E("TODO: Solve mapping for zero or more than one CHR ROM bank.");
         return RESULT_ERROR;
     }
-
-    // Map CHR ROM
 
     // Try to grab the interrupt vectors
     cpu.vectors.NMI = cpu.peek_short( 0xFFFA );

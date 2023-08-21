@@ -1,6 +1,7 @@
 #include "nes_validator.hpp"
 #include "nes_ops.hpp"
 #include "nes.hpp"
+#include "logging.hpp"
 
 namespace nes
 {
@@ -13,29 +14,37 @@ validator::~validator()
     }
 }
 
-RESULT validator::init(emu_t* emu_ref, const char* key_path)
+RESULT validator::init(emu_t* emu_ref, const char* key_path, bool validate)
 {
     emu = emu_ref;
     emu->cpu.nestest_validation = true;
-    emu->cpu.cycles = 7;
-    emu->cpu.regs.PC = 0xC000;
+    validate_log = validate;
+    
     emu->cpu.regs.SP = 0xFD;
-    emu->cpu.regs.SR = 0x24;
     emu->cpu.regs.A  = 0x0;
     emu->cpu.regs.X  = 0x0;
     emu->cpu.regs.Y  = 0x0;
-
-    emu->ppu.cycles = 7 * 3;
-    emu->ppu.x      = 7 * 3;
-    emu->ppu.y      = 0;
-
-    key.open(key_path, std::ios::in |  std::ios::ate);
-    auto file_size = key.tellg();
-    key.seekg(0, key.beg);
-    if (!key.good() || file_size == 0)
+    
+    if (validate_log)
     {
-        printf("Failed to open validation log '%s'\n", key_path);
-        throw RESULT_ERROR;
+        if (strncmp(key_path, "../data/nestest.log", 20) == 0)
+        {
+            emu->cpu.cycles = 7;
+            emu->cpu.regs.PC = 0xC000;
+            emu->cpu.regs.SR = 0x24;
+            emu->ppu.cycles = 7 * 3;
+            emu->ppu.x      = 7 * 3;
+            emu->ppu.y      = 0;
+            
+        }
+        key.open(key_path, std::ios::in |  std::ios::ate);
+        auto file_size = key.tellg();
+        key.seekg(0, key.beg);
+        if (!key.good() || file_size == 0)
+        {
+            LOG_E("Failed to open validation log '%s'", key_path);
+            throw RESULT_ERROR;
+        }
     }
 
     return RESULT_OK;
@@ -55,7 +64,14 @@ RESULT validator::execute()
     ret = construct_output_post_line();
     if (ret != RESULT_OK) return ret; 
 
-    ret = validate_line();
+    if (validate_log)
+    {
+        ret = validate_line();
+    }
+    else
+    {
+        printf("%-105s\033[0;33m%llu\033[0;0m\n", emu_output, line_number);
+    }
     return ret;
 }
 
@@ -68,7 +84,7 @@ RESULT validator::construct_output_pre_line()
     uint8_t data0 = cpu.peek_byte(cpu.regs.PC + 1);
     uint8_t data1 = cpu.peek_byte(cpu.regs.PC + 2);
     op_code_t op  = op_codes[inst];
-    uint16_t cycles = cpu.cycles;
+    uint32_t cycles = cpu.cycles;
     uint16_t ppu_x = emu->ppu.x;
     uint16_t ppu_y = emu->ppu.y;
 
@@ -191,7 +207,7 @@ RESULT validator::construct_output_pre_line()
 
     else
     {
-        printf("UNIMPLEMENTED VALIDATION FOR LINE %u    OP-CODE: %02X (%s)\n", line_number, inst, op.name);
+        LOG_E("UNIMPLEMENTED VALIDATION FOR LINE %llu    OP-CODE: %02X (%s)", line_number, inst, op.name);
         return RESULT_ERROR;
     }
 
@@ -203,8 +219,9 @@ RESULT validator::construct_output_post_line()
     auto index = 0;
     if (strlen(emu->cpu.nestest_validation_str) < post_fix_letters)
     {
-        printf("\033[0;31mERROR OCCOURED WHEN INJECTING DATA PEEK IN VALIDATION!\033[0;0m @ line: %u\n", line_number);
-        return RESULT_ERROR;
+        LOG_E("-- validation str: %s : characters to fit: %u --", emu->cpu.nestest_validation_str, post_fix_letters);
+        LOG_E("ERROR OCCOURED WHEN INJECTING DATA PEEK IN VALIDATION! @ line: %llu", line_number);
+        return RESULT_OK;
     }
     while (post_fix_letters > 0)
     {
@@ -219,8 +236,14 @@ RESULT validator::validate_line()
 {
     std::string line;
     std::getline(key, line);
-    const char* key_cline = line.c_str();
+    
+    while (line.find("[DEBUG]") != std::string::npos)
+    {
+        printf("%s\n", line.c_str());
+        std::getline(key, line);
+    }
 
+    const char* key_cline = line.c_str();
     if (strncmp(emu_output, key_cline, strlen(emu_output)) == 0)
     {   // OK!
         printf("     %-100s\033[0;32mOK!\033[0;0m\n", emu_output);
@@ -229,7 +252,7 @@ RESULT validator::validate_line()
     else
     {   // FAILURE
         printf("\n-- \033[1;31mFAILED\033[0;0m --\n");
-        printf(" @ line %u\n", line_number);
+        printf(" @ line %llu\n", line_number);
         printf("\033[0;34mRES:\033[0;0m ");
         auto i = 0;
         while( i < emu_output_len )
@@ -254,10 +277,20 @@ RESULT validator::validate_line()
         }
         printf("    \033[0;31mFAIL!\033[0;0m\n");
         printf("\033[0;34mKEY:\033[0;0m %s\n", key_cline);
-        return RESULT_ERROR;
+        fails++;
+        if (fails >= 10)
+        {
+            return RESULT_ERROR;
+        }
     }
 
-    if (key.peek() == '\n' || key.eof()) return RESULT_VALIDATION_SUCCESS;
+    if (key.peek() == '\n' || key.eof()) {
+        if (fails > 0)
+        {
+            return RESULT_ERROR;
+        }
+        return RESULT_VALIDATION_SUCCESS;
+    }
 
     return RESULT_OK;
 }

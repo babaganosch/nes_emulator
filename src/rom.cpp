@@ -1,4 +1,5 @@
 #include "nes.hpp"
+#include "logging.hpp"
 
 #include <fstream>
 
@@ -54,7 +55,7 @@ void ines_rom_t::load_from_file(const char* filepath)
     
     if (!file.good() || file_size == 0 || !file.is_open())
     {
-        printf("Failed to open '%s'\n", filepath); // TODO(xxx): Proper logging;
+        LOG_E("Failed to open '%s'", filepath);
         throw RESULT_ERROR;
     }
 
@@ -73,14 +74,14 @@ void ines_rom_t::load_from_file(const char* filepath)
     }
     free(data);
 
-    printf("ROM '%s' (%u bytes) loaded successfully.\n", filepath, file_size); // TODO(xxx): Proper logging;
+    LOG_I("ROM '%s' (%u bytes) loaded successfully.", filepath, file_size);
 }
 
 void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
 {
     if (size < INES_HEADER_SIZE)
     {
-        printf("Size too small to contain iNES header.\n"); // TODO(xxx): Proper logging;
+        LOG_E("Size too small to contain iNES header.");
         throw RESULT_INVALID_INES_HEADER;
     }
 
@@ -92,7 +93,7 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
 
     if (strncmp((const char*)header.magic, INES_MAGIC, 4) != 0)
     {
-        printf("iNES header magic not valid.\n"); // TODO(xxx): Proper logging;
+        LOG_E("iNES header magic not valid.");
         throw RESULT_INVALID_INES_HEADER;
     }
 
@@ -120,7 +121,7 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
     const auto expected_data_size = size - INES_HEADER_SIZE;
     if (loaded_data_size != expected_data_size)
     {
-        printf("Error, written data not the same as specified.\n"); // TODO(xxx): Proper logging;
+        LOG_E("Written data not the same as specified.");
         throw RESULT_ERROR;
     }
 }

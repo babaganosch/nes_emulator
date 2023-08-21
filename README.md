@@ -1,5 +1,5 @@
-1. ./setup.sh
-
-2. ./generate.sh
-3. cd build
-4. make
+1. git submodule update --recursive --init
+2. ./setup.sh
+3. ./generate.sh
+4. cd build
+5. make

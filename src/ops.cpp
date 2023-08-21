@@ -1,5 +1,6 @@
 #include "nes_ops.hpp"
 #include "nes.hpp"
+#include "logging.hpp"
 
 #define CALC_Z_FLAG(VALUE) cpu.regs.Z = (((VALUE & 0xFF) == 0x00) ? 1 : 0 )
 #define CALC_N_FLAG(VALUE) cpu.regs.N = (((VALUE & 0x80) > 0x00) ? 1 : 0 )
@@ -13,8 +14,9 @@ namespace nes
 
 namespace
 {
-void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t old_PC, uint16_t target )
+void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t target )
 {
+    uint16_t old_PC = cpu.regs.PC;
     if (condition == expected)
     { // Branch occurs
         cpu.tick_clock();
@@ -34,7 +36,7 @@ const bool O = true;  // Official OP
 op_code_t op_codes[256] = {
     CPU_OP(BRK, O, implied),                //   0     $ 00
     CPU_OP(ORA, O, pre_index_indirect_x),   //   1     $ 01
-    CPU_OP(___, O, implied),                //   2     $ 02
+    CPU_OP(JAM, I, implied),                //   2     $ 02
     CPU_OP(SLO, I, pre_index_indirect_x),   //   3     $ 03
     CPU_OP(NOP, I, zero_page),              //   4     $ 04
     CPU_OP(ORA, O, zero_page),              //   5     $ 05
@@ -50,7 +52,7 @@ op_code_t op_codes[256] = {
     CPU_OP(SLO, I, absolute),               //  15     $ 0F
     CPU_OP(BPL, O, relative),               //  16     $ 10
     CPU_OP(ORA, O, post_index_indirect_y),  //  17     $ 11
-    CPU_OP(___, O, implied),                //  18     $ 12
+    CPU_OP(JAM, I, implied),                //  18     $ 12
     CPU_OP(SLO, I, post_index_indirect_y),  //  19     $ 13
     CPU_OP(NOP, I, index_zp_x),             //  20     $ 14
     CPU_OP(ORA, O, index_zp_x),             //  21     $ 15
@@ -66,7 +68,7 @@ op_code_t op_codes[256] = {
     CPU_OP(SLO, I, index_x),                //  31     $ 1F
     CPU_OP(JSR, O, absolute),               //  32     $ 20
     CPU_OP(AND, O, pre_index_indirect_x),   //  33     $ 21
-    CPU_OP(___, O, implied),                //  34     $ 22
+    CPU_OP(JAM, I, implied),                //  34     $ 22
     CPU_OP(RLA, I, pre_index_indirect_x),   //  35     $ 23
     CPU_OP(BIT, O, zero_page),              //  36     $ 24
     CPU_OP(AND, O, zero_page),              //  37     $ 25
@@ -82,7 +84,7 @@ op_code_t op_codes[256] = {
     CPU_OP(RLA, I, absolute),               //  47     $ 2F
     CPU_OP(BMI, O, relative),               //  48     $ 30
     CPU_OP(AND, O, post_index_indirect_y),  //  49     $ 31
-    CPU_OP(___, O, implied),                //  50     $ 32
+    CPU_OP(JAM, I, implied),                //  50     $ 32
     CPU_OP(RLA, I, post_index_indirect_y),  //  51     $ 33
     CPU_OP(NOP, I, index_zp_x),             //  52     $ 34
     CPU_OP(AND, O, index_zp_x),             //  53     $ 35
@@ -98,7 +100,7 @@ op_code_t op_codes[256] = {
     CPU_OP(RLA, I, index_x),                //  63     $ 3F
     CPU_OP(RTI, O, implied),                //  64     $ 40
     CPU_OP(EOR, O, pre_index_indirect_x),   //  65     $ 41
-    CPU_OP(___, O, implied),                //  66     $ 42
+    CPU_OP(JAM, I, implied),                //  66     $ 42
     CPU_OP(SRE, I, pre_index_indirect_x),   //  67     $ 43
     CPU_OP(NOP, I, zero_page),              //  68     $ 44
     CPU_OP(EOR, O, zero_page),              //  69     $ 45
@@ -114,7 +116,7 @@ op_code_t op_codes[256] = {
     CPU_OP(SRE, I, absolute),               //  79     $ 4F
     CPU_OP(BVC, O, relative),               //  80     $ 50
     CPU_OP(EOR, O, post_index_indirect_y),  //  81     $ 51
-    CPU_OP(___, O, implied),                //  82     $ 52
+    CPU_OP(JAM, I, implied),                //  82     $ 52
     CPU_OP(SRE, I, post_index_indirect_y),  //  83     $ 53
     CPU_OP(NOP, I, index_zp_x),             //  84     $ 54
     CPU_OP(EOR, O, index_zp_x),             //  85     $ 55
@@ -130,7 +132,7 @@ op_code_t op_codes[256] = {
     CPU_OP(SRE, I, index_x),                //  95     $ 5F
     CPU_OP(RTS, O, implied),                //  96     $ 60
     CPU_OP(ADC, O, pre_index_indirect_x),   //  97     $ 61
-    CPU_OP(___, O, implied),                //  98     $ 62
+    CPU_OP(JAM, I, implied),                //  98     $ 62
     CPU_OP(RRA, I, pre_index_indirect_x),   //  99     $ 63
     CPU_OP(NOP, I, zero_page),              // 100     $ 64
     CPU_OP(ADC, O, zero_page),              // 101     $ 65
@@ -146,7 +148,7 @@ op_code_t op_codes[256] = {
     CPU_OP(RRA, I, absolute),               // 111     $ 6F
     CPU_OP(BVS, O, relative),               // 112     $ 70
     CPU_OP(ADC, O, post_index_indirect_y),  // 113     $ 71
-    CPU_OP(___, O, implied),                // 114     $ 72
+    CPU_OP(JAM, I, implied),                // 114     $ 72
     CPU_OP(RRA, I, post_index_indirect_y),  // 115     $ 73
     CPU_OP(NOP, I, index_zp_x),             // 116     $ 74
     CPU_OP(ADC, O, index_zp_x),             // 117     $ 75
@@ -178,7 +180,7 @@ op_code_t op_codes[256] = {
     CPU_OP(SAX, I, absolute),               // 143     $ 8F
     CPU_OP(BCC, O, relative),               // 144     $ 90
     CPU_OP(STA, O, post_index_indirect_y),  // 145     $ 91
-    CPU_OP(___, O, implied),                // 146     $ 92
+    CPU_OP(JAM, I, implied),                // 146     $ 92
     CPU_OP(___, O, implied),                // 147     $ 93
     CPU_OP(STY, O, index_zp_x),             // 148     $ 94
     CPU_OP(STA, O, index_zp_x),             // 149     $ 95
@@ -210,7 +212,7 @@ op_code_t op_codes[256] = {
     CPU_OP(LAX, I, absolute),               // 175     $ AF
     CPU_OP(BCS, O, relative),               // 176     $ B0
     CPU_OP(LDA, O, post_index_indirect_y),  // 177     $ B1
-    CPU_OP(___, O, implied),                // 178     $ B2
+    CPU_OP(JAM, I, implied),                // 178     $ B2
     CPU_OP(LAX, I, post_index_indirect_y),  // 179     $ B3
     CPU_OP(LDY, O, index_zp_x),             // 180     $ B4
     CPU_OP(LDA, O, index_zp_x),             // 181     $ B5
@@ -242,7 +244,7 @@ op_code_t op_codes[256] = {
     CPU_OP(DCP, I, absolute),               // 207     $ CF
     CPU_OP(BNE, O, relative),               // 208     $ D0
     CPU_OP(CMP, O, post_index_indirect_y),  // 209     $ D1
-    CPU_OP(___, O, implied),                // 210     $ D2
+    CPU_OP(JAM, I, implied),                // 210     $ D2
     CPU_OP(DCP, I, post_index_indirect_y),  // 211     $ D3
     CPU_OP(NOP, I, index_zp_x),             // 212     $ D4
     CPU_OP(CMP, O, index_zp_x),             // 213     $ D5
@@ -274,7 +276,7 @@ op_code_t op_codes[256] = {
     CPU_OP(ISB, I, absolute),               // 239     $ EF
     CPU_OP(BEQ, O, relative),               // 240     $ F0
     CPU_OP(SBC, O, post_index_indirect_y),  // 241     $ F1
-    CPU_OP(___, O, implied),                // 242     $ F2
+    CPU_OP(JAM, I, implied),                // 242     $ F2
     CPU_OP(ISB, I, post_index_indirect_y),  // 243     $ F3
     CPU_OP(NOP, I, index_zp_x),             // 244     $ F4
     CPU_OP(SBC, O, index_zp_x),             // 245     $ F5
@@ -500,7 +502,8 @@ ADDRESS_MODE(accumulator)
 //////////////////////////////////////////// OPs
 OP_FUNCTION(___)
 {
-    printf("UNIMPLEMENTED OP-CODE ENCOUNTERED!\n");
+    LOG_E("UNIMPLEMENTED OP-CODE ENCOUNTERED!");
+    throw;
 }
 
 /////////////////////////////////////////////////////////
@@ -550,7 +553,7 @@ OP_FUNCTION(AND)
 //
 OP_FUNCTION(ASL)
 {
-    uint8_t* operand;
+    uint8_t* operand = nullptr;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
@@ -561,12 +564,19 @@ OP_FUNCTION(ASL)
     {
         operand = &cpu.regs.A;
     }
-    uint16_t data = *operand << 1;
+    if (operand)
+    {
+        uint16_t data = *operand << 1;
     
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    CALC_C_FLAG( data );
-    cpu.write_byte( data, operand );
+        CALC_N_FLAG( data );
+        CALC_Z_FLAG( data );
+        CALC_C_FLAG( data );
+        cpu.write_byte( data, operand );
+    }
+    else
+    {
+        cpu.tick_clock();
+    }
 }
 
 /////////////////////////////////////////////////////////
@@ -579,7 +589,7 @@ OP_FUNCTION(ASL)
 OP_FUNCTION(BCC)
 {
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.C, 0, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.C, 0, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -592,7 +602,7 @@ OP_FUNCTION(BCC)
 OP_FUNCTION(BCS)
 {
     uint16_t address = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.C, 1, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.C, 1, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -605,7 +615,7 @@ OP_FUNCTION(BCS)
 OP_FUNCTION(BEQ)
 {
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.Z, 1, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.Z, 1, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -635,7 +645,7 @@ OP_FUNCTION(BIT)
 OP_FUNCTION(BMI)
 {
     uint16_t address = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.N, 1, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.N, 1, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -648,7 +658,7 @@ OP_FUNCTION(BMI)
 OP_FUNCTION(BNE)
 {
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.Z, 0, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.Z, 0, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -661,7 +671,7 @@ OP_FUNCTION(BNE)
 OP_FUNCTION(BPL)
 {
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.N, 0, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.N, 0, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -699,7 +709,7 @@ OP_FUNCTION(BRK)
 OP_FUNCTION(BVC)
 {
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.V, 0, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.V, 0, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -712,7 +722,7 @@ OP_FUNCTION(BVC)
 OP_FUNCTION(BVS)
 {
     uint16_t address   = addr_mode( cpu, false, true );
-    branch( cpu, cpu.regs.V, 1, cpu.regs.PC, address );
+    branch( cpu, cpu.regs.V, 1, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1025,7 +1035,7 @@ OP_FUNCTION(LDY)
 //
 OP_FUNCTION(LSR)
 {
-    uint8_t* operand;
+    uint8_t* operand = nullptr;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
@@ -1036,12 +1046,18 @@ OP_FUNCTION(LSR)
     {
         operand = &cpu.regs.A;
     }
-    uint16_t data = *operand >> 1;
-    
-    cpu.regs.N = 0;
-    CALC_Z_FLAG( data );
-    cpu.regs.C = (*operand & 0x1) == 0x1;
-    cpu.write_byte( data, operand );
+    if (operand)
+    {
+        uint16_t data = *operand >> 1;
+        cpu.regs.N = 0;
+        CALC_Z_FLAG( data );
+        cpu.regs.C = (*operand & 0x1) == 0x1;
+        cpu.write_byte( data, operand );
+    }
+    else
+    {
+        cpu.tick_clock();
+    }
 }
 
 /////////////////////////////////////////////////////////
@@ -1148,7 +1164,7 @@ OP_FUNCTION(PLP)
 //
 OP_FUNCTION(ROL)
 {
-    uint8_t* operand;
+    uint8_t* operand = nullptr;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
@@ -1159,14 +1175,21 @@ OP_FUNCTION(ROL)
     {
         operand = &cpu.regs.A;
     }
-    uint16_t data = (uint16_t)*operand << 1;
-    data = (data & 0xFFFE) | cpu.regs.C;
+    if (operand)
+    {
+        uint16_t data = (uint16_t)*operand << 1;
+        data = (data & 0xFFFE) | cpu.regs.C;
 
-    cpu.regs.C = data > 0xFF ? 1 : 0;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    
-    cpu.write_byte( data, operand );
+        cpu.regs.C = data > 0xFF ? 1 : 0;
+        CALC_N_FLAG( data );
+        CALC_Z_FLAG( data );
+        
+        cpu.write_byte( data, operand );
+    }
+    else
+    {
+        cpu.tick_clock();
+    }
 }
 
 /////////////////////////////////////////////////////////
@@ -1178,7 +1201,7 @@ OP_FUNCTION(ROL)
 //
 OP_FUNCTION(ROR)
 {
-    uint8_t* operand;
+    uint8_t* operand = nullptr;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
@@ -1189,14 +1212,21 @@ OP_FUNCTION(ROR)
     {
         operand = &cpu.regs.A;
     }
-    uint8_t data = *operand >> 1;
-    data = (data & 0x7F) | cpu.regs.C << 7;
+    if (operand)
+    {
+        uint8_t data = *operand >> 1;
+        data = (data & 0x7F) | cpu.regs.C << 7;
 
-    cpu.regs.C = (*operand & 0x1) == 0x1;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    
-    cpu.write_byte( data, operand );
+        cpu.regs.C = (*operand & 0x1) == 0x1;
+        CALC_N_FLAG( data );
+        CALC_Z_FLAG( data );
+        
+        cpu.write_byte( data, operand );
+    }
+    else
+    {
+        cpu.tick_clock();
+    }
 }
 
 /////////////////////////////////////////////////////////
@@ -1230,7 +1260,6 @@ OP_FUNCTION(RTS)
 {
     addr_mode( cpu, false, true );
     uint16_t address = cpu.pull_short_from_stack();
-    //printf("%04x\n", address);
     cpu.tick_clock( 2 ); // Stack-pop extra cycles
     cpu.regs.PC = address + 1;
     cpu.tick_clock(); // One extra cycle to post-increment PC
@@ -1624,6 +1653,18 @@ OP_FUNCTION(RRA)
     CALC_C_FLAG( res );
     CALC_V_FLAG( cpu.regs.A, data, res );
     cpu.tick_clock();
+}
+
+OP_FUNCTION(JAM)
+{
+    LOG_E("JAM occured, dumping status..");
+    LOG_E("PC: %04X", cpu.regs.PC);
+    LOG_E("SP: %02X", cpu.regs.SP);
+    LOG_E("P:  %02X", cpu.regs.SR);
+    LOG_E("X:  %02X", cpu.regs.X);
+    LOG_E("Y:  %02X", cpu.regs.Y);
+    LOG_E("A:  %02X", cpu.regs.A);
+    throw RESULT_ERROR;
 }
 
 } // nes

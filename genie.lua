@@ -37,7 +37,7 @@ solution "nes_emulator"
 
       configuration "Debug"
          kind "ConsoleApp"
-         defines { "DEBUG" }
+         defines { "DEBUG", "WARNINGS" }
          flags { "Symbols", "StaticRuntime" }
 
       configuration "Release"

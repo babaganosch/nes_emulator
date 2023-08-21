@@ -1,5 +1,5 @@
-#ifndef NES_OPS_H
-#define NES_OPS_H
+#ifndef NES_OPS_HPP
+#define NES_OPS_HPP
 
 #include <cstdint>
 
@@ -113,7 +113,9 @@ OP_FUNCTION(ISB); // ISC, INS
 OP_FUNCTION(SLO); // ASO
 OP_FUNCTION(RLA); //
 OP_FUNCTION(SRE); // LSE
-OP_FUNCTION(RRA); // 
+OP_FUNCTION(RRA); //
+
+OP_FUNCTION(JAM); // (KIL, HLT)
 
 /// Not Implemented OP
 OP_FUNCTION(___);
@@ -122,4 +124,4 @@ extern op_code_t op_codes[256];
 
 } // nes
 
-#endif /* NES_OPS_H */
+#endif /* NES_OPS_HPP */

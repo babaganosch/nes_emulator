@@ -1,37 +1,52 @@
 #include <cstdio>
+#include <MiniFB.h>
 
 #include "nes.hpp"
 #include "nes_validator.hpp"
+#include "render.hpp"
 
 namespace 
 {
 const char* nes_test_rom = "../data/nestest.nes";
+bool validate = false;
+bool validate_log = false;
+bool debug = false;
 } // anonymous
 
 int main(int argc, char *argv[])
 {
-    bool validate = false;
     const char* rom_filepath = nes_test_rom;
     const char* validate_log_filepath;
     for ( auto i = 1; i < argc; ++i )
     {
         if ( strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--validate") == 0 )
         {
-            if (i + 1 >= argc)
-            {
-                printf("Invalid arguments\n");
-                return nes::RESULT_INVALID_ARGUMENTS;
-            }
             validate = true;
-            validate_log_filepath = argv[++i];
+            if (i + 1 < argc)
+            {
+                validate_log = true;
+                validate_log_filepath = argv[++i];
+            }
+            continue;
+        }
+
+        if ( strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0 )
+        {
+            debug = true;
+            printf("Debug mode ON\n");
             continue;
         }
 
         if ( strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0 )
         {
             printf("\n");
-            printf("Usage: nes_emulator <rom_path>\n");
-            printf("       nes_emulator <rom_path> -v <validation_log_path>\n");
+            printf("Usage: nes_emulator <rom_path> <flag>\n");
+            printf("Flags:\n");
+            printf("       no flag          (regular execution)\n");
+            printf("       -d | --debug     (debug execution)\n");
+            printf("       -h | --help      (print this help)\n");
+            printf("       -v | --validate  (validation execution)\n");
+            printf("       -v <validation_log_path>  (validate against provided log file)\n");
             return nes::RESULT_OK;
         }
 
@@ -56,9 +71,9 @@ int main(int argc, char *argv[])
         if (validate)
         { // NesTest Validation
             nes::validator validator{};
-            ret = validator.init(&emu, validate_log_filepath);
+            ret = validator.init( &emu, validate_log_filepath, validate_log ) ;
 
-            while (ret > 0)
+            while ( ret == nes::RESULT_OK )
             {
                 ret = validator.execute();
             }
@@ -72,10 +87,33 @@ int main(int argc, char *argv[])
         }
         else
         { // Regular Execution
-            while (ret > 0)
+
+            struct mfb_window *window = 0x0;
+            nes::clear_window_buffer( 255, 0, 0 );
+            
+            window = mfb_open_ex( "NesScape", NES_WIDTH, NES_HEIGHT, WF_RESIZABLE );
+            mfb_set_user_data( window, (void*)&emu );
+
+            do
             {
-                ret = emu.step(1);
-            }
+                nes::clear_window_buffer( 255, 0, 0 );
+
+                ret = emu.step( 29781 ); // around 60 NES frames per 60 "real" frames
+                if ( ret != nes::RESULT_OK ) break;
+
+                if (debug)
+                {
+                    nes::dump_chr_rom(emu);
+                    nes::cpu_t::regs_t& regs = emu.cpu.regs;
+                    nes::draw_text( 1, 1,  "PC   A  X  Y  P  SP CYC");
+                    nes::draw_text( 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
+                                           regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
+                }
+
+                int32_t state = mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT );
+                if ( state < 0 ) throw nes::RESULT_MFB_ERROR;
+            } while (mfb_wait_sync( window ));
+            printf("Exiting gracefully...\n");
         }
     }
     catch(const nes::RESULT& e)
