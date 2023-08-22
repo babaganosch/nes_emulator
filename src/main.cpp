@@ -141,7 +141,8 @@ int main(int argc, char *argv[])
                 if ( ret != nes::RESULT_OK ) break;
 
                 // Temporarily dump nametables to screen
-                nes::dump_chr_rom(emu);
+                nes::dump_nametables(emu);
+                nes::dump_sprites(emu);
 
                 if (debug)
                 {

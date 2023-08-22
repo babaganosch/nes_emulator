@@ -227,7 +227,7 @@ static void ppu_get_chr(emu_t& emu, uint16_t address, uint8_t* out_data, bool bg
     }
 }
 
-static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_index, bool bg, uint8_t* palette_set)
+static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_index, bool bg, bool flip_x, bool flip_y, uint8_t* palette_set)
 {
     uint8_t chr[8*8]; // 8x8 pixels is one character (tile)
     ppu_get_chr(emu, chr_index*16, chr, bg);
@@ -240,9 +240,9 @@ static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_in
 
             if (!bg && pix == 0x0)
                 continue;
-
-            uint32_t tx = pix_x + x;
-            uint32_t ty = pix_y + y;
+                
+            uint32_t tx = pix_x + (flip_x ? 7 - x : x);
+            uint32_t ty = pix_y + (flip_y ? 7 - y : y);
 
             uint32_t ti = (ty * NES_WIDTH) + tx;
 
@@ -258,7 +258,36 @@ static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_in
     }
 }
 
-void dump_chr_rom(emu_t &emu)
+void dump_sprites(emu_t &emu)
+{
+    bool is_8x16 = ((emu.ppu.regs.PPUCTRL >> 5) & 0b1) == 0b1;
+
+    static uint8_t palette_set[3];
+    for (uint32_t sprite_i = 0; sprite_i < 64; ++sprite_i)
+    {
+        uint8_t sprite_data0 = emu.memory.ppu_mem.oam[sprite_i*4+0]; // y
+        uint8_t sprite_data1 = emu.memory.ppu_mem.oam[sprite_i*4+1]; // tile index
+        uint8_t sprite_data2 = emu.memory.ppu_mem.oam[sprite_i*4+2]; // attributes
+        uint8_t sprite_data3 = emu.memory.ppu_mem.oam[sprite_i*4+3]; // x
+
+        bool flip_x = !!(sprite_data2 & (1 << 6));
+        bool flip_y = !!(sprite_data2 & (1 << 7));
+        uint8_t palette_id = sprite_data2 & 0x3;
+
+        // uint8_t palette_ids = emu.ppu.palette[0x11+palette_id*3];
+        palette_set[0] = emu.memory.ppu_mem.palette[0x11+palette_id*4];
+        palette_set[1] = emu.memory.ppu_mem.palette[0x12+palette_id*4];
+        palette_set[2] = emu.memory.ppu_mem.palette[0x13+palette_id*4];
+
+        blit_chr(emu, sprite_data3, sprite_data0+1, sprite_data1, false, flip_x, flip_y, palette_set);
+
+        if (is_8x16) {
+            blit_chr(emu, sprite_data3, sprite_data0+1+8, sprite_data1+1, false, flip_x, flip_y, palette_set);
+        }
+    }
+}
+
+void dump_nametables(emu_t &emu)
 {
     uint8_t palette_set[3];
     uint16_t base_nt_addr = 0x2000;
@@ -299,7 +328,7 @@ void dump_chr_rom(emu_t &emu)
                 palette_set[0] = emu.memory.ppu_mem.palette[0x01+palette_id*4];
                 palette_set[1] = emu.memory.ppu_mem.palette[0x02+palette_id*4];
                 palette_set[2] = emu.memory.ppu_mem.palette[0x03+palette_id*4];
-                blit_chr(emu, xi*8 + nt_x*(32*8), yi*8 + nt_y*(30*8), chr_i, true, palette_set); // ignore fliping for now
+                blit_chr(emu, xi*8 + nt_x*(32*8), yi*8 + nt_y*(30*8), chr_i, true, false, false, palette_set); // ignore fliping for now
             }
         }
         base_nt_addr+=0x400;

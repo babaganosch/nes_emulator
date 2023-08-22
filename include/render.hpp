@@ -9,7 +9,8 @@ namespace nes
 
 extern uint32_t window_buffer[];
 
-void dump_chr_rom(emu_t &emu);
+void dump_nametables(emu_t &emu);
+void dump_sprites(emu_t &emu);
 
 void clear_window_buffer(uint8_t r, uint8_t g, uint8_t b);
 void draw_glyph(uint32_t x, uint32_t y, uint8_t glyph);

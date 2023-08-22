@@ -327,6 +327,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
 
     if ( address < 0x4020 )
     { // apu and I/O registers
+
         if ( address == 0x4016 )
         {
             gamepad_strobe = value & 0x1;
