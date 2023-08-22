@@ -22,6 +22,20 @@ enum RESULT
     RESULT_VALIDATION_SUCCESS  = 1
 };
 
+inline const char* RESULT_to_string(RESULT v)
+{
+    switch (v)
+    {
+        case RESULT_INVALID_INES_HEADER:    return "[Invalid iNES Header]";
+        case RESULT_MFB_ERROR:              return "[MFB Error]";
+        case RESULT_INVALID_ARGUMENTS:      return "[Invalid Arguments]";
+        case RESULT_ERROR:                  return "[Error]";
+        case RESULT_OK:                     return "[OK]";
+        case RESULT_VALIDATION_SUCCESS:     return "[Validation Success]";
+        default:                            return "[Unkown]";
+    }
+}
+
 typedef void (* cpu_callback_t)(void * cookie);
 struct cpu_t;
 struct ppu_t;
@@ -41,10 +55,10 @@ struct gamepad_t
             uint8_t left : 1;
             uint8_t right : 1;
         };
-        uint8_t latch{0};
+        uint8_t data{0};
     };
 
-    uint8_t data{0};
+    uint8_t latch{0};
 };
 
 struct mem_t
@@ -295,7 +309,7 @@ struct emu_t
     ppu_t ppu;
     mem_t memory;
 
-    RESULT init(ines_rom_t &rom);
+    void init(ines_rom_t &rom);
     RESULT step(int32_t cycles);
 };
 

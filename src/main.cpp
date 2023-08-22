@@ -108,7 +108,6 @@ int main(int argc, char *argv[])
             if (ret == nes::RESULT_VALIDATION_SUCCESS)
             {
                 printf("\033[1;32mVALIDATION SUCCESS\033[0;0m\n\n");
-                ret = nes::RESULT_OK;
             }
         }
         else
@@ -147,7 +146,7 @@ int main(int argc, char *argv[])
                 if (debug)
                 {
                     nes::cpu_t::regs_t& regs = emu.cpu.regs;
-                    nes::draw_text( 1, 1,  "PC   A  X  Y  P  SP CYC");
+                    nes::draw_text( 1, 1,  "PC   A  X  Y  SR SP CYC");
                     nes::draw_text( 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
                                            regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
                     nes::draw_text( 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
@@ -174,6 +173,6 @@ int main(int argc, char *argv[])
 
     printf("--- Shutting Down ---\n");
 
-    printf("Exiting with code %d\n", ret);
+    printf("Exiting with code %d %s\n", ret, RESULT_to_string(ret));
     return ret;
 }

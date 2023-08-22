@@ -14,7 +14,7 @@ void cpu_clock_callback(void *cookie)
 
 } // anonymous
 
-RESULT emu_t::init(ines_rom_t &rom)
+void emu_t::init(ines_rom_t &rom)
 {
     emulator_ref = this;
     cpu.init(&cpu_clock_callback, memory);
@@ -30,7 +30,7 @@ RESULT emu_t::init(ines_rom_t &rom)
         memory.cartridge_mem.prg_upper_bank = rom.prg_pages[1];
     } else {
         LOG_E("TODO: Solve mapping for more than two PRG ROM bank.");
-        return RESULT_ERROR;
+        throw RESULT_ERROR;
     }
 
     // Map CHR ROM
@@ -38,7 +38,7 @@ RESULT emu_t::init(ines_rom_t &rom)
         memory.cartridge_mem.chr_rom = rom.chr_pages[0];
     } else {
         LOG_E("TODO: Solve mapping for zero or more than one CHR ROM bank.");
-        return RESULT_ERROR;
+        throw RESULT_ERROR;
     }
 
     // Try to grab the interrupt vectors
@@ -48,8 +48,6 @@ RESULT emu_t::init(ines_rom_t &rom)
 
     // Reset program counter to reset vector
     cpu.regs.PC = cpu.vectors.RESET;
-
-    return RESULT_OK;
 }
 
 RESULT emu_t::step(int32_t cycles)

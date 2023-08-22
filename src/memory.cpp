@@ -136,17 +136,17 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
     { // apu and IO registers
         if ( address == 0x4016 )
         {
-            uint8_t value = gamepad[0].data & 0x1;
-            gamepad[0].data = gamepad[0].data >> 1;
+            uint8_t value = gamepad[0].latch & 0x1;
+            gamepad[0].latch = gamepad[0].latch >> 1;
             return value;
         }
         if ( address == 0x4017 )
         {
-            uint8_t value = gamepad[1].data & 0x1;
-            gamepad[1].data = gamepad[1].data >> 1;
+            uint8_t value = gamepad[1].latch & 0x1;
+            gamepad[1].latch = gamepad[1].latch >> 1;
             return value;
         }
-        return 0x00;
+        return 0xFF;
     }
 
     else
@@ -331,8 +331,8 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         if ( address == 0x4016 )
         {
             gamepad_strobe = value & 0x1;
-            gamepad[0].data = gamepad[0].latch;
-            gamepad[1].data = gamepad[1].latch;
+            gamepad[0].latch = gamepad[0].data;
+            gamepad[1].latch = gamepad[1].data;
             return;
         }
 
@@ -390,6 +390,7 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
     if ( address < 0x2000 )
     { // patterntables
         // ignore for now
+        LOG_E("Write to patterntable @ %04X not implemented!", address);
     }
 
     else if (address < 0x3F00) 
