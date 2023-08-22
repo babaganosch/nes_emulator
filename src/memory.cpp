@@ -134,6 +134,18 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
 
     else if ( address < 0x4020 )
     { // apu and IO registers
+        if ( address == 0x4016 )
+        {
+            uint8_t value = gamepad[0].data & 0x1;
+            gamepad[0].data = gamepad[0].data >> 1;
+            return value;
+        }
+        if ( address == 0x4017 )
+        {
+            uint8_t value = gamepad[1].data & 0x1;
+            gamepad[1].data = gamepad[1].data >> 1;
+            return value;
+        }
         return 0x00;
     }
 
@@ -314,12 +326,19 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
     }
 
     if ( address < 0x4020 )
-    { // apu registers
+    { // apu and I/O registers
+        if ( address == 0x4016 )
+        {
+            gamepad_strobe = value & 0x1;
+            gamepad[0].data = gamepad[0].latch;
+            gamepad[1].data = gamepad[1].latch;
+            return;
+        }
+
         LOG_W("Failed to write %02X @ $%04X (unmapped APU address space)", value, address);
         return;
     }
 
-    // TODO, implement writing to sram
 }
 
 ///////////////////////////// PPU

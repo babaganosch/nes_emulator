@@ -67,7 +67,6 @@ void cpu_t::nmi()
     regs.I  = 1;
     regs.PC = vectors.NMI;
     queue_nmi = false;
-    LOG_D("NMI Triggered!");
 }
 
 uint8_t cpu_t::peek_byte( uint16_t address )

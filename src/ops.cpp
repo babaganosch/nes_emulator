@@ -45,7 +45,7 @@ op_code_t op_codes[256] = {
     CPU_OP(PHP, O, implied),                //   8     $ 08
     CPU_OP(ORA, O, immediate),              //   9     $ 09
     CPU_OP(ASL, O, accumulator),            //  10     $ 0A
-    CPU_OP(___, O, implied),                //  11     $ 0B
+    CPU_OP(ANC, I, immediate),              //  11     $ 0B
     CPU_OP(NOP, I, absolute),               //  12     $ 0C
     CPU_OP(ORA, O, absolute),               //  13     $ 0D
     CPU_OP(ASL, O, absolute),               //  14     $ 0E
@@ -77,7 +77,7 @@ op_code_t op_codes[256] = {
     CPU_OP(PLP, O, implied),                //  40     $ 28
     CPU_OP(AND, O, immediate),              //  41     $ 29
     CPU_OP(ROL, O, accumulator),            //  42     $ 2A
-    CPU_OP(___, O, implied),                //  43     $ 2B
+    CPU_OP(ANC, I, immediate),              //  43     $ 2B
     CPU_OP(BIT, O, absolute),               //  44     $ 2C
     CPU_OP(AND, O, absolute),               //  45     $ 2D
     CPU_OP(ROL, O, absolute),               //  46     $ 2E
@@ -109,7 +109,7 @@ op_code_t op_codes[256] = {
     CPU_OP(PHA, O, implied),                //  72     $ 48
     CPU_OP(EOR, O, immediate),              //  73     $ 49
     CPU_OP(LSR, O, accumulator),            //  74     $ 4A
-    CPU_OP(___, O, implied),                //  75     $ 4B
+    CPU_OP(ALR, I, immediate),              //  75     $ 4B
     CPU_OP(JMP, O, absolute),               //  76     $ 4C
     CPU_OP(EOR, O, absolute),               //  77     $ 4D
     CPU_OP(LSR, O, absolute),               //  78     $ 4E
@@ -1465,6 +1465,26 @@ OP_FUNCTION(TYA)
 ///////// ------------------------ Illegal Operations ------------------------
 
 /////////////////////////////////////////////////////////
+// ALR (ASR)
+// AND oper + LSR
+//
+// A AND oper, 0 -> [76543210] -> C
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(ALR)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    uint8_t  data = operand & cpu.regs.A;
+    cpu.regs.C = data & 0x1;
+    data = data >> 1;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+}
+
+/////////////////////////////////////////////////////////
 // LAX - LDA oper + LDX oper
 // M -> A -> X
 //
@@ -1655,6 +1675,32 @@ OP_FUNCTION(RRA)
     cpu.tick_clock();
 }
 
+/////////////////////////////////////////////////////////
+// ANC (ANC2)
+// AND oper + set C as ASL
+//
+// A AND oper, bit(7) -> C
+//
+// N Z C I D V
+// + + + - - -
+//
+OP_FUNCTION(ANC)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    uint8_t  data = operand & cpu.regs.A;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    cpu.regs.C = (data >> 7) & 0x1;
+}
+
+/////////////////////////////////////////////////////////
+// JAM (KIL, HLT)
+// These instructions freeze the CPU.
+//
+// The processor will be trapped infinitely in T1 phase 
+// with $FF on the data bus. — Reset required.
+//
 OP_FUNCTION(JAM)
 {
     LOG_E("JAM occured, dumping status..");

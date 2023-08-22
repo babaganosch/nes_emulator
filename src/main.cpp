@@ -12,6 +12,31 @@ const char* nes_test_rom = "../data/nestest.nes";
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
+
+void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed)
+{
+    nes::emu_t* emu = (nes::emu_t*)mfb_get_user_data(window);
+
+    switch ( key )
+    {
+        case KB_KEY_Z:     emu->memory.gamepad[0].A      = isPressed; break;
+        case KB_KEY_X:     emu->memory.gamepad[0].B      = isPressed; break;
+        case KB_KEY_N:     emu->memory.gamepad[0].select = isPressed; break;
+        case KB_KEY_M:     emu->memory.gamepad[0].start  = isPressed; break;
+        case KB_KEY_UP:    emu->memory.gamepad[0].up     = isPressed; break;
+        case KB_KEY_DOWN:  emu->memory.gamepad[0].down   = isPressed; break;
+        case KB_KEY_LEFT:  emu->memory.gamepad[0].left   = isPressed; break;
+        case KB_KEY_RIGHT: emu->memory.gamepad[0].right  = isPressed; break;
+        default: break;
+    }
+
+    if( key == KB_KEY_ESCAPE )
+    {
+        mfb_close(window);
+    }
+
+}
+
 } // anonymous
 
 int main(int argc, char *argv[])
@@ -94,6 +119,7 @@ int main(int argc, char *argv[])
             
             window = mfb_open_ex( "NesScape", NES_WIDTH, NES_HEIGHT, WF_RESIZABLE );
             mfb_set_user_data( window, (void*)&emu );
+            mfb_set_keyboard_callback(window, keyboard_callback);
 
             float delta_time;
             uint16_t cycles_per_frame;
@@ -114,17 +140,28 @@ int main(int argc, char *argv[])
                 ret = emu.step( cycles_per_frame ); 
                 if ( ret != nes::RESULT_OK ) break;
 
+                // Temporarily dump nametables to screen
+                nes::dump_chr_rom(emu);
+
                 if (debug)
                 {
-                    nes::dump_chr_rom(emu);
                     nes::cpu_t::regs_t& regs = emu.cpu.regs;
                     nes::draw_text( 1, 1,  "PC   A  X  Y  P  SP CYC");
                     nes::draw_text( 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
                                            regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
+                    nes::draw_text( 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
+                                           emu.memory.gamepad[0].A > 0 ? '*' : ' ', 
+                                           emu.memory.gamepad[0].B > 0 ? '*' : ' ',
+                                           emu.memory.gamepad[0].select > 0 ? '*' : ' ',
+                                           emu.memory.gamepad[0].start > 0 ? '*' : ' ',
+                                           emu.memory.gamepad[0].up > 0 ? '*' : ' ',
+                                           emu.memory.gamepad[0].down > 0 ? '*' : ' ',
+                                           emu.memory.gamepad[0].left > 0 ? '*' : ' ',
+                                           emu.memory.gamepad[0].right > 0 ? '*' : ' ');
                 }
 
                 int32_t state = mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT );
-                if ( state < 0 ) throw nes::RESULT_MFB_ERROR;
+                if ( state < -1 ) throw nes::RESULT_MFB_ERROR;
             } while (mfb_wait_sync( window ));
             printf("Exiting gracefully...\n");
         }

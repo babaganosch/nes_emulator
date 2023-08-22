@@ -26,6 +26,27 @@ typedef void (* cpu_callback_t)(void * cookie);
 struct cpu_t;
 struct ppu_t;
 
+struct gamepad_t
+{
+    union 
+    {
+        struct 
+        {
+            uint8_t right : 1;
+            uint8_t left : 1;
+            uint8_t down : 1;
+            uint8_t up : 1;
+            uint8_t start : 1;
+            uint8_t select : 1;
+            uint8_t B : 1;
+            uint8_t A : 1;
+        };
+        uint8_t latch{0};
+    };
+
+    uint8_t data{0};
+};
+
 struct mem_t
 {
     /*
@@ -113,6 +134,9 @@ struct mem_t
         uint8_t* prg_lower_bank;   // CPU: $8000 - $BFFF
         uint8_t* prg_upper_bank;   // CPU: $C000 - $FFFF
     } cartridge_mem;
+
+    gamepad_t gamepad[2];
+    uint8_t gamepad_strobe{0};
 
     enum MEMORY_BUS
     {
