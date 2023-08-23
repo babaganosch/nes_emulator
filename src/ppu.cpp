@@ -39,6 +39,11 @@ RESULT ppu_t::execute()
         y = (y + 1) % 262; // NTSC = 262 scanlines
     }
 
+    if ( yy == 1 && xx == 1)
+    { // Fake sprite 0 at 1,1 for testing Mario Bros
+        regs.PPUSTATUS |= 0x40;
+    }
+
     if ( yy == 240 )
     { // Post-render scanline
         // The PPU just idles during this scanline.

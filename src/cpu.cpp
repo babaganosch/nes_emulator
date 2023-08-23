@@ -24,6 +24,7 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
 
 uint16_t cpu_t::execute()
 {
+    // Reset CPU instruction delta
     delta_cycles = 0u;
 
     // Fetch instruction
@@ -44,11 +45,20 @@ void cpu_t::tick_clock()
     delta_cycles++;
     cycles++;
     memory->cpu_cycles = cycles;
-    if (callback) 
-    { // PPU should run at tripple the CPU clock speed
+    if (callback)
+    { // NTSC PPU runs at 3x the CPU clock speed
         callback(nullptr);
         callback(nullptr);
         callback(nullptr);
+        if (variant == PAL)
+        { // PAL PPU runs at 3.2x the CPU clock speed
+            pal_clock_buffer++;
+            if (pal_clock_buffer >= 5)
+            {
+                callback(nullptr);
+                pal_clock_buffer = 0;
+            }
+        }
     }
 }
 
@@ -61,7 +71,7 @@ void cpu_t::tick_clock( uint8_t ticks )
 }
 
 void cpu_t::nmi()
-{
+{ // non-maskable interrupt
     push_short_to_stack( regs.PC );
     push_byte_to_stack( regs.SR );
     regs.I  = 1;
@@ -129,6 +139,11 @@ void cpu_t::write_byte( uint8_t data, uint8_t* ref )
     if (ref)
     {
         *ref = data;
+    }
+    else
+    {
+        LOG_E("CPU write byte to nullptr");
+        throw RESULT_ERROR;
     }
     tick_clock();
 }

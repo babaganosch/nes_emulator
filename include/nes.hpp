@@ -39,6 +39,7 @@ inline const char* RESULT_to_string(RESULT v)
 typedef void (* cpu_callback_t)(void * cookie);
 struct cpu_t;
 struct ppu_t;
+struct apu_t;
 
 struct gamepad_t
 {
@@ -61,96 +62,76 @@ struct gamepad_t
     uint8_t latch{0};
 };
 
+struct cpu_mem_t
+{ // $0000 - $401F
+    union
+    {
+        struct
+        {
+            uint8_t zero_page         [0x0100]; // $0000 - $00FF
+            uint8_t stack             [0x0100]; // $0100 - $01FF
+            uint8_t ram               [0x0600]; // $0200 - $07FF
+        };
+        uint8_t internal_ram          [0x0800]; // $0000 - $07FF
+        // Mirroring $0800 - $1FFF of $0000 - $07FF
+        // (repeats every $800 bytes)
+    };
+
+    // $2000 - $2007
+    // PPU Registers
+    // Mirroring $2008 – $3FFF of $2000 - $2007 
+    // (repeats every 8 bytes)
+
+    // $4000 – $4017
+    uint8_t* apu_regs{nullptr};
+
+    // $4018 – $401F
+    uint8_t* cpu_test_mode{nullptr}; 
+};
+
+struct ppu_mem_t
+{
+    uint8_t palette [0xFF];
+    uint8_t vram    [0x800];
+    uint8_t oam     [0x100];
+
+    bool ppuscroll_y_byte_flag{false};
+    bool ppuaddr_lo_byte_flag{false};
+};
+
+struct cartridge_mem_t
+{
+    // PPU: $0000 - $1FFF
+    uint8_t* chr_rom;                 // PPU: $0000 - $1FFF
+
+    // CPU: $4020 - $FFFF
+    uint8_t expansion_rom[0x1FE0];    // CPU: $4020 - $5FFF
+    uint8_t sram[0x2000];             // CPU: $6000 - $7FFF
+    uint8_t* prg_lower_bank;          // CPU: $8000 - $BFFF
+    uint8_t* prg_upper_bank;          // CPU: $C000 - $FFFF
+};
+
+struct apu_mem_t
+{
+    // Not implemented
+};
+
 struct mem_t
 {
-    /*
-    NES CPU address space
-    https://wiki.nesdev.com/w/index.php/CPU_memory_map
-
-    +---------------+ (0x10000)
-    |    PRG ROM    |
-    |  (upper bank) | 
-    +---------------+ 0xC000
-    |    PRG ROM    |
-    |  (lower bank) | 
-    +---------------+ 0x8000
-    |      SRAM     |
-    +---------------+ 0x6000
-    | Expansion ROM |
-    +---------------+ 0x4020
-    | I/O Registers |
-    +---------------+ 0x4000
-    |    Mirrors    |
-    | 0x2000-0x2007 |
-    +---------------+ 0x0800
-    |      RAM      |
-    +---------------+ 0x0200
-    |     Stack     |
-    +---------------+ 0x0100
-    |   Zero Page   |
-    +---------------+ 0x0000
-
-    */
-
     cpu_t* cpu;
-    struct cpu_mem_t
-    { // $0000 - $401F
-        union
-        {
-            struct
-            {
-                uint8_t zero_page         [0x0100]; // $0000 - $00FF
-                uint8_t stack             [0x0100]; // $0100 - $01FF
-                uint8_t ram               [0x0600]; // $0200 - $07FF
-            };
-            uint8_t internal_ram          [0x0800]; // $0000 - $07FF
-            // Mirroring $0800 - $1FFF of $0000 - $07FF
-            // (repeats every $800 bytes)
-        };
-
-        // $2000 - $2007
-        // PPU Registers
-        // Mirroring $2008 – $3FFF of $2000 - $2007 
-        // (repeats every 8 bytes)
-
-        // $4000 – $4017
-        uint8_t* apu_regs{nullptr};
-
-        // $4018 – $401F
-        uint8_t* cpu_test_mode{nullptr}; 
-
-    } cpu_mem;
+    cpu_mem_t cpu_mem;
 
     ppu_t* ppu;
-    struct ppu_mem_t
-    {
-        uint8_t palette [0xFF];
-        uint8_t vram    [0x800];
-        uint8_t oam     [0x100];
+    ppu_mem_t ppu_mem;
 
-        bool ppuscroll_y_byte_flag{false};
-        bool ppuaddr_lo_byte_flag{false};
-    } ppu_mem;
+    apu_t* apu;
+    apu_mem_t apu_mem;
 
-    struct apu_mem_t
-    {
-        
-    } apu_mem;
-
-    struct cartridge_mem_t
-    {
-        // PPU: $0000 - $1FFF
-        uint8_t* chr_rom;          // PPU: $0000 - $1FFF
-
-        // CPU: $4020 - $FFFF
-        uint8_t expansion_rom[0x1FE0];    // CPU: $4020 - $5FFF
-        uint8_t sram[0x2000];             // CPU: $6000 - $7FFF
-        uint8_t* prg_lower_bank;   // CPU: $8000 - $BFFF
-        uint8_t* prg_upper_bank;   // CPU: $C000 - $FFFF
-    } cartridge_mem;
+    cartridge_mem_t cartridge_mem;
 
     gamepad_t gamepad[2];
     uint8_t gamepad_strobe{0};
+    uint32_t cpu_cycles{0};
 
     enum MEMORY_BUS
     {
@@ -158,8 +139,6 @@ struct mem_t
         PPU,
         APU
     };
-
-    uint32_t cpu_cycles{0};
 
     void     init();
 
@@ -211,10 +190,18 @@ struct cpu_t
         uint16_t IRQBRK;
     } vectors;
 
+    enum VARIANT
+    {
+        NTSC,
+        PAL
+    };
+
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
     cpu_callback_t callback{nullptr};
     bool queue_nmi{false};
+    VARIANT variant{NTSC};
+    uint16_t pal_clock_buffer{0};
 
     mem_t* memory{nullptr};
     
@@ -242,8 +229,6 @@ struct cpu_t
     char nestest_validation_str[28];
 };
 
-
-
 struct ines_rom_t
 {
     struct header_t
@@ -268,11 +253,6 @@ struct ines_rom_t
     void clear_contents();
     void load_from_file(const char* filepath);
     void load_from_data(const uint8_t* data, const uint32_t size);
-};
-
-struct apu_t
-{
-
 };
 
 struct ppu_t

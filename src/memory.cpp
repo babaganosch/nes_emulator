@@ -350,7 +350,7 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
     (void) peek;
     if ( address < 0x2000 )
     { // patterntables
-        return ppu->memory->cartridge_mem.chr_rom[ address ];
+        return cartridge_mem.chr_rom[ address ];
     }
 
     else if ( address < 0x3F00 )
@@ -388,9 +388,9 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
 void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
 { // Writing to VRAM
     if ( address < 0x2000 )
-    { // patterntables
-        // ignore for now
-        LOG_E("Write to patterntable @ %04X not implemented!", address);
+    { // pattern tables
+        cartridge_mem.chr_rom[ address ] = value;
+        //LOG_E("Write to patterntable @ %04X not implemented!", address);
     }
 
     else if (address < 0x3F00) 

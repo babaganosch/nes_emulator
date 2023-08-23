@@ -8,10 +8,10 @@ namespace nes
 
 namespace
 {
-const char INES_MAGIC[4] = { 'N', 'E', 'S', 0x1A };
-const uint32_t PRG_PAGE_SIZE = 16 * 1024;
-const uint32_t CHR_PAGE_SIZE = 8 * 1024;
-const uint32_t INES_HEADER_SIZE = 16u;
+constexpr char INES_MAGIC[4] = { 'N', 'E', 'S', 0x1A };
+constexpr uint32_t PRG_PAGE_SIZE = 16 * 1024;
+constexpr uint32_t CHR_PAGE_SIZE = 8 * 1024;
+constexpr uint32_t INES_HEADER_SIZE = 16u;
 } // anonymous
 
 ines_rom_t::~ines_rom_t()

@@ -12,6 +12,7 @@ const char* nes_test_rom = "../data/nestest.nes";
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
+bool pause = false;
 
 void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed)
 {
@@ -30,9 +31,15 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
         default: break;
     }
 
-    if( key == KB_KEY_ESCAPE )
+    if (isPressed) return; // Only react on key release below
+    if ( key == KB_KEY_ESCAPE )
     {
         mfb_close(window);
+    }
+
+    if ( key == KB_KEY_BACKSPACE )
+    {
+        pause = !pause;
     }
 
 }
@@ -132,7 +139,7 @@ int main(int argc, char *argv[])
                 delta_time = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000000.0f;
                 last_update = now;
                 // 29786 around 60 NES frames per 60 "real" frames
-                cycles_per_frame = 29786.0f / ((1.0f / 60.0f) / delta_time);
+                cycles_per_frame = ((uint16_t)!pause) * 29786.0f / ((1.0f / 60.0f) / delta_time);
 
                 nes::clear_window_buffer( 255, 0, 0 );
 
