@@ -10,6 +10,9 @@ namespace nes
 #define NES_WIDTH  256
 #define NES_HEIGHT 240
 
+#define BIT_CHECK_HI(value, bit) (((value >> bit) & 0x1) == 0x1)
+#define BIT_CHECK_LO(value, bit) (((value >> bit) & 0x1) == 0x0)
+
 enum RESULT
 {
     RESULT_INVALID_INES_HEADER = -10,
@@ -95,8 +98,7 @@ struct ppu_mem_t
     uint8_t vram    [0x800];
     uint8_t oam     [0x100];
 
-    bool ppuscroll_y_byte_flag{false};
-    bool ppuaddr_lo_byte_flag{false};
+    bool w_toggle{false};
 };
 
 struct cartridge_mem_t
@@ -263,6 +265,7 @@ struct ppu_t
 
     mem_t* memory{nullptr};
     uint8_t write_latch{0};
+    uint8_t ppudata_read_buffer{0};
     bool recently_power_on{false};
     bool odd_frame{false};
 

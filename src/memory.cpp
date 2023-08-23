@@ -87,6 +87,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
                     ppu->regs.PPUSTATUS &= ~0x80;   // clear vblank status bit if register is being read
                     ppu->regs.PPUADDR[0] = 0x00;    // PPUADDR is also zeroed
                     ppu->regs.PPUADDR[1] = 0x00;
+                    ppu_mem.w_toggle = false;
                 }
                 return value;
             } break;
@@ -110,10 +111,11 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             { // PPUDATA <> read/write
                 uint16_t addr = ppu->regs.PPUADDR[0] << 8 | ppu->regs.PPUADDR[1];
                 bool is_palette = addr >= 0x3F00 && addr <= 0x3F1F;
-                uint8_t data = ppu_memory_read( addr, peek );
+                uint8_t data = ppu->ppudata_read_buffer;
+                ppu->ppudata_read_buffer = ppu_memory_read( addr, peek );
 
                 // check vram address increment
-                if (!is_palette && ((ppu->regs.PPUCTRL >> 2) == 0x1)) 
+                if (!is_palette && BIT_CHECK_HI(ppu->regs.PPUCTRL, 2)) 
                 {
                     addr+=32;
                 }
@@ -283,18 +285,18 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             } break;
             case( 0x2005 ):
             { // PPUSCROLL >> write x2
-                ppu->regs.PPUSCROLL[ppu_mem.ppuscroll_y_byte_flag] = value;
-                ppu_mem.ppuscroll_y_byte_flag = !ppu_mem.ppuscroll_y_byte_flag;
+                ppu->regs.PPUSCROLL[ppu_mem.w_toggle] = value;
+                ppu_mem.w_toggle = !ppu_mem.w_toggle;
                 ppu->write_latch = value;
             } break;
             case( 0x2006 ):
             { // PPUADDR >> write x2
-                if (ppu_mem.ppuaddr_lo_byte_flag == 0)
+                if (ppu_mem.w_toggle == 0)
                 { // Valid addresses are $0000–$3FFF; higher addresses will be mirrored down.
                     value = value % 0x40;
                 }
-                ppu->regs.PPUADDR[ppu_mem.ppuaddr_lo_byte_flag] = value;
-                ppu_mem.ppuaddr_lo_byte_flag = !ppu_mem.ppuaddr_lo_byte_flag;
+                ppu->regs.PPUADDR[ppu_mem.w_toggle] = value;
+                ppu_mem.w_toggle = !ppu_mem.w_toggle;
                 ppu->write_latch = value;
             } break;
             case( 0x2007 ):
@@ -304,7 +306,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 ppu_memory_write( value, addr );
 
                 // check vram address increment
-                if (!is_palette && ((ppu->regs.PPUCTRL >> 2) & 0x1)) 
+                if (!is_palette && BIT_CHECK_HI(ppu->regs.PPUCTRL, 2))
                 {
                     addr+=32;
                 }

@@ -30,11 +30,18 @@ RESULT ppu_t::execute()
 {
     cycles++;
 
-    int16_t xx = x, yy = y; // Scanlines range from -1 to 261
-    x++;
+    int16_t xx = x++;   // Each scanline range from 0 to 340 dots
+    int16_t yy = y - 1; // Scanlines range from -1 to 261
+
+    // Check if in pre-render line
+    if ((yy == 261 || yy == -1) && xx == 1) {
+        regs.PPUSTATUS &= ~0x80;
+        // Sprite 0 Hit flag is cleared at dot 1 of the pre-render line.
+        regs.PPUSTATUS &= ~0x40;
+    }
 
     if (x > 340)
-    { // End of scanline
+    { // End of scanline, wrap around
         x = 0;
         y = (y + 1) % 262; // NTSC = 262 scanlines
     }
@@ -63,13 +70,6 @@ RESULT ppu_t::execute()
         if (regs.PPUCTRL & 0x80) {
             memory->cpu->queue_nmi = true;
         }
-    }
-
-    // Check if in pre-render line
-    if (yy == 261 && xx == 1) {
-        regs.PPUSTATUS &= ~0x80;
-        // Sprite 0 Hit flag is cleared at dot 1 of the pre-render line.
-        regs.PPUSTATUS &= ~0x40;
     }
 
     return RESULT_OK;
