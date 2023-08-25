@@ -630,8 +630,8 @@ OP_FUNCTION(BIT)
 {
     uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
-    cpu.regs.N = (operand >> 7) & 0x1;
-    cpu.regs.V = (operand >> 6) & 0x1;
+    cpu.regs.N = BIT_CHECK_HI( operand, 7 );
+    cpu.regs.V = BIT_CHECK_HI( operand, 6 ); 
     cpu.regs.Z = CALC_Z_FLAG( operand & cpu.regs.A );
 }
 
@@ -1691,7 +1691,7 @@ OP_FUNCTION(ANC)
     uint8_t  data = operand & cpu.regs.A;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
-    cpu.regs.C = (data >> 7) & 0x1;
+    cpu.regs.C = BIT_CHECK_HI( data, 7 );
 }
 
 /////////////////////////////////////////////////////////

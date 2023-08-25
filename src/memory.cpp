@@ -43,57 +43,34 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
     { // ppu registers
         if (address == 0x4014) 
         { // OAMDMA > write
-            return ppu->write_latch;
+            return ppu_mem.write_latch;
         }
-
-        uint16_t reg = 0x2000 + ((address - 0x2000) % 0x0008);
         
-        switch (reg)
+        switch ( address )
         {
             case( 0x2000 ):
             { // PPUCTRL > write
-                return ppu->write_latch;
+                return ppu_mem.write_latch;
             } break;
             case( 0x2001 ):
             { // PPUMASK > write
-                return ppu->write_latch;
+                return ppu_mem.write_latch;
             } break;
             case( 0x2002 ):
-            {
-                /* PPUSTATUS < read
-                 *
-                 * 7  bit  0
-                 * ---- ----
-                 * VSO. ....
-                 * |||| ||||
-                 * |||+-++++- PPU open bus. Returns stale PPU bus contents.
-                 * ||+------- Sprite overflow. The intent was for this flag to be set
-                 * ||         whenever more than eight sprites appear on a scanline, but a
-                 * ||         hardware bug causes the actual behavior to be more complicated
-                 * ||         and generate false positives as well as false negatives; see
-                 * ||         PPU sprite evaluation. This flag is set during sprite
-                 * ||         evaluation and cleared at dot 1 (the second dot) of the
-                 * ||         pre-render line.
-                 * |+-------- Sprite 0 Hit.  Set when a nonzero pixel of sprite 0 overlaps
-                 * |          a nonzero background pixel; cleared at dot 1 of the pre-render
-                 * |          line.  Used for raster timing.
-                 * +--------- Vertical blank has started (0: not in vblank; 1: in vblank).
-                 *         Set at dot 1 of line 241 (the line *after* the post-render
-                 *         line); cleared after reading $2002 and at dot 1 of the
-                 *         pre-render line.
-                 */
+            { // PPUSTATUS < read
                 uint8_t value = ppu->regs.PPUSTATUS;
                 if (!peek) {
-                    ppu->regs.PPUSTATUS &= ~0x80;   // clear vblank status bit if register is being read
-                    ppu->regs.PPUADDR[0] = 0x00;    // PPUADDR is also zeroed
-                    ppu->regs.PPUADDR[1] = 0x00;
-                    ppu_mem.w_toggle = false;
+                    // Clear vblank status bit
+                    ppu->regs.PPUSTATUS &= ~0x80;
+                    // Reset PPUADDR and write toggle
+                    ppu_mem.v.data = 0x0000;
+                    ppu_mem.w = 0;
                 }
                 return value;
             } break;
             case( 0x2003 ):
             { // OAMADDR > write
-                return ppu->write_latch;
+                return ppu_mem.write_latch;
             } break;
             case( 0x2004 ):
             { // OAMDATA <> read/write
@@ -101,18 +78,18 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             } break;
             case( 0x2005 ):
             { // PPUSCROLL >> write x2
-                return ppu->write_latch;
+                return ppu_mem.write_latch;
             } break;
             case( 0x2006 ):
             { // PPUADDR >> write x2
-                return ppu->write_latch;
+                return ppu_mem.write_latch;
             } break;
             case( 0x2007 ):
             { // PPUDATA <> read/write
-                uint16_t addr = ppu->regs.PPUADDR[0] << 8 | ppu->regs.PPUADDR[1];
+                uint16_t addr = ppu_mem.v.data;
                 bool is_palette = addr >= 0x3F00 && addr <= 0x3F1F;
-                uint8_t data = ppu->ppudata_read_buffer;
-                ppu->ppudata_read_buffer = ppu_memory_read( addr, peek );
+                uint8_t data = ppu_mem.ppudata_read_buffer;
+                ppu_mem.ppudata_read_buffer = ppu_memory_read( addr, peek );
 
                 // check vram address increment
                 if (!is_palette && BIT_CHECK_HI(ppu->regs.PPUCTRL, 2)) 
@@ -127,10 +104,13 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
                 {
                     addr = addr % 0x3F00;
                 }
-                ppu->regs.PPUADDR[0] = (addr & 0xFF00) >> 8;
-                ppu->regs.PPUADDR[1] = (addr & 0x00FF);
+                ppu_mem.v.data = addr;
                 return data;
             } break;
+            case( 0x4014 ):
+            { // OAMDMA > write
+                return ppu_mem.write_latch;
+            }
         }
     }
 
@@ -139,13 +119,13 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         if ( address == 0x4016 )
         {
             uint8_t value = gamepad[0].latch & 0x1;
-            gamepad[0].latch = gamepad[0].latch >> 1;
+            gamepad[0].latch >>= 1;
             return value;
         }
         if ( address == 0x4017 )
         {
             uint8_t value = gamepad[1].latch & 0x1;
-            gamepad[1].latch = gamepad[1].latch >> 1;
+            gamepad[1].latch >>= 1;
             return value;
         }
         return 0xFF;
@@ -172,99 +152,27 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
 
     if ( address < 0x4000 || address == 0x4014)
     { // ppu registers
-        if (address == 0x4014) 
-        { // OAMDMA > write
 
-            // oam addr is 0xXX00 where XX is data
-            uint16_t source_addr = (value << 8);
-            uint8_t* source = nullptr;
-            if ( source_addr < 0x4000 )
-            {
-                source = &cpu_mem.internal_ram[ source_addr % 0x0800 ];
-            }
-            else if (source_addr < 0x6000) 
-            {
-                // TODO Fix I/O reg read and mirroring
-            } 
-            else if (source_addr < 0x8000) 
-            {
-                // TODO Fix save RAM read
-            } 
-            else if (source_addr < 0xC000) 
-            {
-                source = &cartridge_mem.prg_lower_bank[ source_addr - 0x8000 ]; 
-            } 
-            else 
-            {
-                source = &cartridge_mem.prg_upper_bank[ source_addr - 0xC000 ];
-            }
-
-            if (!source)
-            { // error
-                return;
-            }
-
-            // todo take care of cycles here, somehow!
-            // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
-            // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
-            memcpy( &ppu_mem.oam[ppu->regs.OAMADDR], source, 256 );//  &ppu.oam[ppu.oamaddr], dma_data_ptr, 256);
-
-            return;
-        }
-
-        uint16_t reg = 0x2000 + ((address - 0x2000) % 0x0008);
-        switch (reg)
+        switch (address)
         {
             case( 0x2000 ):
-            {
-                /* PPUCTRL > write
-                 *
-                 *  7  bit  0
-                 *  ---- ----
-                 *  VPHB SINN
-                 *  |||| ||||
-                 *  |||| ||++- Base nametable address
-                 *  |||| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
-                 *  |||| |+--- VRAM address increment per CPU read/write of PPUDATA
-                 *  |||| |     (0: add 1, going across; 1: add 32, going down)
-                 *  |||| +---- Sprite pattern table address for 8x8 sprites
-                 *  ||||       (0: $0000; 1: $1000; ignored in 8x16 mode)
-                 *  |||+------ Background pattern table address (0: $0000; 1: $1000)
-                 *  ||+------- Sprite size (0: 8x8 pixels; 1: 8x16 pixels – see PPU OAM#Byte 1)
-                 *  |+-------- PPU master/slave select
-                 *  |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
-                 *  +--------- Generate an NMI at the start of the
-                 *             vertical blanking interval (0: off; 1: on)
-                 */
-                
+            { // PPUCTRL > write
                 // After power/reset, writes to this register are ignored for about 30,000 cycles.
                 if (cpu_cycles < 29658 && ppu->recently_power_on)
                 {
-                    ppu->recently_power_on = false;
                     return;
                 }
+                // t: ...GH.. ........ <- d: ......GH
+                //    <used elsewhere> <- d: ABCDEF..
+                ppu_mem.t.nametable = (value & 0b00000011);
+                ppu_mem.write_latch = value;
                 ppu->regs.PPUCTRL = value;
-                ppu->write_latch = value;
+                ppu->recently_power_on = false;
             } break;
             case( 0x2001 ):
-            {
-                /* PPUMASK > write
-                 *
-                 * 7  bit  0
-                 * ---- ----
-                 * BGRs bMmG
-                 * |||| ||||
-                 * |||| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
-                 * |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
-                 * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
-                 * |||| +---- 1: Show background
-                 * |||+------ 1: Show sprites
-                 * ||+------- Emphasize red (green on PAL/Dendy)
-                 * |+-------- Emphasize green (red on PAL/Dendy)
-                 * +--------- Emphasize blue
-                 */
+            { // PPUMASK > write
                 ppu->regs.PPUMASK = value;
-                ppu->write_latch = value;
+                ppu_mem.write_latch = value;
             } break;
             case( 0x2002 ):
             { // PPUSTATUS < read
@@ -273,7 +181,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             case( 0x2003 ):
             { // OAMADDR < write
                 ppu->regs.OAMADDR = value;
-                ppu->write_latch = value;
+                ppu_mem.write_latch = value;
             } break;
             case( 0x2004 ):
             { // OAMDATA <> read/write
@@ -281,27 +189,57 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 uint8_t addr = ppu->regs.OAMADDR;
                 ppu_mem.oam[addr++] = value;
                 ppu->regs.OAMADDR = addr;
-                ppu->write_latch = value;
+                ppu_mem.write_latch = value;
             } break;
             case( 0x2005 ):
             { // PPUSCROLL >> write x2
-                ppu->regs.PPUSCROLL[ppu_mem.w_toggle] = value;
-                ppu_mem.w_toggle = !ppu_mem.w_toggle;
-                ppu->write_latch = value;
+                if (ppu_mem.w == 0)
+                { // First Write
+                    // t: ....... ...ABCDE <- d: ABCDE...
+                    // x:              FGH <- d: .....FGH
+                    // w:                  <- 1
+                    ppu_mem.t.coarse_x = (value & 0b11111000) >> 3;
+                    ppu_mem.x = (value & 0b00000111);
+                    ppu_mem.w = 1;
+                }
+                else
+                { // Second Write
+                    // t: FGH..AB CDE..... <- d: ABCDEFGH
+                    // w:                  <- 0
+                    ppu_mem.t.coarse_y = (value & 0b11111000) >> 3;
+                    ppu_mem.t.fine_y = (value & 0b00000111);
+                    ppu_mem.w = 0;
+                }
+                ppu_mem.write_latch = value;
             } break;
             case( 0x2006 ):
             { // PPUADDR >> write x2
-                if (ppu_mem.w_toggle == 0)
-                { // Valid addresses are $0000–$3FFF; higher addresses will be mirrored down.
-                    value = value % 0x40;
+                if (ppu_mem.w == 0)
+                { // First Write
+                    // t: .CDEFGH ........ <- d: ..CDEFGH
+                    //        <unused>     <- d: AB......
+                    // t: Z...... ........ <- 0 (bit Z is cleared)
+                    // w:                  <- 1
+                    ppu_mem.t.data &= 0b000000011111111;
+                    ppu_mem.t.data |= (value & 0b00111111) << 8;
+                    ppu_mem.w = 1;
                 }
-                ppu->regs.PPUADDR[ppu_mem.w_toggle] = value;
-                ppu_mem.w_toggle = !ppu_mem.w_toggle;
-                ppu->write_latch = value;
+                else
+                { // Second Write
+                    // t: ....... ABCDEFGH <- d: ABCDEFGH
+                    // v: <...all bits...> <- t: <...all bits...>
+                    // w:                  <- 0
+                    ppu_mem.t.data &= 0b111111100000000;
+                    ppu_mem.t.data |= value;
+                    ppu_mem.v.data = ppu_mem.t.data;
+                    ppu_mem.w = 0;
+                }
+                ppu_mem.write_latch = value;
+
             } break;
             case( 0x2007 ):
             { // PPUDATA <> read/write
-                uint16_t addr = (ppu->regs.PPUADDR[0] << 8) | ppu->regs.PPUADDR[1];
+                uint16_t addr = ppu_mem.v.data;
                 bool is_palette = addr >= 0x3F00 && addr <= 0x3F1F;
                 ppu_memory_write( value, addr );
 
@@ -318,10 +256,48 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 {
                     addr = addr % 0x3F00;
                 }
-                ppu->regs.PPUADDR[0] = (addr & 0xFF00) >> 8;
-                ppu->regs.PPUADDR[1] = (addr & 0x00FF);
-                ppu->regs.PPUDATA = value;
-                ppu->write_latch = value;
+                ppu_mem.v.data = addr;
+                ppu_mem.write_latch = value;
+            } break;
+            case ( 0x4014 ):
+            { // OAMDMA > write
+
+                // oam addr is 0xXX00 where XX is data
+                uint16_t source_addr = (value << 8);
+                uint8_t* source = nullptr;
+                if ( source_addr < 0x4000 )
+                {
+                    source = &cpu_mem.internal_ram[ source_addr % 0x0800 ];
+                }
+                else if (source_addr < 0x6000) 
+                {
+                    // TODO Fix I/O reg read and mirroring
+                    LOG_E("I/O reg read and mirroring not implemented (%04X)", source_addr);
+                } 
+                else if (source_addr < 0x8000) 
+                {
+                    // TODO Fix save RAM read
+                    LOG_E("Save RAM not implemented (%04X)", source_addr);
+                } 
+                else if (source_addr < 0xC000) 
+                {
+                    source = &cartridge_mem.prg_lower_bank[ source_addr - 0x8000 ]; 
+                } 
+                else 
+                {
+                    source = &cartridge_mem.prg_upper_bank[ source_addr - 0xC000 ];
+                }
+
+                if (!source)
+                { // error
+                    LOG_E("No source found for OAMDMA write");
+                    return;
+                }
+
+                // todo take care of cycles here, somehow!
+                // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
+                // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
+                memcpy( &ppu_mem.oam[ppu->regs.OAMADDR], source, 256 );
             } break;
         }
         return;
@@ -332,9 +308,13 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
 
         if ( address == 0x4016 )
         {
+            auto old_strobe = gamepad_strobe;
             gamepad_strobe = value & 0x1;
-            gamepad[0].latch = gamepad[0].data;
-            gamepad[1].latch = gamepad[1].data;
+            if (old_strobe == 1 && gamepad_strobe == 0)
+            {
+                gamepad[0].latch = gamepad[0].data;
+                gamepad[1].latch = gamepad[1].data;
+            }
             return;
         }
 
@@ -392,7 +372,6 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
     if ( address < 0x2000 )
     { // pattern tables
         cartridge_mem.chr_rom[ address ] = value;
-        //LOG_E("Write to patterntable @ %04X not implemented!", address);
     }
 
     else if (address < 0x3F00) 

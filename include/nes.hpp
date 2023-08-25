@@ -98,7 +98,33 @@ struct ppu_mem_t
     uint8_t vram    [0x800];
     uint8_t oam     [0x100];
 
-    bool w_toggle{false};
+    /* PPU Shift register VRAM address and Temp VRAM address
+     *   yyy NN YYYYY XXXXX
+     *   ||| || ||||| +++++-- coarse X scroll
+     *   ||| || +++++-------- coarse Y scroll
+     *   ||| ++-------------- nametable select
+     *   +++----------------- fine Y scroll
+     */
+    union shift_regs_t
+    {
+        struct
+        {
+            uint16_t coarse_x  : 5;
+            uint16_t coarse_y  : 5;
+            uint16_t nametable : 2;
+            uint16_t fine_y    : 3;
+            uint16_t padding   : 1;
+        };
+        uint16_t data{0};
+    };
+
+    shift_regs_t v;
+    shift_regs_t t;
+    uint8_t x{0};
+    uint8_t w{0};
+
+    uint8_t write_latch{0};
+    uint8_t ppudata_read_buffer{0};
 };
 
 struct cartridge_mem_t
@@ -264,21 +290,69 @@ struct ppu_t
     uint32_t cycles{0};
 
     mem_t* memory{nullptr};
-    uint8_t write_latch{0};
-    uint8_t ppudata_read_buffer{0};
     bool recently_power_on{false};
     bool odd_frame{false};
 
     struct regs_t
     {
+        /* PPUCTRL > write
+        *  7  bit  0
+        *  ---- ----
+        *  VPHB SINN
+        *  |||| ||||
+        *  |||| ||++- Base nametable address
+        *  |||| ||    (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+        *  |||| |+--- VRAM address increment per CPU read/write of PPUDATA
+        *  |||| |     (0: add 1, going across; 1: add 32, going down)
+        *  |||| +---- Sprite pattern table address for 8x8 sprites
+        *  ||||       (0: $0000; 1: $1000; ignored in 8x16 mode)
+        *  |||+------ Background pattern table address (0: $0000; 1: $1000)
+        *  ||+------- Sprite size (0: 8x8 pixels; 1: 8x16 pixels – see PPU OAM#Byte 1)
+        *  |+-------- PPU master/slave select
+        *  |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
+        *  +--------- Generate an NMI at the start of the
+        *             vertical blanking interval (0: off; 1: on)
+        */
         uint8_t PPUCTRL;
+        /* PPUMASK > write
+        * 7  bit  0
+        * ---- ----
+        * BGRs bMmG
+        * |||| ||||
+        * |||| |||+- Greyscale (0: normal color, 1: produce a greyscale display)
+        * |||| ||+-- 1: Show background in leftmost 8 pixels of screen, 0: Hide
+        * |||| |+--- 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+        * |||| +---- 1: Show background
+        * |||+------ 1: Show sprites
+        * ||+------- Emphasize red (green on PAL/Dendy)
+        * |+-------- Emphasize green (red on PAL/Dendy)
+        * +--------- Emphasize blue
+        */
         uint8_t PPUMASK;
+        /* PPUSTATUS < read
+        * 7  bit  0
+        * ---- ----
+        * VSO. ....
+        * |||| ||||
+        * |||+-++++- PPU open bus. Returns stale PPU bus contents.
+        * ||+------- Sprite overflow. The intent was for this flag to be set
+        * ||         whenever more than eight sprites appear on a scanline, but a
+        * ||         hardware bug causes the actual behavior to be more complicated
+        * ||         and generate false positives as well as false negatives; see
+        * ||         PPU sprite evaluation. This flag is set during sprite
+        * ||         evaluation and cleared at dot 1 (the second dot) of the
+        * ||         pre-render line.
+        * |+-------- Sprite 0 Hit.  Set when a nonzero pixel of sprite 0 overlaps
+        * |          a nonzero background pixel; cleared at dot 1 of the pre-render
+        * |          line.  Used for raster timing.
+        * +--------- Vertical blank has started (0: not in vblank; 1: in vblank).
+        *         Set at dot 1 of line 241 (the line *after* the post-render
+        *         line); cleared after reading $2002 and at dot 1 of the
+        *         pre-render line.
+        */
         uint8_t PPUSTATUS;
         uint8_t OAMADDR;
         uint8_t OAMDATA;
-        uint8_t PPUSCROLL[2];
-        uint8_t PPUADDR[2];
-        uint8_t PPUDATA;
         uint8_t OAMDMA;
     } regs;
 
