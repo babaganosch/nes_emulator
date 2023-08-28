@@ -7,6 +7,10 @@ namespace nes
 void mem_t::init()
 {
     memset(cpu_mem.internal_ram, 0x00, sizeof(cpu_mem.internal_ram));
+    for (auto i = 0; i < sizeof(cpu_mem.ram); ++i)
+    {
+        //cpu_mem.ram[i] = rand() * 0xFF;
+    }
 }
 
 uint8_t mem_t::memory_read( MEMORY_BUS bus, uint16_t address, bool peek )
@@ -87,7 +91,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             case( 0x2007 ):
             { // PPUDATA <> read/write
                 uint16_t addr = ppu_mem.v.data;
-                bool is_palette = addr >= 0x3F00 && addr <= 0x3F1F;
+                bool is_palette = (addr >= 0x3F00) && (addr <= 0x3F1F);
                 uint8_t data = ppu_mem.ppudata_read_buffer;
                 ppu_mem.ppudata_read_buffer = ppu_memory_read( addr, peek );
 
@@ -138,7 +142,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         if ( address < 0xC000 ) return cartridge_mem.prg_lower_bank[ address - 0x8000 ];
         else return cartridge_mem.prg_upper_bank[ address - 0xC000 ];
     }
-
+    
     return 0x00;
 }
 
@@ -240,7 +244,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             case( 0x2007 ):
             { // PPUDATA <> read/write
                 uint16_t addr = ppu_mem.v.data;
-                bool is_palette = addr >= 0x3F00 && addr <= 0x3F1F;
+                bool is_palette = (addr >= 0x3F00) && (addr <= 0x3F1F);
                 ppu_memory_write( value, addr );
 
                 // check vram address increment
@@ -337,17 +341,11 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
 
     else if ( address < 0x3F00 )
     { // nametables
-        uint16_t t_addr = address - 0x2000;
-        if (address < 0x2800) {
-            t_addr = t_addr % 0x400;
-        } else {
-            t_addr = (t_addr - 0x800) % 0x400;
-            t_addr = t_addr + 0x400;
-        }
-
-        uint16_t wrapped_addr = t_addr % 0x800;
-
-        return ppu_mem.vram[wrapped_addr];
+        // TODO: Fix mirroring of nametables
+        //       Currently, only vertical mirroring works
+        uint16_t wrapped_addr = address - 0x2000;
+        wrapped_addr = wrapped_addr % 0x800;
+        return ppu_mem.vram[ wrapped_addr ];
     }
 
     else if ( address < 0x3FFF )
@@ -364,7 +362,8 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
         return ppu_mem.palette[ wrapped_addr ];
     }
     
-    return 0xFF;
+    LOG_E("PPU memory read on weird address (%04X)", address );
+    throw RESULT_ERROR;
 }
 
 void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
@@ -372,21 +371,17 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
     if ( address < 0x2000 )
     { // pattern tables
         cartridge_mem.chr_rom[ address ] = value;
+        return;
     }
 
     else if (address < 0x3F00) 
     { // nametables
-        uint16_t t_addr = address - 0x2000;
-        if (address < 0x2800) {
-            t_addr = t_addr % 0x400;
-        } else {
-            t_addr = (t_addr - 0x800) % 0x400;
-            t_addr = t_addr + 0x400;
-        }
-
-        uint16_t wrapped_addr = t_addr % 0x800;
-
-        ppu_mem.vram[wrapped_addr] = value;
+        // TODO: Fix mirroring of nametables
+        //       Currently, only vertical mirroring works
+        uint16_t wrapped_addr = address - 0x2000;
+        wrapped_addr = wrapped_addr % 0x800;
+        ppu_mem.vram[ wrapped_addr ] = value;
+        return;
     } 
 
     else if ( address < 0x3FFF )
@@ -401,7 +396,11 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
         }
 
         ppu_mem.palette[ wrapped_addr ] = value;
+        return;
     }
+
+    LOG_E("PPU memory write on weird address (%04X)", address );
+    throw RESULT_ERROR;
 }
 
 } // nes

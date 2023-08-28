@@ -121,11 +121,18 @@ int main(int argc, char *argv[])
         { // Regular Execution
 
             struct mfb_window *window = 0x0;
+            struct mfb_window *nt_window = 0x0;
             nes::clear_window_buffer( 255, 0, 0 );
             
             window = mfb_open_ex( "NesScape", NES_WIDTH, NES_HEIGHT, WF_RESIZABLE );
             mfb_set_user_data( window, (void*)&emu );
             mfb_set_keyboard_callback(window, keyboard_callback);
+
+            if (debug)
+            {
+                nt_window = mfb_open_ex( "Nametables", NES_WIDTH * 2, NES_HEIGHT * 2, WF_RESIZABLE );
+                nes::clear_nt_window_buffer( 255, 0, 0 );
+            }
 
             float delta_time;
             uint16_t cycles_per_frame;
@@ -139,7 +146,7 @@ int main(int argc, char *argv[])
                 delta_time = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000000.0f;
                 last_update = now;
                 // 29786 around 60 NES frames per 60 "real" frames
-                cycles_per_frame = ((uint16_t)!pause) * 29786.0f / ((1.0f / 60.0f) / delta_time);
+                cycles_per_frame = ((uint16_t)!pause) * 29786.0f * ((1.0f / 60.0f) / delta_time);
 
                 nes::clear_window_buffer( 255, 0, 0 );
 
@@ -147,7 +154,7 @@ int main(int argc, char *argv[])
                 if ( ret != nes::RESULT_OK ) break;
 
                 // Temporarily dump nametables to screen
-                nes::dump_nametables(emu);
+                nes::dump_ppu_vram(emu);
                 nes::dump_sprites(emu);
 
                 if (debug)
@@ -165,6 +172,12 @@ int main(int argc, char *argv[])
                                            emu.memory.gamepad[0].down > 0 ? '*' : ' ',
                                            emu.memory.gamepad[0].left > 0 ? '*' : ' ',
                                            emu.memory.gamepad[0].right > 0 ? '*' : ' ');
+
+                    nes::clear_nt_window_buffer( 255, 0, 0 );
+                    nes::dump_nametables(emu);
+                    
+                    int32_t state = mfb_update_ex( nt_window, nes::nt_window_buffer, NES_WIDTH*2, NES_HEIGHT*2 );
+                    if ( state < 0 ) break;
                 }
 
                 int32_t state = mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT );

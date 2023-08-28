@@ -15,6 +15,7 @@ namespace nes
 {
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
+uint32_t nt_window_buffer[(NES_WIDTH*2) * (NES_HEIGHT*2) * 4];
 
 static uint8_t font8x8_basic[128][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0000 (nul)
@@ -258,6 +259,37 @@ static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_in
     }
 }
 
+static void blit_chr_nt(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_index, bool bg, bool flip_x, bool flip_y, uint8_t* palette_set)
+{
+    uint8_t chr[8*8]; // 8x8 pixels is one character (tile)
+    ppu_get_chr(emu, chr_index*16, chr, bg);
+
+    for (uint32_t y = 0; y < 8; ++y)
+    {
+        for (uint32_t x = 0; x < 8; ++x)
+        {
+            uint8_t pix = chr[y*8+x];
+
+            if (!bg && pix == 0x0)
+                continue;
+                
+            uint32_t tx = pix_x + (flip_x ? 7 - x : x);
+            uint32_t ty = pix_y + (flip_y ? 7 - y : y);
+
+            uint32_t ti = (ty * NES_WIDTH * 2) + tx;
+
+            if (bg && pix == 0x0) {
+                uint32_t palette_bg = emu.memory.ppu_mem.palette[0x00];
+                nt_window_buffer[ti] = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
+            } else if (palette_set == 0x0) {
+                nt_window_buffer[ti] = MFB_RGB(gray_palette[pix*3], gray_palette[pix*3], gray_palette[pix*3]);
+            } else {
+                nt_window_buffer[ti] = MFB_RGB(palette_id_to_red(palette_set[pix-1]), palette_id_to_green(palette_set[pix-1]), palette_id_to_blue(palette_set[pix-1]));
+            }
+        }
+    }
+}
+
 void dump_sprites(emu_t &emu)
 {
     bool is_8x16 = ((emu.ppu.regs.PPUCTRL >> 5) & 0b1) == 0b1;
@@ -287,6 +319,45 @@ void dump_sprites(emu_t &emu)
     }
 }
 
+void dump_ppu_vram(emu_t& emu)
+{
+    uint8_t palette_set[3];
+    for (uint32_t yi = 0; yi < 30; ++yi)
+    {
+        for (uint32_t xi = 0; xi < 32; ++xi)
+        {
+
+            uint32_t nti = yi*32+xi;
+            if (nti >= 0x800) {
+                LOG_E("trying to access vram out of bounds!\n");
+            }
+            uint8_t chr_i = emu.memory.ppu_mem.vram[nti];
+
+            // find correct attribute
+            unsigned short attribute_addr = ((yi / 4)*8)+(xi / 4);
+            uint8_t attribute = emu.memory.ppu_mem.vram[attribute_addr+0x3C0];
+
+            uint32_t sub_x = (xi / 2) % 2;
+            uint32_t sub_y = (yi / 2) % 2;
+            uint32_t palette_id = 0;
+
+            if (sub_x == 0 && sub_y == 0) {
+                palette_id = attribute & 0x3;
+            } else if (sub_x == 1 && sub_y == 0) {
+                palette_id = (attribute >> 2) & 0x3;
+            } else if (sub_x == 0 && sub_y == 1) {
+                palette_id = (attribute >> 4) & 0x3;
+            } else if (sub_x == 1 && sub_y == 1) {
+                palette_id = (attribute >> 6) & 0x3;
+            }
+            palette_set[0] = emu.memory.ppu_mem.palette[0x01+palette_id*4];
+            palette_set[1] = emu.memory.ppu_mem.palette[0x02+palette_id*4];
+            palette_set[2] = emu.memory.ppu_mem.palette[0x03+palette_id*4];
+            blit_chr(emu, xi*8, yi*8, chr_i, true, false, false, palette_set); // ignore fliping for now
+        }
+    }
+}
+
 void dump_nametables(emu_t &emu)
 {
     uint8_t palette_set[3];
@@ -304,7 +375,7 @@ void dump_nametables(emu_t &emu)
                 if (nti >= 0x800) {
                     LOG_E("trying to access vram out of bounds!");
                 }
-
+                
                 uint8_t chr_i = emu.memory.ppu_memory_read( base_nt_addr+nti, true );
 
                 // find correct attribute
@@ -328,7 +399,8 @@ void dump_nametables(emu_t &emu)
                 palette_set[0] = emu.memory.ppu_mem.palette[0x01+palette_id*4];
                 palette_set[1] = emu.memory.ppu_mem.palette[0x02+palette_id*4];
                 palette_set[2] = emu.memory.ppu_mem.palette[0x03+palette_id*4];
-                blit_chr(emu, xi*8 + nt_x*(32*8), yi*8 + nt_y*(30*8), chr_i, true, false, false, palette_set); // ignore fliping for now
+                
+                blit_chr_nt(emu, xi*8 + nt_x*NES_WIDTH, yi*8 + nt_y*NES_HEIGHT, chr_i, true, false, false, palette_set); // ignore fliping for now
             }
         }
         base_nt_addr+=0x400;
@@ -340,6 +412,14 @@ void clear_window_buffer(uint8_t r, uint8_t g, uint8_t b)
     for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT; i++)
     {
         nes::window_buffer[i] = MFB_RGB(r, g, b);
+    }
+}
+
+void clear_nt_window_buffer(uint8_t r, uint8_t g, uint8_t b)
+{
+    for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT * 4; i++)
+    {
+        nes::nt_window_buffer[i] = MFB_RGB(r, g, b);
     }
 }
 

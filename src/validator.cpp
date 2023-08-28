@@ -278,7 +278,7 @@ RESULT validator::validate_line()
         printf("    \033[0;31mFAIL!\033[0;0m\n");
         printf("\033[0;34mKEY:\033[0;0m %s\n", key_cline);
         fails++;
-        if (fails >= 10)
+        if (fails >= 0)
         {
             return RESULT_ERROR;
         }
