@@ -21,6 +21,12 @@ void emu_t::init(ines_rom_t &rom)
     ppu.init(memory);
     memory.init();
 
+    // Mirroring
+    if (BIT_CHECK_HI(rom.header.flags_6, 0))
+    {
+        memory.ppu_mem.nt_mirroring = ppu_mem_t::nametable_mirroring::vertical;
+    }
+
     // Map PRG ROM
     if (rom.header.prg_size == 1) {
         memory.cartridge_mem.prg_lower_bank = rom.prg_pages[0];

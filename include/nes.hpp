@@ -118,6 +118,14 @@ struct ppu_mem_t
         uint16_t data{0};
     };
 
+    enum class nametable_mirroring
+    {
+        horizontal    = 0,
+        vertical      = 1,
+        single_screen = 2,
+        four_screen   = 3
+    };
+
     shift_regs_t v;
     shift_regs_t t;
     uint8_t x{0};
@@ -125,6 +133,7 @@ struct ppu_mem_t
 
     uint8_t write_latch{0};
     uint8_t ppudata_read_buffer{0};
+    nametable_mirroring nt_mirroring{nametable_mirroring::horizontal};
 };
 
 struct cartridge_mem_t
@@ -285,13 +294,6 @@ struct ines_rom_t
 
 struct ppu_t
 {
-    uint16_t x{0};
-    uint16_t y{0};
-    uint32_t cycles{0};
-
-    mem_t* memory{nullptr};
-    bool recently_power_on{false};
-    bool odd_frame{false};
 
     struct regs_t
     {
@@ -354,8 +356,67 @@ struct ppu_t
         uint8_t OAMADDR;
         uint8_t OAMDATA;
         uint8_t OAMDMA;
+
     } regs;
 
+    struct shift_regs_t
+    {
+        union pt_t
+        {
+            struct
+            {
+                uint16_t lo : 8;
+                uint16_t hi : 8;
+            };
+            uint16_t data;
+        };
+        
+        pt_t pt_hi;
+        pt_t pt_lo;
+        uint8_t  at_hi;
+        uint8_t  at_lo;
+    } shift_regs;
+
+    struct latch_t
+    {
+        uint8_t  nt_byte;
+        uint8_t  at_byte;
+        uint16_t pt_tile;
+    } latches;
+
+    enum class render_states
+    {
+        pre_render_scanline    = 0, // (-1 or 261)
+        visible_scanline       = 1, // (0 - 239)
+        post_render_scanline   = 2, // (240)
+        vertical_blanking_line = 3  // (241 - 260)
+    };
+
+    uint16_t x{0};
+    uint16_t y{0};
+    uint16_t vram_address_multiplexer{0};
+    uint32_t cycles{0};
+
+    mem_t* memory{nullptr};
+    bool recently_power_on{false};
+    bool odd_frame{false};
+    render_states render_state{render_states::pre_render_scanline};
+
+    uint32_t fetch_bg_pixel( uint16_t dot, uint16_t scanline );
+    uint32_t fetch_sprite_pixel( uint16_t dot, uint16_t scanline );
+
+    // Rendering cycle stages from PPU Frame Timing Diagram
+    // https://www.nesdev.org/wiki/PPU_rendering
+    void vram_fetch_nt( bool step );
+    void vram_fetch_at( bool step );
+    void vram_fetch_bg_lsbits( bool step );
+    void vram_fetch_bg_msbits( bool step );
+    void v_update_inc_hori_v();
+    void v_update_inc_vert_v();
+    void v_update_hori_v_eq_hori_t();
+    void v_update_vert_v_eq_vert_t();
+    void reload_shift_registers();
+    
     RESULT init(mem_t &mem);
     RESULT execute();
 };

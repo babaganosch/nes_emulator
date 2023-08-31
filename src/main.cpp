@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
                 if ( ret != nes::RESULT_OK ) break;
 
                 // Temporarily dump nametables to screen
-                nes::dump_ppu_vram(emu);
+                //nes::dump_ppu_vram(emu);
                 nes::dump_sprites(emu);
 
                 if (debug)

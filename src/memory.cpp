@@ -341,11 +341,38 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
 
     else if ( address < 0x3F00 )
     { // nametables
-        // TODO: Fix mirroring of nametables
-        //       Currently, only vertical mirroring works
-        uint16_t wrapped_addr = address - 0x2000;
-        wrapped_addr = wrapped_addr % 0x800;
-        return ppu_mem.vram[ wrapped_addr ];
+        uint16_t t_addr = address - 0x2000;
+        switch( ppu_mem.nt_mirroring )
+        {
+            case( ppu_mem_t::nametable_mirroring::horizontal ):
+            {
+                if ( t_addr >= 0xC00 )
+                { // Mirror B
+                    t_addr -= 0x400;
+                }
+                else if ( t_addr >= 0x400 && t_addr < 0x800 )
+                { // Mirror A
+                    t_addr -= 0x400;
+                }
+            } break;
+            case( ppu_mem_t::nametable_mirroring::vertical ):
+            {
+                t_addr %= 0x800;
+            } break;
+            case( ppu_mem_t::nametable_mirroring::single_screen ):
+            {
+                t_addr %= 0x400;
+            } break;
+            case( ppu_mem_t::nametable_mirroring::four_screen ):
+            { // No wrapping required
+            } break;
+            default:
+            {
+                LOG_E("Unimplemented nametable mirroring mode: %d", ppu_mem.nt_mirroring );
+            } break;
+        }
+        address = t_addr;
+        return ppu_mem.vram[ address ];
     }
 
     else if ( address < 0x3FFF )
@@ -376,11 +403,38 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
 
     else if (address < 0x3F00) 
     { // nametables
-        // TODO: Fix mirroring of nametables
-        //       Currently, only vertical mirroring works
-        uint16_t wrapped_addr = address - 0x2000;
-        wrapped_addr = wrapped_addr % 0x800;
-        ppu_mem.vram[ wrapped_addr ] = value;
+        uint16_t t_addr = address - 0x2000;
+        switch( ppu_mem.nt_mirroring )
+        {
+            case( ppu_mem_t::nametable_mirroring::horizontal ):
+            {
+                if ( t_addr >= 0xC00 )
+                { // Mirror B
+                    t_addr -= 0x400;
+                }
+                else if ( t_addr >= 0x400 && t_addr < 0x800 )
+                { // Mirror A
+                    t_addr -= 0x400;
+                }
+            } break;
+            case( ppu_mem_t::nametable_mirroring::vertical ):
+            {
+                t_addr %= 0x800;
+            } break;
+            case( ppu_mem_t::nametable_mirroring::single_screen ):
+            {
+                t_addr %= 0x400;
+            } break;
+            case( ppu_mem_t::nametable_mirroring::four_screen ):
+            { // No wrapping required
+            } break;
+            default:
+            {
+                LOG_E("Unimplemented nametable mirroring mode: %d", ppu_mem.nt_mirroring );
+            } break;
+        }
+        address = t_addr;
+        ppu_mem.vram[ address ] = value;
         return;
     } 
 
