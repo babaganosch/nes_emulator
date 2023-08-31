@@ -48,7 +48,7 @@ struct gamepad_t
 {
     union 
     {
-        struct 
+        struct __attribute__((packed))
         {
             uint8_t A : 1;
             uint8_t B : 1;
@@ -69,7 +69,7 @@ struct cpu_mem_t
 { // $0000 - $401F
     union
     {
-        struct
+        struct __attribute__((packed))
         {
             uint8_t zero_page         [0x0100]; // $0000 - $00FF
             uint8_t stack             [0x0100]; // $0100 - $01FF
@@ -107,7 +107,7 @@ struct ppu_mem_t
      */
     union shift_regs_t
     {
-        struct
+        struct __attribute__((packed))
         {
             uint16_t coarse_x  : 5;
             uint16_t coarse_y  : 5;
@@ -128,7 +128,7 @@ struct ppu_mem_t
 
     shift_regs_t v;
     shift_regs_t t;
-    uint8_t x{0};
+    uint8_t fine_x{0};
     uint8_t w{0};
 
     uint8_t write_latch{0};
@@ -206,7 +206,7 @@ struct cpu_t
         //  N V - - D I Z C
         union 
         {
-            struct 
+            struct __attribute__((packed))
             {
                 uint8_t C : 1; // Carry 
                 uint8_t Z : 1; // Zero
@@ -363,7 +363,7 @@ struct ppu_t
     {
         union pt_t
         {
-            struct
+            struct __attribute__((packed))
             {
                 uint16_t lo : 8;
                 uint16_t hi : 8;

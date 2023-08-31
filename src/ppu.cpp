@@ -81,9 +81,7 @@ RESULT ppu_t::execute()
         { // Jump from (339, 261) to (0,0) on odd frames
             if ( odd_frame )
             {
-                xx = 0;
-                x = 1;
-                yy = 0;
+                x = 0;
                 y = 0;
             }
             odd_frame = !odd_frame;
@@ -120,7 +118,7 @@ RESULT ppu_t::execute()
 
     uint32_t bg_pixel = fetch_bg_pixel( xx, yy );
     uint32_t sp_pixel = fetch_sprite_pixel( xx, yy );
-
+    (void) bg_pixel;
     window_buffer[ (yy * NES_WIDTH) + xx ] = bg_pixel;
     (void) sp_pixel;
 
@@ -129,25 +127,25 @@ RESULT ppu_t::execute()
 
 uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
 {
-    uint32_t bg_color = 0x0;
-    if ( dot == 0 || BIT_CHECK_LO(regs.PPUMASK, 3) )
-    { // Idle cycle or BG rendering disabled
-        return bg_color;
+    if ( BIT_CHECK_LO(regs.PPUMASK, 3) )
+    { // BG rendering disabled
+        return 0x0;
     }
-
+    
+    uint32_t bg_color = 0x0;
     if ( render_state == render_states::visible_scanline && 
          dot < NES_WIDTH && scanline < NES_HEIGHT )
-    { // Fetch current pixel
-        uint8_t fine_x = memory->ppu_mem.x;
+    { // Fetch current pixel color
+        uint8_t fine_x = 7 - memory->ppu_mem.fine_x;
         uint8_t pattern_lo = shift_regs.pt_lo.lo;
         uint8_t pattern_hi = shift_regs.pt_hi.lo;
-        uint8_t pattern = ((((pattern_lo >> (7-fine_x)) & 0x1) << 0) |
-                           (((pattern_hi >> (7-fine_x)) & 0x1) << 1));
+        uint8_t pattern = ((((pattern_lo >> fine_x) & 0x1) << 0) |
+                           (((pattern_hi >> fine_x) & 0x1) << 1));
 
         uint8_t palette_lo = shift_regs.at_lo;
         uint8_t palette_hi = shift_regs.at_hi;
-        uint8_t palette_id = ((((palette_lo >> (7-fine_x)) & 0x1) << 0) |
-                              (((palette_hi >> (7-fine_x)) & 0x1) << 1));
+        uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
+                              (((palette_hi >> fine_x) & 0x1) << 1));
 
         if (pattern == 0x0) 
         {
@@ -162,16 +160,16 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
             palette_set[2] = memory->ppu_mem.palette[0x03+palette_id*4];
             bg_color = MFB_RGB(palette_id_to_red(palette_set[pattern-1]), palette_id_to_green(palette_set[pattern-1]), palette_id_to_blue(palette_set[pattern-1]));
         }
-
-        shift_regs.pt_lo.data >>= 1;
-        shift_regs.pt_hi.data >>= 1;
-        shift_regs.at_lo >>= 1;
-        shift_regs.at_hi >>= 1;
     }
 
     if (render_state == render_states::visible_scanline || 
-        render_state == render_states::pre_render_scanline )
+        render_state == render_states::pre_render_scanline)
     {
+        if ( dot == 0 )
+        { // Idle cycle
+            return bg_color;
+        }
+
         if ( render_state == render_states::pre_render_scanline && 
            ( dot >= 280 && dot <= 304 ))
         {
@@ -179,13 +177,25 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
         }
 
         uint8_t eight_tick = dot % 8;
+        if ( (dot > 0 && dot < 258) || (dot > 320 && dot < 337) )
+        {
+            if ( eight_tick == 1 )
+            {
+                reload_shift_registers();
+            }
+            shift_regs.pt_lo.data >>= 1;
+            shift_regs.pt_hi.data >>= 1;
+            // shift register for AT should probably be fed one bit
+            // from the AT latch here. I'm feeding the whole byte 
+            // instead each "reload" of shift registers (each tick 1)
+        }
         switch (eight_tick)
         {
             case( 1 ):
             { // NT 1
-                if ( dot < 258 || (dot > 320 && dot < 337) ) // 340?
+                if ( dot == 257 )
                 {
-                    reload_shift_registers();
+                    v_update_hori_v_eq_hori_t();
                 }
                 vram_fetch_nt( 0 );
             } break;
@@ -242,18 +252,13 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
                 {
                     vram_fetch_bg_msbits( 1 );
                 }
-                if ( dot < 256 || dot > 320 )
+                if ( dot <= 256 || dot > 320 )
                 {
                     v_update_inc_hori_v();
                 }
                 if ( dot == 256 )
                 {
-                    v_update_inc_hori_v();
                     v_update_inc_vert_v();
-                }
-                if ( dot == 257 )
-                {
-                    v_update_hori_v_eq_hori_t();
                 }
             } break;
         }
@@ -331,7 +336,7 @@ void ppu_t::vram_fetch_bg_msbits( bool step )
     {
         vram_address_multiplexer &= 0x00FF;
         vram_address_multiplexer |= t_addr & 0xFF00;
-        latches.pt_tile |= ((uint16_t) memory->ppu_memory_read( vram_address_multiplexer, false )) << 8;
+        latches.pt_tile |= ((uint16_t) memory->ppu_memory_read( vram_address_multiplexer + 8, false )) << 8;
     }
 }
 

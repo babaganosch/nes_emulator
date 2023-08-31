@@ -203,7 +203,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                     // x:              FGH <- d: .....FGH
                     // w:                  <- 1
                     ppu_mem.t.coarse_x = (value & 0b11111000) >> 3;
-                    ppu_mem.x = (value & 0b00000111);
+                    ppu_mem.fine_x = value & 0b111;
                     ppu_mem.w = 1;
                 }
                 else
