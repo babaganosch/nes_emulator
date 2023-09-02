@@ -7,7 +7,6 @@
 namespace nes
 {
 
-extern uint32_t window_buffer[];
 extern uint32_t nt_window_buffer[];
 
 void dump_nametables(emu_t &emu);

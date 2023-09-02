@@ -12,6 +12,9 @@ namespace nes
 
 #define BIT_CHECK_HI(value, bit) (((value >> bit) & 0x1) == 0x1)
 #define BIT_CHECK_LO(value, bit) (((value >> bit) & 0x1) == 0x0)
+#define UINT16(LO, HI) (((uint16_t) HI << 8) | LO)
+
+extern uint32_t window_buffer[];
 
 enum RESULT
 {
@@ -379,9 +382,10 @@ struct ppu_t
 
     struct latch_t
     {
-        uint8_t  nt_byte;
+        uint8_t  nt_latch;
+        uint8_t  at_latch;
         uint8_t  at_byte;
-        uint16_t pt_tile;
+        uint16_t pt_latch;
     } latches;
 
     enum class render_states

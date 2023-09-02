@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 
                 nes::clear_window_buffer( 255, 0, 0 );
 
-                ret = emu.step( cycles_per_frame ); 
+                ret = emu.step( cycles_per_frame );
                 if ( ret != nes::RESULT_OK ) break;
 
                 // Temporarily dump nametables to screen
@@ -181,8 +181,9 @@ int main(int argc, char *argv[])
                 }
 
                 int32_t state = mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT );
-                if ( state < -1 ) throw nes::RESULT_MFB_ERROR;
+                if ( state < 0 ) break;
             } while (mfb_wait_sync( window ));
+            mfb_close( window );
             printf("Exiting gracefully...\n");
         }
     }

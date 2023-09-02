@@ -2,7 +2,6 @@
 
 #include "nes.hpp"
 #include "logging.hpp"
-#include "render.hpp"
 
 namespace nes
 {
@@ -38,6 +37,8 @@ inline uint8_t palette_id_to_blue(uint32_t id) {
 }
 } // anonymous
 
+uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
+
 RESULT ppu_t::init(mem_t &mem)
 {
     memory = &mem;
@@ -46,7 +47,7 @@ RESULT ppu_t::init(mem_t &mem)
     odd_frame = false;
     cycles = 0;
     x = 0;
-    y = 261;
+    y = 0;
     regs.PPUCTRL = 0x00;
     regs.PPUMASK = 0x00;
     regs.PPUSTATUS = 0x00;
@@ -59,8 +60,8 @@ RESULT ppu_t::execute()
 {
     cycles++;
 
-    uint16_t xx = x++;   // Each scanline range from 0 to 340 dots
-    uint16_t yy = y;     // Scanlines range from 0 to 261
+    uint16_t dot = x++;    // Each scanline range from 0 to 340 dots
+    uint16_t scanline = y; // Scanlines range from 0 to 261
     if ( x > 340 )
     { // End of scanline, wrap around
         x = 0;
@@ -69,17 +70,17 @@ RESULT ppu_t::execute()
     
     ///////////////// Rendering
 
-    if ( yy == 261 )
+    if ( scanline == 261 )
     { // Pre-render scanline (261)
         render_state = render_states::pre_render_scanline;
-        if ( xx == 1 )
+        if ( dot == 1 )
         { // vblank and sprite0 hit cleared at dot 1 of pre-render line.
             regs.PPUSTATUS &= ~0x80;
             regs.PPUSTATUS &= ~0x40;
         }
-        if ( xx == 339 )
+        if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
-            if ( odd_frame )
+            if ( !odd_frame )
             {
                 x = 0;
                 y = 0;
@@ -87,25 +88,25 @@ RESULT ppu_t::execute()
             odd_frame = !odd_frame;
         }
     }
-    else if ( yy <= 239 )
+    else if ( scanline <= 239 )
     { // Visible scanlines (0-239)
         render_state = render_states::visible_scanline;
-        if ( yy == 1 && xx == 1 )
+        if ( scanline == 1 && dot == 1 )
         { // Fake sprite 0 at 1,1 for testing Mario Bros
             regs.PPUSTATUS |= 0x40;
         }
     }
-    else if ( yy == 240 )
+    else if ( scanline == 240 )
     { // Post-render scanline (240)
         render_state = render_states::post_render_scanline;
         // The PPU just idles during this scanline.
         // Even though accessing PPU memory from the program would be safe here, 
         // the VBlank flag isn't set until after this scanline.
     }
-    else if ( yy <= 260 )
+    else if ( scanline <= 260 )
     { // Vertical blanking lines (241-260)
         render_state = render_states::vertical_blanking_line;
-        if ( yy == 241 && xx == 1 )
+        if ( scanline == 241 && dot == 1 )
         {
             // The VBlank flag of the PPU is set at tick 1 (the second tick) of
             // scanline 241, where the VBlank NMI also occurs.
@@ -116,25 +117,28 @@ RESULT ppu_t::execute()
         }
     }
 
-    uint32_t bg_pixel = fetch_bg_pixel( xx, yy );
-    uint32_t sp_pixel = fetch_sprite_pixel( xx, yy );
+    uint32_t bg_pixel = fetch_bg_pixel( dot, scanline );
+    uint32_t sp_pixel = fetch_sprite_pixel( dot, scanline );
     (void) bg_pixel;
-    window_buffer[ (yy * NES_WIDTH) + xx ] = bg_pixel;
     (void) sp_pixel;
 
+    if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
+    {
+        window_buffer[ (scanline * NES_WIDTH) + dot - 1 ] = bg_pixel;
+    }
+    
     return RESULT_OK;
 }
 
 uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
 {
-    if ( BIT_CHECK_LO(regs.PPUMASK, 3) )
+    if ( BIT_CHECK_LO(regs.PPUMASK, 3) || render_state == render_states::post_render_scanline )
     { // BG rendering disabled
         return 0x0;
     }
-    
+
     uint32_t bg_color = 0x0;
-    if ( render_state == render_states::visible_scanline && 
-         dot < NES_WIDTH && scanline < NES_HEIGHT )
+    if ( (dot - 1) < NES_WIDTH && scanline < NES_HEIGHT )
     { // Fetch current pixel color
         uint8_t fine_x = 7 - memory->ppu_mem.fine_x;
         uint8_t pattern_lo = shift_regs.pt_lo.lo;
@@ -147,7 +151,15 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
         uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
                               (((palette_hi >> fine_x) & 0x1) << 1));
 
-        if (pattern == 0x0) 
+        shift_regs.pt_lo.lo <<= 1;
+        shift_regs.pt_hi.lo <<= 1;
+        shift_regs.at_hi <<= 1;
+        shift_regs.at_lo <<= 1;
+        // Pull in bit from AT bit-latches
+        shift_regs.at_hi |= (latches.at_latch & 0b10) >> 1;
+        shift_regs.at_lo |= (latches.at_latch & 0b01);
+
+        if ( pattern == 0x0 ) 
         {
             uint32_t palette_bg = memory->ppu_mem.palette[0x00];
             bg_color = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
@@ -162,37 +174,36 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
         }
     }
 
-    if (render_state == render_states::visible_scanline || 
-        render_state == render_states::pre_render_scanline)
+    if ((render_state == render_states::visible_scanline || 
+         render_state == render_states::pre_render_scanline) && dot != 0)
     {
-        if ( dot == 0 )
-        { // Idle cycle
-            return bg_color;
-        }
-
-        if ( render_state == render_states::pre_render_scanline && 
-           ( dot >= 280 && dot <= 304 ))
+        if ( render_state == render_states::pre_render_scanline )
         {
-            v_update_vert_v_eq_vert_t();
-        }
+            if ( dot >= 280 && dot <= 304 )
+            {
+                v_update_vert_v_eq_vert_t();
+            }
+
+            if ( dot == 339 )
+            { // Jump from (339, 261) to (0,0) on odd frames
+                if ( !odd_frame )
+                {
+                    x = 0;
+                    y = 0;
+                }
+                odd_frame = !odd_frame;
+            }
+        } 
 
         uint8_t eight_tick = dot % 8;
-        if ( (dot > 0 && dot < 258) || (dot > 320 && dot < 337) )
-        {
-            if ( eight_tick == 1 )
-            {
-                reload_shift_registers();
-            }
-            shift_regs.pt_lo.data >>= 1;
-            shift_regs.pt_hi.data >>= 1;
-            // shift register for AT should probably be fed one bit
-            // from the AT latch here. I'm feeding the whole byte 
-            // instead each "reload" of shift registers (each tick 1)
-        }
-        switch (eight_tick)
+        switch ( eight_tick )
         {
             case( 1 ):
             { // NT 1
+                if ((dot < 258) || (dot > 320 && dot < 337) )
+                {
+                    reload_shift_registers();
+                }
                 if ( dot == 257 )
                 {
                     v_update_hori_v_eq_hori_t();
@@ -263,6 +274,7 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
             } break;
         }
     }
+
     return bg_color;
 }
 
@@ -272,14 +284,12 @@ void ppu_t::vram_fetch_nt( bool step )
     uint16_t t_addr = 0x2000 | (v & 0x0FFF);
     if ( step == 0 )
     {
-        vram_address_multiplexer &= 0xFF00;
-        vram_address_multiplexer |= t_addr & 0x00FF;
+        vram_address_multiplexer = (vram_address_multiplexer & 0xFF00) | (t_addr & 0x00FF);
     }
     else
     {
-        vram_address_multiplexer &= 0x00FF;
-        vram_address_multiplexer |= t_addr & 0xFF00;
-        latches.nt_byte = memory->ppu_memory_read( vram_address_multiplexer, false );
+        vram_address_multiplexer = (vram_address_multiplexer & 0x00FF) | (t_addr & 0xFF00);
+        latches.nt_latch = memory->ppu_memory_read( vram_address_multiplexer, false );
     }
 }
 
@@ -289,54 +299,50 @@ void ppu_t::vram_fetch_at( bool step )
     uint16_t t_addr = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
     if ( step == 0 )
     {
-        vram_address_multiplexer &= 0xFF00;
-        vram_address_multiplexer |= t_addr & 0x00FF;
+        vram_address_multiplexer = (vram_address_multiplexer & 0xFF00) | (t_addr & 0x00FF);
     }
     else
     {
-        vram_address_multiplexer &= 0x00FF;
-        vram_address_multiplexer |= t_addr & 0xFF00;
+        vram_address_multiplexer = (vram_address_multiplexer & 0x00FF) | (t_addr & 0xFF00);
         latches.at_byte = memory->ppu_memory_read( vram_address_multiplexer, false );
+        if (memory->ppu_mem.v.coarse_y & 2) latches.at_byte >>= 4;
+        if (memory->ppu_mem.v.coarse_x & 2) latches.at_byte >>= 2;
     }
 }
 
 void ppu_t::vram_fetch_bg_lsbits( bool step )
 {
-    uint16_t t_addr = (latches.nt_byte * 16) + memory->ppu_mem.v.fine_y;
+    uint16_t t_addr = (latches.nt_latch * 16) + memory->ppu_mem.v.fine_y;
     if ( BIT_CHECK_HI(regs.PPUCTRL, 4) )
     {
         t_addr += 0x1000;
     }
     if ( step == 0 )
     {
-        vram_address_multiplexer &= 0xFF00;
-        vram_address_multiplexer |= t_addr & 0x00FF;
+        vram_address_multiplexer = (vram_address_multiplexer & 0xFF00) | (t_addr & 0x00FF);
     }
     else
     {
-        vram_address_multiplexer &= 0x00FF;
-        vram_address_multiplexer |= t_addr & 0xFF00;
-        latches.pt_tile = memory->ppu_memory_read( vram_address_multiplexer, false );
+        vram_address_multiplexer = (vram_address_multiplexer & 0x00FF) | (t_addr & 0xFF00);
+        latches.pt_latch = memory->ppu_memory_read( vram_address_multiplexer, false );
     }
 }
 
 void ppu_t::vram_fetch_bg_msbits( bool step )
 {
-    uint16_t t_addr = (latches.nt_byte * 16) + memory->ppu_mem.v.fine_y;
+    uint16_t t_addr = (latches.nt_latch * 16) + memory->ppu_mem.v.fine_y;
     if ( BIT_CHECK_HI(regs.PPUCTRL, 4) )
     {
         t_addr += 0x1000;
     }
     if ( step == 0 )
     {
-        vram_address_multiplexer &= 0xFF00;
-        vram_address_multiplexer |= t_addr & 0x00FF;
+        vram_address_multiplexer = (vram_address_multiplexer & 0xFF00) | (t_addr & 0x00FF);
     }
     else
     {
-        vram_address_multiplexer &= 0x00FF;
-        vram_address_multiplexer |= t_addr & 0xFF00;
-        latches.pt_tile |= ((uint16_t) memory->ppu_memory_read( vram_address_multiplexer + 8, false )) << 8;
+        vram_address_multiplexer = (vram_address_multiplexer & 0x00FF) | (t_addr & 0xFF00);
+        latches.pt_latch |= ((uint16_t) memory->ppu_memory_read( vram_address_multiplexer + 8, false )) << 8;
     }
 }
 
@@ -365,7 +371,7 @@ void ppu_t::v_update_inc_vert_v()
 void ppu_t::v_update_hori_v_eq_hori_t()
 {
     // v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
-    uint16_t mask = 0b0111101111100000; // (note: 15 bits, not 16)
+    uint16_t mask = 0b111101111100000; // (note: 15 bits, not 16)
     memory->ppu_mem.v.data &= mask;
     memory->ppu_mem.v.data |= (memory->ppu_mem.t.data & ~mask);
 }
@@ -373,7 +379,7 @@ void ppu_t::v_update_hori_v_eq_hori_t()
 void ppu_t::v_update_vert_v_eq_vert_t()
 {
     // v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
-    uint16_t mask = 0b0000010000011111; // (note: 15 bits, not 16)
+    uint16_t mask = 0b000010000011111; // (note: 15 bits, not 16)
     memory->ppu_mem.v.data &= mask;
     memory->ppu_mem.v.data |= (memory->ppu_mem.t.data & ~mask);
 }
@@ -381,11 +387,12 @@ void ppu_t::v_update_vert_v_eq_vert_t()
 void ppu_t::reload_shift_registers()
 {
     // A and B?
-    shift_regs.pt_hi.hi = (latches.pt_tile & 0xFF00) >> 8;
-    shift_regs.pt_lo.hi =  latches.pt_tile & 0x00FF;
+    shift_regs.pt_hi.lo = shift_regs.pt_hi.hi;
+    shift_regs.pt_lo.lo = shift_regs.pt_lo.hi;
+    shift_regs.pt_hi.hi = (latches.pt_latch & 0xFF00) >> 8;
+    shift_regs.pt_lo.hi =  latches.pt_latch & 0x00FF;
     // P
-    shift_regs.at_hi = (latches.at_byte & 0b10) > 0 ? 0xFF : 0x00;
-    shift_regs.at_lo = (latches.at_byte & 0b01) > 0 ? 0xFF : 0x00;
+    latches.at_latch = latches.at_byte & 0b11;
 }
 
 uint32_t ppu_t::fetch_sprite_pixel( uint16_t dot, uint16_t scanline )

@@ -7,8 +7,6 @@
 #define CALC_C_FLAG(VALUE) cpu.regs.C = (( VALUE > 0xFF ) ? 1 : 0 )
 #define CALC_V_FLAG(M, N, RESULT) cpu.regs.V = ((((M ^ RESULT) & (N ^ RESULT) & 0x80) != 0) ? 1 : 0 )
 
-#define UINT16(LO, HI) (((uint16_t) HI << 8) | LO)
-
 namespace nes
 {
 

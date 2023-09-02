@@ -14,7 +14,6 @@
 namespace nes
 {
 
-uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
 uint32_t nt_window_buffer[(NES_WIDTH*2) * (NES_HEIGHT*2) * 4];
 
 static uint8_t font8x8_basic[128][8] = {
@@ -311,10 +310,10 @@ void dump_sprites(emu_t &emu)
         palette_set[1] = emu.memory.ppu_mem.palette[0x12+palette_id*4];
         palette_set[2] = emu.memory.ppu_mem.palette[0x13+palette_id*4];
 
-        blit_chr(emu, sprite_data3, sprite_data0+1, sprite_data1, false, flip_x, flip_y, palette_set);
+        blit_chr(emu, sprite_data3+2, sprite_data0, sprite_data1, false, flip_x, flip_y, palette_set);
 
         if (is_8x16) {
-            blit_chr(emu, sprite_data3, sprite_data0+1+8, sprite_data1+1, false, flip_x, flip_y, palette_set);
+            blit_chr(emu, sprite_data3+2, sprite_data0+8, sprite_data1+1, false, flip_x, flip_y, palette_set);
         }
     }
 }
