@@ -19,7 +19,7 @@ void emu_t::init(ines_rom_t &rom)
     emulator_ref = this;
     cpu.init(&cpu_clock_callback, memory);
     ppu.init(memory);
-    memory.init();
+    memory.init( rom );
 
     // Mirroring
     if (BIT_CHECK_HI(rom.header.flags_6, 0))
@@ -29,11 +29,11 @@ void emu_t::init(ines_rom_t &rom)
 
     // Map PRG ROM
     if (rom.header.prg_size == 1) {
-        memory.cartridge_mem.prg_lower_bank = rom.prg_pages[0];
-        memory.cartridge_mem.prg_upper_bank = rom.prg_pages[0];
+        memory.cartridge_mem.prg_lower_bank = memory.ines_rom->prg_pages[0];
+        memory.cartridge_mem.prg_upper_bank = memory.ines_rom->prg_pages[0];
     } else if (rom.header.prg_size == 2) {
-        memory.cartridge_mem.prg_lower_bank = rom.prg_pages[0];
-        memory.cartridge_mem.prg_upper_bank = rom.prg_pages[1];
+        memory.cartridge_mem.prg_lower_bank = memory.ines_rom->prg_pages[0];
+        memory.cartridge_mem.prg_upper_bank = memory.ines_rom->prg_pages[1];
     } else {
         LOG_E("TODO: Solve mapping for more than two PRG ROM bank.");
         throw RESULT_ERROR;
@@ -41,7 +41,8 @@ void emu_t::init(ines_rom_t &rom)
 
     // Map CHR ROM
     if (rom.header.chr_size == 1) {
-        memory.cartridge_mem.chr_rom = rom.chr_pages[0];
+        LOG_I("Setting chr_rom = chr_pages[0]");
+        memory.cartridge_mem.chr_rom = memory.ines_rom->chr_pages[0];
     } else {
         LOG_E("TODO: Solve mapping for zero or more than one CHR ROM bank.");
         throw RESULT_ERROR;

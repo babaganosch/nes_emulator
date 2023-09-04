@@ -46,6 +46,7 @@ typedef void (* cpu_callback_t)(void * cookie);
 struct cpu_t;
 struct ppu_t;
 struct apu_t;
+struct ines_rom_t;
 
 struct gamepad_t
 {
@@ -167,6 +168,7 @@ struct mem_t
     apu_t* apu;
     apu_mem_t apu_mem;
 
+    ines_rom_t* ines_rom;
     cartridge_mem_t cartridge_mem;
 
     gamepad_t gamepad[2];
@@ -180,7 +182,7 @@ struct mem_t
         APU
     };
 
-    void     init();
+    void     init( ines_rom_t &rom );
 
     uint8_t  memory_read( MEMORY_BUS bus, uint16_t address, bool peek );
     void     memory_write( MEMORY_BUS bus, uint8_t data, uint16_t address );

@@ -110,8 +110,10 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
     }
 
     // Copy CHR pages
+    LOG_I("Chr size: %02X", header.chr_size);
     for (auto i = 0; i < header.chr_size; ++i)
     {
+        LOG_I("chr_pages[i] = new uint8_t[CHR_PAGE_SIZE];");
         chr_pages[i] = new uint8_t[CHR_PAGE_SIZE];
         memcpy(chr_pages[i], data_ptr, CHR_PAGE_SIZE);
         data_ptr += CHR_PAGE_SIZE;

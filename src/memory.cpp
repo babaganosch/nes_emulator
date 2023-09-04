@@ -4,8 +4,9 @@
 namespace nes
 {
 
-void mem_t::init()
+void mem_t::init( ines_rom_t &rom )
 {
+    ines_rom = &rom;
     memset(cpu_mem.internal_ram, 0x00, sizeof(cpu_mem.internal_ram));
     for (auto i = 0; i < sizeof(cpu_mem.ram); ++i)
     {
@@ -346,13 +347,18 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
         {
             case( ppu_mem_t::nametable_mirroring::horizontal ):
             {
-                if ( t_addr >= 0xC00 )
-                { // Mirror B
-                    t_addr -= 0x400;
-                }
-                else if ( t_addr >= 0x400 && t_addr < 0x800 )
+                t_addr %= 0x1000;
+                if ( t_addr >= 0x0800 )
+                { // B
+                    if ( t_addr >= 0x0C00 )
+                    { // Mirror B
+                        t_addr -= 0x0400;
+                    }
+                    t_addr -= 0x0400;
+                } 
+                else if ( t_addr >= 0x0400 )
                 { // Mirror A
-                    t_addr -= 0x400;
+                    t_addr -= 0x0400;
                 }
             } break;
             case( ppu_mem_t::nametable_mirroring::vertical ):
@@ -365,6 +371,7 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
             } break;
             case( ppu_mem_t::nametable_mirroring::four_screen ):
             { // No wrapping required
+                t_addr %= 0x1000;
             } break;
             default:
             {
@@ -408,13 +415,18 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
         {
             case( ppu_mem_t::nametable_mirroring::horizontal ):
             {
-                if ( t_addr >= 0xC00 )
-                { // Mirror B
-                    t_addr -= 0x400;
-                }
-                else if ( t_addr >= 0x400 && t_addr < 0x800 )
+                t_addr %= 0x1000;
+                if ( t_addr >= 0x0800 )
+                { // B
+                    if ( t_addr >= 0x0C00 )
+                    { // Mirror B
+                        t_addr -= 0x0400;
+                    }
+                    t_addr -= 0x0400;
+                } 
+                else if ( t_addr >= 0x0400 )
                 { // Mirror A
-                    t_addr -= 0x400;
+                    t_addr -= 0x0400;
                 }
             } break;
             case( ppu_mem_t::nametable_mirroring::vertical ):
@@ -424,9 +436,6 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
             case( ppu_mem_t::nametable_mirroring::single_screen ):
             {
                 t_addr %= 0x400;
-            } break;
-            case( ppu_mem_t::nametable_mirroring::four_screen ):
-            { // No wrapping required
             } break;
             default:
             {

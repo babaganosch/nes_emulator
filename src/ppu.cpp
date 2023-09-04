@@ -118,9 +118,9 @@ RESULT ppu_t::execute()
     }
 
     uint32_t bg_pixel = fetch_bg_pixel( dot, scanline );
-    uint32_t sp_pixel = fetch_sprite_pixel( dot, scanline );
+    //uint32_t sp_pixel = fetch_sprite_pixel( dot, scanline );
     (void) bg_pixel;
-    (void) sp_pixel;
+    //(void) sp_pixel;
 
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
     {
