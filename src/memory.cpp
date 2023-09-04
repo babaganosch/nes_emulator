@@ -369,10 +369,6 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
             {
                 t_addr %= 0x400;
             } break;
-            case( ppu_mem_t::nametable_mirroring::four_screen ):
-            { // No wrapping required
-                t_addr %= 0x1000;
-            } break;
             default:
             {
                 LOG_E("Unimplemented nametable mirroring mode: %d", ppu_mem.nt_mirroring );

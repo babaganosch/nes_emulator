@@ -91,7 +91,7 @@ RESULT ppu_t::execute()
     else if ( scanline <= 239 )
     { // Visible scanlines (0-239)
         render_state = render_states::visible_scanline;
-        if ( scanline == 1 && dot == 1 )
+        if ( scanline == 30 && dot == 64 )
         { // Fake sprite 0 at 1,1 for testing Mario Bros
             regs.PPUSTATUS |= 0x40;
         }
@@ -124,7 +124,7 @@ RESULT ppu_t::execute()
 
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
     {
-        window_buffer[ (scanline * NES_WIDTH) + dot - 1 ] = bg_pixel;
+        window_buffer[ (scanline * NES_WIDTH) + dot + 1 ] = bg_pixel;
     }
     
     return RESULT_OK;
