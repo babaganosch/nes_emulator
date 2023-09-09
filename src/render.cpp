@@ -296,10 +296,10 @@ void dump_sprites(emu_t &emu)
     static uint8_t palette_set[3];
     for (uint32_t sprite_i = 0; sprite_i < 64; ++sprite_i)
     {
-        uint8_t sprite_data0 = emu.memory.ppu_mem.oam[sprite_i*4+0]; // y
-        uint8_t sprite_data1 = emu.memory.ppu_mem.oam[sprite_i*4+1]; // tile index
-        uint8_t sprite_data2 = emu.memory.ppu_mem.oam[sprite_i*4+2]; // attributes
-        uint8_t sprite_data3 = emu.memory.ppu_mem.oam[sprite_i*4+3]; // x
+        uint8_t sprite_data0 = emu.memory.ppu_mem.oam.arr2d[sprite_i][0]; // y
+        uint8_t sprite_data1 = emu.memory.ppu_mem.oam.arr2d[sprite_i][1]; // tile index
+        uint8_t sprite_data2 = emu.memory.ppu_mem.oam.arr2d[sprite_i][2]; // attributes
+        uint8_t sprite_data3 = emu.memory.ppu_mem.oam.arr2d[sprite_i][3]; // x
 
         bool flip_x = !!(sprite_data2 & (1 << 6));
         bool flip_y = !!(sprite_data2 & (1 << 7));

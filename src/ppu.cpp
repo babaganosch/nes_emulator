@@ -421,32 +421,49 @@ uint32_t ppu_t::fetch_sprite_pixel( uint16_t dot, uint16_t scanline )
         // [2] attribute data
         // [3] x-coordinate
 
+        oam_t& oam = memory->ppu_mem.oam;
+        soam_t& soam = memory->ppu_mem.soam;
+
         if ( dot <= 64 )
         { // Secondary OAM clear
             // Clear one sprite each cycle?
-            memory->ppu_mem.oam[ ((dot-1) * 4) + 0 ] = 0xFF;
-            memory->ppu_mem.oam[ ((dot-1) * 4) + 1 ] = 0xFF;
-            memory->ppu_mem.oam[ ((dot-1) * 4) + 2 ] = 0xFF;
-            memory->ppu_mem.oam[ ((dot-1) * 4) + 3 ] = 0xFF;
+            oam.arr2d[ dot-1 ][0] = 0xFF;
+            oam.arr2d[ dot-1 ][1] = 0xFF;
+            oam.arr2d[ dot-1 ][2] = 0xFF;
+            oam.arr2d[ dot-1 ][3] = 0xFF;
         }
 
         else if ( dot <= NES_WIDTH )
-        { // Sprite evaluation
+        { // Sprite evaluation (dot 65-256)
 
             if ( dot == 65 )
             { // Reset stuff
                 oam_n = 0; // n: Sprite [ 0 - 63 ]
                 oam_m = 0; // m: Byte   [ 0 -  3 ]
+                soam_counter = 0; // sOAM index [ 0 - 7 ]
             }
 
             if ( (dot % 2) == 0 )
             { // Even cycle
                 // data is written to secondary OAM (unless secondary OAM is full, 
                 // in which case it will read the value in secondary OAM instead)
+
+                // 1. Starting at n = 0, read a sprite's Y-coordinate (OAM[n][0], 
+                //    copying it to the next open slot in secondary OAM (unless 8 sprites
+                //    have been found, in which case the write is ignored).
+                if ( soam_counter < 8 )
+                {
+                    soam.arr2d[ soam_counter ][0] = oam.arr2d[ oam_n ][0];
+                }
+
             }
             else
             { // Uneven cycle
                 // Data is read from pOAM
+                oam_read_buffer[ 0 ] = oam.arr2d[ oam_n ][0];
+                oam_read_buffer[ 1 ] = oam.arr2d[ oam_n ][1];
+                oam_read_buffer[ 2 ] = oam.arr2d[ oam_n ][2];
+                oam_read_buffer[ 3 ] = oam.arr2d[ oam_n ][3];
             }   
 
         }

@@ -96,12 +96,25 @@ struct cpu_mem_t
     uint8_t* cpu_test_mode{nullptr}; 
 };
 
+union oam_t
+{ // Primary OAM, holds 64 sprites, each sprite 4 bytes
+    uint8_t data [64*4];
+    uint8_t arr2d[64][4];
+};
+
+union soam_t
+{ // Secondary OAM, holds 8 sprites for current scanline
+    uint8_t data [8*4];
+    uint8_t arr2d[8][4];
+};
+
 struct ppu_mem_t
 {
     uint8_t palette [0xFF];
     uint8_t vram    [0x800];
-    uint8_t oam     [64*4];  // Primary OAM, holds 64 sprites, each sprite 4 bytes
-    uint8_t soam    [8*4];   // Secondary OAM, holds 8 sprites for current scanline
+    oam_t   oam;
+    soam_t  soam;
+    
 
     /* PPU Shift register VRAM address and Temp VRAM address
      *   yyy NN YYYYY XXXXX
@@ -412,6 +425,8 @@ struct ppu_t
 
     uint8_t  oam_n{0};
     uint8_t  oam_m{0};
+    uint8_t  oam_read_buffer[4]{0};
+    uint8_t  soam_counter{0};
 
     mem_t* memory{nullptr};
     bool recently_power_on{false};

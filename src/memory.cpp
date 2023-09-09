@@ -79,7 +79,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             } break;
             case( 0x2004 ):
             { // OAMDATA <> read/write
-                return ppu_mem.oam[ ppu->regs.OAMADDR ];
+                return ppu_mem.oam.data[ ppu->regs.OAMADDR ];
             } break;
             case( 0x2005 ):
             { // PPUSCROLL >> write x2
@@ -192,7 +192,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             { // OAMDATA <> read/write
                 ppu->regs.OAMDATA = value;
                 uint8_t addr = ppu->regs.OAMADDR;
-                ppu_mem.oam[addr++] = value;
+                ppu_mem.oam.data[addr++] = value;
                 ppu->regs.OAMADDR = addr;
                 ppu_mem.write_latch = value;
             } break;
@@ -302,7 +302,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 // todo take care of cycles here, somehow!
                 // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
                 // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
-                memcpy( ppu_mem.oam, source, 256 );
+                memcpy( ppu_mem.oam.data, source, 256 );
             } break;
         }
         return;
