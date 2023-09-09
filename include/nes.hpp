@@ -100,7 +100,8 @@ struct ppu_mem_t
 {
     uint8_t palette [0xFF];
     uint8_t vram    [0x800];
-    uint8_t oam     [0x100];
+    uint8_t oam     [64*4];  // Primary OAM, holds 64 sprites, each sprite 4 bytes
+    uint8_t soam    [8*4];   // Secondary OAM, holds 8 sprites for current scanline
 
     /* PPU Shift register VRAM address and Temp VRAM address
      *   yyy NN YYYYY XXXXX
@@ -109,7 +110,7 @@ struct ppu_mem_t
      *   ||| ++-------------- nametable select
      *   +++----------------- fine Y scroll
      */
-    union shift_regs_t
+    union vram_shift_regs_t
     {
         struct __attribute__((packed))
         {
@@ -130,10 +131,10 @@ struct ppu_mem_t
         four_screen   = 3
     };
 
-    shift_regs_t v;
-    shift_regs_t t;
-    uint8_t fine_x{0};
-    uint8_t w{0};
+    vram_shift_regs_t v; // Current vram address
+    vram_shift_regs_t t; // Temporary vram address
+    uint8_t fine_x{0};   // Fine X scroll
+    uint8_t w{0};        // Write toggle
 
     uint8_t write_latch{0};
     uint8_t ppudata_read_buffer{0};
@@ -172,8 +173,8 @@ struct mem_t
     cartridge_mem_t cartridge_mem;
 
     gamepad_t gamepad[2];
-    uint8_t gamepad_strobe{0};
-    uint32_t cpu_cycles{0};
+    uint8_t   gamepad_strobe{0};
+    uint32_t  cpu_cycles{0};
 
     enum MEMORY_BUS
     {
@@ -375,19 +376,24 @@ struct ppu_t
             };
             uint16_t data;
         };
-        
+        // BGs
         pt_t pt_hi;
         pt_t pt_lo;
         uint8_t  at_hi;
         uint8_t  at_lo;
+        // Sprites
+        uint8_t sprite_pattern_tables[8];
     } shift_regs;
 
     struct latch_t
     {
+        // BGs
         uint8_t  nt_latch;
         uint8_t  at_latch;
         uint8_t  at_byte;
         uint16_t pt_latch;
+        // Sprites
+        uint8_t  sprite_attribute_latch[8];
     } latches;
 
     enum class render_states
@@ -401,7 +407,11 @@ struct ppu_t
     uint16_t x{0};
     uint16_t y{0};
     uint16_t vram_address_multiplexer{0};
+    uint16_t sprite_counters[8];
     uint32_t cycles{0};
+
+    uint8_t  oam_n{0};
+    uint8_t  oam_m{0};
 
     mem_t* memory{nullptr};
     bool recently_power_on{false};

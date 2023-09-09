@@ -118,9 +118,9 @@ RESULT ppu_t::execute()
     }
 
     uint32_t bg_pixel = fetch_bg_pixel( dot, scanline );
-    //uint32_t sp_pixel = fetch_sprite_pixel( dot, scanline );
+    uint32_t sp_pixel = fetch_sprite_pixel( dot, scanline );
     (void) bg_pixel;
-    //(void) sp_pixel;
+    (void) sp_pixel;
 
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
     {
@@ -397,7 +397,67 @@ void ppu_t::reload_shift_registers()
 
 uint32_t ppu_t::fetch_sprite_pixel( uint16_t dot, uint16_t scanline )
 {
-    (void) dot;
+    if ( BIT_CHECK_LO(regs.PPUMASK, 4) )
+    { // BG rendering disabled
+        return 0x0;
+    }
+
+    if ( render_state != render_states::visible_scanline && render_state != render_states::pre_render_scanline )
+    {
+        return 0x0;
+    }
+
+    if ( dot == 0 )
+    { // Idle
+        return 0x0;
+    }
+
+    if ( render_state == render_states::visible_scanline )
+    { // Secondary OAM clear and sprite evaluation for next scanline
+
+        // Sprite byte structure
+        // [0] y-coordinate
+        // [1] tile-index
+        // [2] attribute data
+        // [3] x-coordinate
+
+        if ( dot <= 64 )
+        { // Secondary OAM clear
+            // Clear one sprite each cycle?
+            memory->ppu_mem.oam[ ((dot-1) * 4) + 0 ] = 0xFF;
+            memory->ppu_mem.oam[ ((dot-1) * 4) + 1 ] = 0xFF;
+            memory->ppu_mem.oam[ ((dot-1) * 4) + 2 ] = 0xFF;
+            memory->ppu_mem.oam[ ((dot-1) * 4) + 3 ] = 0xFF;
+        }
+
+        else if ( dot <= NES_WIDTH )
+        { // Sprite evaluation
+
+            if ( dot == 65 )
+            { // Reset stuff
+                oam_n = 0; // n: Sprite [ 0 - 63 ]
+                oam_m = 0; // m: Byte   [ 0 -  3 ]
+            }
+
+            if ( (dot % 2) == 0 )
+            { // Even cycle
+                // data is written to secondary OAM (unless secondary OAM is full, 
+                // in which case it will read the value in secondary OAM instead)
+            }
+            else
+            { // Uneven cycle
+                // Data is read from pOAM
+            }   
+
+        }
+
+    }
+
+    if ( dot > NES_WIDTH )
+    { // Sprite lsbits and msbits
+
+    }
+
     (void) scanline;
     return 0x00;
 }

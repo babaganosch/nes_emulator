@@ -302,7 +302,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 // todo take care of cycles here, somehow!
                 // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
                 // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
-                memcpy( &ppu_mem.oam[ppu->regs.OAMADDR], source, 256 );
+                memcpy( ppu_mem.oam, source, 256 );
             } break;
         }
         return;
