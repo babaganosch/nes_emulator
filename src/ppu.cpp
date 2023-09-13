@@ -8,7 +8,7 @@ namespace nes
 
 namespace
 {
-static uint8_t color_2c02[] = { 
+const uint8_t color_2c02[] = { 
    0x80, 0x80, 0x80, 0x00, 0x3D, 0xA6, 0x00, 0x12, 0xB0, 0x44, 0x00, 0x96, 0xA1, 0x00, 0x5E,
    0xC7, 0x00, 0x28, 0xBA, 0x06, 0x00, 0x8C, 0x17, 0x00, 0x5C, 0x2F, 0x00, 0x10, 0x45, 0x00,
    0x05, 0x4A, 0x00, 0x00, 0x47, 0x2E, 0x00, 0x41, 0x66, 0x00, 0x00, 0x00, 0x05, 0x05, 0x05,
@@ -24,15 +24,58 @@ static uint8_t color_2c02[] = {
    0x99, 0xFF, 0xFC, 0xDD, 0xDD, 0xDD, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11
 };
 
-inline uint8_t palette_id_to_red(uint32_t id) {
+const uint8_t reverse_byte_lookup_table[] = {
+    0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
+    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
+    0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8,
+    0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8,
+    0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4,
+    0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4,
+    0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec,
+    0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,
+    0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2,
+    0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2,
+    0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea,
+    0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
+    0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6,
+    0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6,
+    0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee,
+    0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
+    0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1,
+    0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
+    0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9,
+    0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9,
+    0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5,
+    0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
+    0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed,
+    0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
+    0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3,
+    0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3,
+    0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb,
+    0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
+    0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7,
+    0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7,
+    0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
+    0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff,
+};
+
+inline uint8_t reverse_byte(uint8_t x)
+{
+    return reverse_byte_lookup_table[x];
+}
+
+inline uint8_t palette_id_to_red(uint32_t id)
+{
     return color_2c02[id*3];
 }
 
-inline uint8_t palette_id_to_green(uint32_t id) {
+inline uint8_t palette_id_to_green(uint32_t id)
+{
     return color_2c02[id*3+1];
 }
 
-inline uint8_t palette_id_to_blue(uint32_t id) {
+inline uint8_t palette_id_to_blue(uint32_t id)
+{
     return color_2c02[id*3+2];
 }
 } // anonymous
@@ -44,7 +87,7 @@ RESULT ppu_t::init(mem_t &mem)
     memory = &mem;
     memory->ppu = this;
     recently_power_on = true;
-    odd_frame = false;
+    frame_num = 0;
     cycles = 0;
     x = 0;
     y = 0;
@@ -80,21 +123,17 @@ RESULT ppu_t::execute()
         }
         if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
-            if ( !odd_frame )
+            if ( (frame_num++ % 2) != 0 )
             {
                 x = 0;
                 y = 0;
             }
-            odd_frame = !odd_frame;
+            sprite0 = false;
         }
     }
     else if ( scanline <= 239 )
     { // Visible scanlines (0-239)
         render_state = render_states::visible_scanline;
-        if ( scanline == 30 && dot == 64 )
-        { // Fake sprite 0 at 1,1 for testing Mario Bros
-            regs.PPUSTATUS |= 0x40;
-        }
     }
     else if ( scanline == 240 )
     { // Post-render scanline (240)
@@ -117,61 +156,19 @@ RESULT ppu_t::execute()
         }
     }
 
-    uint32_t bg_pixel = fetch_bg_pixel( dot, scanline );
-    uint32_t sp_pixel = fetch_sprite_pixel( dot, scanline );
-    (void) bg_pixel;
-    (void) sp_pixel;
-
-    if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
-    {
-        window_buffer[ (scanline * NES_WIDTH) + dot + 1 ] = bg_pixel;
-    }
+    bg_evaluation( dot, scanline );
+    sp_evaluation( dot, scanline );
+    render( dot - 2, scanline );
     
     return RESULT_OK;
 }
 
-uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
+void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
 {
     if ( BIT_CHECK_LO(regs.PPUMASK, 3) || render_state == render_states::post_render_scanline )
     { // BG rendering disabled
-        return 0x0;
-    }
-
-    uint32_t bg_color = 0x0;
-    if ( (dot - 1) < NES_WIDTH && scanline < NES_HEIGHT )
-    { // Fetch current pixel color
-        uint8_t fine_x = 7 - memory->ppu_mem.fine_x;
-        uint8_t pattern_lo = shift_regs.pt_lo.lo;
-        uint8_t pattern_hi = shift_regs.pt_hi.lo;
-        uint8_t pattern = ((((pattern_lo >> fine_x) & 0x1) << 0) |
-                           (((pattern_hi >> fine_x) & 0x1) << 1));
-
-        uint8_t palette_lo = shift_regs.at_lo;
-        uint8_t palette_hi = shift_regs.at_hi;
-        uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
-                              (((palette_hi >> fine_x) & 0x1) << 1));
-
-        shift_regs.pt_lo.lo <<= 1;
-        shift_regs.pt_hi.lo <<= 1;
-        shift_regs.at_hi <<= 1;
-        shift_regs.at_lo <<= 1;
-        // Pull in bit from AT bit-latches
-        shift_regs.at_hi |= (latches.at_latch & 0b10) >> 1;
-        shift_regs.at_lo |= (latches.at_latch & 0b01);
-
-        if ( pattern == 0x0 ) 
-        {
-            uint32_t palette_bg = memory->ppu_mem.palette[0x00];
-            bg_color = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
-        } 
-        else 
-        {
-            uint8_t palette_set[3];
-            palette_set[0] = memory->ppu_mem.palette[0x01+palette_id*4];
-            palette_set[1] = memory->ppu_mem.palette[0x02+palette_id*4];
-            palette_set[2] = memory->ppu_mem.palette[0x03+palette_id*4];
-            bg_color = MFB_RGB(palette_id_to_red(palette_set[pattern-1]), palette_id_to_green(palette_set[pattern-1]), palette_id_to_blue(palette_set[pattern-1]));
-        }
+        bg_color = 0x0;
+        return;
     }
 
     if ((render_state == render_states::visible_scanline || 
@@ -182,16 +179,6 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
             if ( dot >= 280 && dot <= 304 )
             {
                 v_update_vert_v_eq_vert_t();
-            }
-
-            if ( dot == 339 )
-            { // Jump from (339, 261) to (0,0) on odd frames
-                if ( !odd_frame )
-                {
-                    x = 0;
-                    y = 0;
-                }
-                odd_frame = !odd_frame;
             }
         } 
 
@@ -274,8 +261,6 @@ uint32_t ppu_t::fetch_bg_pixel( uint16_t dot, uint16_t scanline )
             } break;
         }
     }
-
-    return bg_color;
 }
 
 void ppu_t::vram_fetch_nt( bool step )
@@ -395,25 +380,18 @@ void ppu_t::reload_shift_registers()
     latches.at_latch = latches.at_byte & 0b11;
 }
 
-uint32_t ppu_t::fetch_sprite_pixel( uint16_t dot, uint16_t scanline )
+void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( BIT_CHECK_LO(regs.PPUMASK, 4) )
-    { // BG rendering disabled
-        return 0x0;
-    }
-
-    if ( render_state != render_states::visible_scanline && render_state != render_states::pre_render_scanline )
-    {
-        return 0x0;
-    }
-
-    if ( dot == 0 )
-    { // Idle
-        return 0x0;
+    if ( BIT_CHECK_LO(regs.PPUMASK, 4) || dot == 0 ||
+        (render_state != render_states::visible_scanline && render_state != render_states::pre_render_scanline) )
+    { // BG rendering disabled or idle cycle
+        sp_color = 0x0;
+        return;
     }
 
     if ( render_state == render_states::visible_scanline )
-    { // Secondary OAM clear and sprite evaluation for next scanline
+    { 
+        // Secondary OAM clear and sprite evaluation for next scanline
 
         // Sprite byte structure
         // [0] y-coordinate
@@ -424,59 +402,265 @@ uint32_t ppu_t::fetch_sprite_pixel( uint16_t dot, uint16_t scanline )
         oam_t& oam = memory->ppu_mem.oam;
         soam_t& soam = memory->ppu_mem.soam;
 
+        if ( dot == 65 )
+        { // Reset stuff
+            oam_n = 0; // n: Sprite [ 0 - 63 ]
+            oam_m = 0; // m: Byte   [ 0 -  3 ]
+            soam_counter = 0; // sOAM index [ 0 - 7 ]
+            sprite_fetch = 0; // counter used for sprite fetching
+        }
+
         if ( dot <= 64 )
         { // Secondary OAM clear
-            // Clear one sprite each cycle?
-            oam.arr2d[ dot-1 ][0] = 0xFF;
-            oam.arr2d[ dot-1 ][1] = 0xFF;
-            oam.arr2d[ dot-1 ][2] = 0xFF;
-            oam.arr2d[ dot-1 ][3] = 0xFF;
+            soam.data[ (dot - 1) / 2 ] = 0xFF;
         }
 
         else if ( dot <= NES_WIDTH )
         { // Sprite evaluation (dot 65-256)
 
-            if ( dot == 65 )
-            { // Reset stuff
-                oam_n = 0; // n: Sprite [ 0 - 63 ]
-                oam_m = 0; // m: Byte   [ 0 -  3 ]
-                soam_counter = 0; // sOAM index [ 0 - 7 ]
-            }
-
             if ( (dot % 2) == 0 )
             { // Even cycle
                 // data is written to secondary OAM (unless secondary OAM is full, 
                 // in which case it will read the value in secondary OAM instead)
-
-                // 1. Starting at n = 0, read a sprite's Y-coordinate (OAM[n][0], 
-                //    copying it to the next open slot in secondary OAM (unless 8 sprites
-                //    have been found, in which case the write is ignored).
-                if ( soam_counter < 8 )
+                if ( oam_n < 64 )
                 {
-                    soam.arr2d[ soam_counter ][0] = oam.arr2d[ oam_n ][0];
+                    // 1. Starting at n = 0, read a sprite's Y-coordinate (OAM[n][0], 
+                    //    copying it to the next open slot in secondary OAM (unless 8 sprites
+                    //    have been found, in which case the write is ignored).
+                    if ( soam_counter < 8 )
+                    {
+                        soam.arr2d[ soam_counter ][0] = oam_read_buffer[0];
+
+                        // 1a. If Y-coordinate is in range, copy remaining bytes of 
+                        //     sprite data (OAM[n][1] thru OAM[n][3]) into secondary OAM.
+                        uint8_t& yy = soam.arr2d[ soam_counter ][0];
+                        bool is_8x16 = BIT_CHECK_HI(regs.PPUCTRL, 5);
+                        if ( (scanline >= yy) && (scanline <= (yy + (is_8x16 ? 15 : 7))) )
+                        {
+                            memcpy( soam.arr2d[ soam_counter ], oam.arr2d[ oam_n ], sizeof(uint8_t) * 4 );
+                            soam_counter++;
+                        }
+                    }
+
+                    // 2. Increment n
+                    oam_n++;
+
+                    // 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
+                    if ( oam_n >= 64 )
+                    { }
+
+                    // 2b. If less than 8 sprites have been found, go to 1
+                    if ( soam_counter < 8 )
+                    { }
+
+                    // 2c. If exactly 8 sprites have been found, disable writes to secondary
+                    //     OAM because it is full. This causes sprites in back to drop out.
+
+                    // 3. Starting at m = 0, evaluate OAM[n][m] as a Y-coordinate.
+                    // 3a. If the value is in range, set the sprite overflow flag in $2002 and read the
+                    //     next 3 entries of OAM (incrementing 'm' after each byte and incrementing 'n'
+                    //     when 'm' overflows); if m = 3, increment n
+                    // 3b. If the value is not in range, increment n and m (without carry). If n overflows
+                    //     to 0, go to 4; otherwise go to 3
+                    //     The m increment is a hardware bug - if only n was incremented, the overflow flag
+                    //     would be set whenever more than 8 sprites were present on the same scanline, as expected.
+                
+                    // 4. Attempt (and fail) to copy OAM[n][0] into the next free slot in secondary OAM, and
+                    //    increment n (repeat until HBLANK is reached)
                 }
 
             }
             else
             { // Uneven cycle
                 // Data is read from pOAM
-                oam_read_buffer[ 0 ] = oam.arr2d[ oam_n ][0];
-                oam_read_buffer[ 1 ] = oam.arr2d[ oam_n ][1];
-                oam_read_buffer[ 2 ] = oam.arr2d[ oam_n ][2];
-                oam_read_buffer[ 3 ] = oam.arr2d[ oam_n ][3];
+                memcpy( oam_read_buffer, oam.arr2d[ oam_n ], sizeof(u_int8_t) * 4 );
             }   
 
         }
 
+        if ( dot >= 257 && dot <= 320 )
+        { // Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
+            uint8_t eight_tick = dot % 8;
+            switch ( eight_tick )
+            {
+                case( 5 ):
+                { // Sprite lsbits 1
+                    uint8_t sprite_y    = soam.arr2d[ sprite_fetch ][0]; // y
+                    uint8_t sprite_tile = soam.arr2d[ sprite_fetch ][1]; // tile
+                    uint8_t sprite_attr = soam.arr2d[ sprite_fetch ][2]; // attr
+                    uint8_t sprite_x    = soam.arr2d[ sprite_fetch ][3]; // x
+
+                    // Set X counter for sprite
+                    sprite_counters[ sprite_fetch ] = sprite_x;
+
+                    // Fill attribute latch for sprite
+                    latches.sprite_attribute_latch[ sprite_fetch ] = sprite_attr;
+
+                    // Calculate pattern tables for sprite
+                    bool flip_x = BIT_CHECK_HI(sprite_attr, 6);
+                    bool flip_y = BIT_CHECK_HI(sprite_attr, 7);
+
+                    uint16_t chr_offset = 0x0;
+                    bool is_8x16 = BIT_CHECK_HI(regs.PPUCTRL, 5);
+                    if (is_8x16) 
+                    {
+                        // Skip for now..
+                    } 
+                    else
+                    {
+                        if (BIT_CHECK_HI(regs.PPUCTRL, 3))
+                        {
+                            chr_offset = 0x1000;
+                        }
+                    }
+
+                    uint8_t y_offset = (scanline - sprite_y);
+                    if (flip_y) 
+                    {
+                        y_offset = 7 - y_offset;
+                    }
+
+                    uint8_t* chr_data = (uint8_t*)memory->cartridge_mem.chr_rom + (sprite_tile*16) + chr_offset + y_offset;
+                    uint8_t lo = *chr_data;
+                    uint8_t hi = *(chr_data+8);
+
+                    // Fill shift-registers..
+                    if (flip_x)
+                    {
+                        shift_regs.sprite_pattern_tables_lo[ sprite_fetch ] = reverse_byte( lo );
+                        shift_regs.sprite_pattern_tables_hi[ sprite_fetch ] = reverse_byte( hi );
+                    }
+                    else
+                    {
+                        shift_regs.sprite_pattern_tables_lo[ sprite_fetch ] = lo;
+                        shift_regs.sprite_pattern_tables_hi[ sprite_fetch ] = hi;
+                    }
+
+                } break;
+                case( 6 ):
+                { // Sprite lsbits 2
+
+                } break;
+                case( 7 ):
+                { // Sprite msbits 1
+                    sprite_fetch++;
+                } break;
+                case( 0 ):
+                { // Sprite msbits 2
+
+                } break;
+            }
+        }
+
+    }
+}
+
+void ppu_t::render( uint16_t dot, u_int16_t scanline )
+{
+    // Background pixel color
+    if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
+    { 
+        uint8_t fine_x = 7 - memory->ppu_mem.fine_x;
+        uint8_t pattern_lo = shift_regs.pt_lo.lo;
+        uint8_t pattern_hi = shift_regs.pt_hi.lo;
+        uint8_t pattern = ((((pattern_lo >> fine_x) & 0x1) << 0) |
+                           (((pattern_hi >> fine_x) & 0x1) << 1));
+
+        uint8_t palette_lo = shift_regs.at_lo;
+        uint8_t palette_hi = shift_regs.at_hi;
+        uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
+                              (((palette_hi >> fine_x) & 0x1) << 1));
+
+        shift_regs.pt_lo.lo <<= 1;
+        shift_regs.pt_hi.lo <<= 1;
+        shift_regs.at_hi <<= 1;
+        shift_regs.at_lo <<= 1;
+        // Pull in bit from AT bit-latches
+        shift_regs.at_hi |= (latches.at_latch & 0b10) >> 1;
+        shift_regs.at_lo |= (latches.at_latch & 0b01);
+
+        if ( pattern == 0x0 ) 
+        {
+            uint32_t palette_bg = memory->ppu_mem.palette[0x00];
+            bg_color = MFB_RGB(palette_id_to_red(palette_bg),
+                               palette_id_to_green(palette_bg),
+                               palette_id_to_blue(palette_bg));
+        } 
+        else 
+        {
+            uint8_t palette_set[3];
+            palette_set[0] = memory->ppu_mem.palette[0x01+palette_id*4];
+            palette_set[1] = memory->ppu_mem.palette[0x02+palette_id*4];
+            palette_set[2] = memory->ppu_mem.palette[0x03+palette_id*4];
+            bg_color = MFB_RGB(palette_id_to_red(palette_set[pattern-1]),
+                               palette_id_to_green(palette_set[pattern-1]),
+                               palette_id_to_blue(palette_set[pattern-1]));
+        }
     }
 
-    if ( dot > NES_WIDTH )
-    { // Sprite lsbits and msbits
+    // Sprites pixel color
+    if ( dot <= NES_WIDTH )
+    {
+        for (auto sprite = 0; sprite < 8; ++sprite)
+        {
+            int16_t& sprite_x_counter = sprite_counters[ sprite ];
+            if ( sprite_x_counter != 0xFF)
+            { // Dec the counter
+                sprite_x_counter--;
+            }
+        }
+    }
+    
+    sp_color = 0x0;
+    if ( render_state == render_states::visible_scanline )
+    {
+        for (auto sprite = 0; sprite < 8; ++sprite)
+        {
+            int16_t sprite_x_counter = sprite_counters[ sprite ];
+            
+            if ( sprite_x_counter > -8 && sprite_x_counter <= 0 )
+            { // Trigger!
+                bool lo_bit = BIT_CHECK_HI(shift_regs.sprite_pattern_tables_lo[ sprite ], 7);
+                bool hi_bit = BIT_CHECK_HI(shift_regs.sprite_pattern_tables_hi[ sprite ], 7);
+                shift_regs.sprite_pattern_tables_lo[ sprite ] <<= 1;
+                shift_regs.sprite_pattern_tables_hi[ sprite ] <<= 1;
 
+                uint8_t pattern = lo_bit | (hi_bit << 1);
+                
+                if (pattern && !sp_color)
+                {
+                    uint8_t palette_id = latches.sprite_attribute_latch[ sprite ] & 0b11;
+
+                    static uint8_t palette_set[3];
+                    palette_set[0] = memory->ppu_mem.palette[0x11+palette_id*4];
+                    palette_set[1] = memory->ppu_mem.palette[0x12+palette_id*4];
+                    palette_set[2] = memory->ppu_mem.palette[0x13+palette_id*4];
+
+                    sp_color = MFB_RGB(palette_id_to_red(palette_set[pattern-1]), 
+                                       palette_id_to_green(palette_set[pattern-1]),
+                                       palette_id_to_blue(palette_set[pattern-1]));
+                }
+            }
+        }
     }
 
-    (void) scanline;
-    return 0x00;
+    // Sprite Zero check
+    if ( !sprite0 && sp_color > 0 )
+    {
+        sprite0 = true;
+        LOG_D("Sprite0 @ (%d,%d)", dot, scanline);
+        regs.PPUSTATUS |= 0x40;
+    }
+
+    // Render Pixel
+    if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
+    {
+        uint32_t color = sp_color > 0 ? sp_color : bg_color;
+        uint32_t pixel_index = (scanline * NES_WIDTH) + dot;
+        pixel_index = pixel_index % (NES_WIDTH * NES_HEIGHT);
+        window_buffer[ pixel_index ] = color;
+    }
+    
 }
 
 } // nes

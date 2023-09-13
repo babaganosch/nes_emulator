@@ -18,7 +18,7 @@ void _log(LOG_LEVEL level, const char* buffer, ...)
     switch (level)
     {
         case L_ERROR: {
-            printf("\x1B[0;30;41m[ERROR]\x1B[0;;m %s\n", _buffer);
+            fprintf(stderr, "\x1B[0;30;41m[ERROR]\x1B[0;;m %s\n", _buffer);
         } break;
         case L_WARNING: {
             printf("\x1B[0;30;43m[WARN]\x1B[0;;m %s\n", _buffer);

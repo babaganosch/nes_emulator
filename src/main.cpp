@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 
                 // Temporarily dump nametables to screen
                 //nes::dump_ppu_vram(emu);
-                nes::dump_sprites(emu);
+                //nes::dump_sprites(emu);
 
                 if (debug)
                 {

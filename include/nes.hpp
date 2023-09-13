@@ -395,7 +395,8 @@ struct ppu_t
         uint8_t  at_hi;
         uint8_t  at_lo;
         // Sprites
-        uint8_t sprite_pattern_tables[8];
+        uint8_t sprite_pattern_tables_lo[8];
+        uint8_t sprite_pattern_tables_hi[8];
     } shift_regs;
 
     struct latch_t
@@ -420,21 +421,26 @@ struct ppu_t
     uint16_t x{0};
     uint16_t y{0};
     uint16_t vram_address_multiplexer{0};
-    uint16_t sprite_counters[8];
     uint32_t cycles{0};
 
     uint8_t  oam_n{0};
     uint8_t  oam_m{0};
     uint8_t  oam_read_buffer[4]{0};
     uint8_t  soam_counter{0};
+    uint8_t  sprite_fetch{0};
+    int16_t  sprite_counters[8];
 
     mem_t* memory{nullptr};
     bool recently_power_on{false};
-    bool odd_frame{false};
+    uint8_t frame_num{0};
     render_states render_state{render_states::pre_render_scanline};
 
-    uint32_t fetch_bg_pixel( uint16_t dot, uint16_t scanline );
-    uint32_t fetch_sprite_pixel( uint16_t dot, uint16_t scanline );
+    uint32_t bg_color{0};
+    uint32_t sp_color{0};
+    bool sprite0{false};
+    void bg_evaluation( uint16_t dot, uint16_t scanline );
+    void sp_evaluation( uint16_t dot, uint16_t scanline );
+    void render( uint16_t dot, u_int16_t scanline );
 
     // Rendering cycle stages from PPU Frame Timing Diagram
     // https://www.nesdev.org/wiki/PPU_rendering

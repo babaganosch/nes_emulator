@@ -41,7 +41,6 @@ void emu_t::init(ines_rom_t &rom)
 
     // Map CHR ROM
     if (rom.header.chr_size == 1) {
-        LOG_I("Setting chr_rom = chr_pages[0]");
         memory.cartridge_mem.chr_rom = memory.ines_rom->chr_pages[0];
     } else {
         LOG_E("TODO: Solve mapping for zero or more than one CHR ROM bank.");
