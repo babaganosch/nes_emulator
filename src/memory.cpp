@@ -44,13 +44,10 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         return cpu_mem.internal_ram[ address % 0x0800 ];
     }
     
-    else if ( address < 0x4000 || address == 0x4014 )
+    else if ( address < 0x4000 )
     { // ppu registers
-        if (address == 0x4014) 
-        { // OAMDMA > write
-            return ppu_mem.write_latch;
-        }
-        
+        address %= 0x0008;
+        address += 0x2000;
         switch ( address )
         {
             case( 0x2000 ):
@@ -111,11 +108,12 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
                 ppu_mem.v.data = addr;
                 return data;
             } break;
-            case( 0x4014 ):
-            { // OAMDMA > write
-                return ppu_mem.write_latch;
-            }
         }
+    }
+
+    else if ( address == 0x4014 ) 
+    { // OAMDMA > write
+        return ppu_mem.write_latch;
     }
 
     else if ( address < 0x4020 )
@@ -154,9 +152,10 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         return;
     }
 
-    if ( address < 0x4000 || address == 0x4014)
+    else if ( address < 0x4000 )
     { // ppu registers
-
+        address %= 0x0008;
+        address += 0x2000;
         switch (address)
         {
             case( 0x2000 ):
@@ -263,51 +262,52 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 ppu_mem.v.data = addr;
                 ppu_mem.write_latch = value;
             } break;
-            case ( 0x4014 ):
-            { // OAMDMA > write
-
-                // oam addr is 0xXX00 where XX is data
-                uint16_t source_addr = (value << 8);
-                uint8_t* source = nullptr;
-                if ( source_addr < 0x4000 )
-                {
-                    source = &cpu_mem.internal_ram[ source_addr % 0x0800 ];
-                }
-                else if (source_addr < 0x6000) 
-                {
-                    // TODO Fix I/O reg read and mirroring
-                    LOG_E("I/O reg read and mirroring not implemented (%04X)", source_addr);
-                } 
-                else if (source_addr < 0x8000) 
-                {
-                    // TODO Fix save RAM read
-                    LOG_E("Save RAM not implemented (%04X)", source_addr);
-                } 
-                else if (source_addr < 0xC000) 
-                {
-                    source = &cartridge_mem.prg_lower_bank[ source_addr - 0x8000 ]; 
-                } 
-                else 
-                {
-                    source = &cartridge_mem.prg_upper_bank[ source_addr - 0xC000 ];
-                }
-
-                if (!source)
-                { // error
-                    LOG_E("No source found for OAMDMA write");
-                    return;
-                }
-
-                // todo take care of cycles here, somehow!
-                // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
-                // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
-                memcpy( ppu_mem.oam.data, source, 256 );
-            } break;
         }
-        return;
     }
 
-    if ( address < 0x4020 )
+    else if ( address == 0x4014 )
+    { // OAMDMA > write
+        // oam addr is 0xXX00 where XX is data
+        uint16_t source_addr = (value << 8);
+        uint8_t* source = nullptr;
+        if ( source_addr < 0x4000 )
+        {
+            source = &cpu_mem.internal_ram[ source_addr % 0x0800 ];
+        }
+        else if (source_addr < 0x6000) 
+        {
+            // TODO Fix I/O reg read and mirroring
+            LOG_E("I/O reg read and mirroring not implemented (%04X)", source_addr);
+        } 
+        else if (source_addr < 0x8000) 
+        {
+            // TODO Fix save RAM read
+            LOG_E("Save RAM not implemented (%04X)", source_addr);
+        } 
+        else if (source_addr < 0xC000) 
+        {
+            source = &cartridge_mem.prg_lower_bank[ source_addr - 0x8000 ]; 
+        } 
+        else 
+        {
+            source = &cartridge_mem.prg_upper_bank[ source_addr - 0xC000 ];
+        }
+
+        if (!source)
+        { // error
+            LOG_E("No source found for OAMDMA write");
+            return;
+        }
+
+        // todo take care of cycles here, somehow!
+        // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
+        // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
+        memcpy( ppu_mem.oam.data, source, 256 );
+        
+        return;
+    }
+    
+    else if ( address < 0x4020 )
     { // apu and I/O registers
 
         if ( address == 0x4016 )
