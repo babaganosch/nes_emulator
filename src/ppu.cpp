@@ -128,7 +128,6 @@ RESULT ppu_t::execute()
                 x = 0;
                 y = 0;
             }
-            sprite0 = false;
         }
     }
     else if ( scanline <= 239 )
@@ -158,16 +157,15 @@ RESULT ppu_t::execute()
 
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
-    render( dot - 2, scanline );
+    render_pixel( dot - 2, scanline );
     
     return RESULT_OK;
 }
 
 void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( BIT_CHECK_LO(regs.PPUMASK, 3) || render_state == render_states::post_render_scanline )
+    if ( (BIT_CHECK_LO(regs.PPUMASK, 3)) || render_state == render_states::post_render_scanline )
     { // BG rendering disabled
-        bg_color = 0x0;
         return;
     }
 
@@ -249,14 +247,11 @@ void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
                 if ( dot < 257 || dot > 320 )
                 {
                     vram_fetch_bg_msbits( 1 );
-                }
-                if ( dot <= 256 || dot > 320 )
-                {
                     v_update_inc_hori_v();
-                }
-                if ( dot == 256 )
-                {
-                    v_update_inc_vert_v();
+                    if ( dot == 256 )
+                    {
+                        v_update_inc_vert_v();
+                    }
                 }
             } break;
         }
@@ -281,7 +276,7 @@ void ppu_t::vram_fetch_nt( bool step )
 void ppu_t::vram_fetch_at( bool step )
 {
     uint16_t &v = memory->ppu_mem.v.data;
-    uint16_t t_addr = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+    uint16_t t_addr = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x0038) | ((v >> 2) & 0x0007);
     if ( step == 0 )
     {
         vram_address_multiplexer = (vram_address_multiplexer & 0xFF00) | (t_addr & 0x00FF);
@@ -343,9 +338,7 @@ void ppu_t::v_update_inc_vert_v()
 {
     if (++memory->ppu_mem.v.fine_y == 0)
     {
-        uint8_t temp_y = memory->ppu_mem.v.coarse_y;
-        memory->ppu_mem.v.coarse_y++;
-        if (temp_y == 29)
+        if (++memory->ppu_mem.v.coarse_y == 29)
         {
             memory->ppu_mem.v.coarse_y = 0;
             memory->ppu_mem.v.nametable ^= 0x10;
@@ -372,10 +365,8 @@ void ppu_t::v_update_vert_v_eq_vert_t()
 void ppu_t::reload_shift_registers()
 {
     // A and B?
-    shift_regs.pt_hi.lo = shift_regs.pt_hi.hi;
-    shift_regs.pt_lo.lo = shift_regs.pt_lo.hi;
-    shift_regs.pt_hi.hi = (latches.pt_latch & 0xFF00) >> 8;
-    shift_regs.pt_lo.hi =  latches.pt_latch & 0x00FF;
+    shift_regs.pt_hi.lo = (latches.pt_latch & 0xFF00) >> 8;
+    shift_regs.pt_lo.lo =  latches.pt_latch & 0x00FF;
     // P
     latches.at_latch = latches.at_byte & 0b11;
 }
@@ -385,7 +376,6 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
     if ( BIT_CHECK_LO(regs.PPUMASK, 4) || dot == 0 ||
         (render_state != render_states::visible_scanline && render_state != render_states::pre_render_scanline) )
     { // BG rendering disabled or idle cycle
-        sp_color = 0x0;
         return;
     }
 
@@ -408,6 +398,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
             oam_m = 0; // m: Byte   [ 0 -  3 ]
             soam_counter = 0; // sOAM index [ 0 - 7 ]
             sprite_fetch = 0; // counter used for sprite fetching
+            memset( sprite_indices_next_scanline, 0xFF, sizeof(uint8_t) * 8 );
         }
 
         if ( dot <= 64 )
@@ -438,6 +429,8 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                         if ( (scanline >= yy) && (scanline <= (yy + (is_8x16 ? 15 : 7))) )
                         {
                             memcpy( soam.arr2d[ soam_counter ], oam.arr2d[ oam_n ], sizeof(uint8_t) * 4 );
+                            // Store sprite index for sprite 0 checking
+                            sprite_indices_next_scanline[ soam_counter ] = oam_n;
                             soam_counter++;
                         }
                     }
@@ -480,6 +473,11 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 
         if ( dot >= 257 && dot <= 320 )
         { // Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
+            if ( dot == 257 )
+            { // Clear sprite indices for old scanline
+                memset( sprite_indices_current_scanline, 0xFF, sizeof(uint8_t) * 8 );
+            }
+
             uint8_t eight_tick = dot % 8;
             switch ( eight_tick )
             {
@@ -489,6 +487,9 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                     uint8_t sprite_tile = soam.arr2d[ sprite_fetch ][1]; // tile
                     uint8_t sprite_attr = soam.arr2d[ sprite_fetch ][2]; // attr
                     uint8_t sprite_x    = soam.arr2d[ sprite_fetch ][3]; // x
+
+                    // Store current scanlines sprite indices for sprite 0 hit checks
+                    sprite_indices_current_scanline[ sprite_fetch ] = sprite_indices_next_scanline[ sprite_fetch ];
 
                     // Set X counter for sprite
                     sprite_counters[ sprite_fetch ] = sprite_x;
@@ -555,36 +556,39 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
     }
 }
 
-void ppu_t::render( uint16_t dot, u_int16_t scanline )
+void ppu_t::render_pixel( uint16_t dot, u_int16_t scanline )
 {
+    uint32_t bg_color{0};
+    uint32_t bg_pattern{0};
+    uint32_t sp_color{0};
+
     // Background pixel color
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
-    { 
+    {
+        
         uint8_t fine_x = 7 - memory->ppu_mem.fine_x;
-        uint8_t pattern_lo = shift_regs.pt_lo.lo;
-        uint8_t pattern_hi = shift_regs.pt_hi.lo;
-        uint8_t pattern = ((((pattern_lo >> fine_x) & 0x1) << 0) |
-                           (((pattern_hi >> fine_x) & 0x1) << 1));
+        bg_pattern = ((((shift_regs.pt_lo.hi >> fine_x) & 0x1) << 0) |
+                      (((shift_regs.pt_hi.hi >> fine_x) & 0x1) << 1));
 
         uint8_t palette_lo = shift_regs.at_lo;
         uint8_t palette_hi = shift_regs.at_hi;
         uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
                               (((palette_hi >> fine_x) & 0x1) << 1));
 
-        shift_regs.pt_lo.lo <<= 1;
-        shift_regs.pt_hi.lo <<= 1;
+        shift_regs.pt_lo.data <<= 1;
+        shift_regs.pt_hi.data <<= 1;
         shift_regs.at_hi <<= 1;
         shift_regs.at_lo <<= 1;
         // Pull in bit from AT bit-latches
-        shift_regs.at_hi |= (latches.at_latch & 0b10) >> 1;
+        shift_regs.at_hi |= ((latches.at_latch & 0b10) >> 1);
         shift_regs.at_lo |= (latches.at_latch & 0b01);
 
-        if ( pattern == 0x0 ) 
+        if ( bg_pattern == 0x0 ) 
         {
             uint32_t palette_bg = memory->ppu_mem.palette[0x00];
             bg_color = MFB_RGB(palette_id_to_red(palette_bg),
-                               palette_id_to_green(palette_bg),
-                               palette_id_to_blue(palette_bg));
+                            palette_id_to_green(palette_bg),
+                            palette_id_to_blue(palette_bg));
         } 
         else 
         {
@@ -592,10 +596,16 @@ void ppu_t::render( uint16_t dot, u_int16_t scanline )
             palette_set[0] = memory->ppu_mem.palette[0x01+palette_id*4];
             palette_set[1] = memory->ppu_mem.palette[0x02+palette_id*4];
             palette_set[2] = memory->ppu_mem.palette[0x03+palette_id*4];
-            bg_color = MFB_RGB(palette_id_to_red(palette_set[pattern-1]),
-                               palette_id_to_green(palette_set[pattern-1]),
-                               palette_id_to_blue(palette_set[pattern-1]));
+            bg_color = MFB_RGB(palette_id_to_red(palette_set[bg_pattern-1]),
+                            palette_id_to_green(palette_set[bg_pattern-1]),
+                            palette_id_to_blue(palette_set[bg_pattern-1]));
         }
+    }
+
+    if ( BIT_CHECK_LO(regs.PPUMASK, 1) && dot < 8 )
+    { // Leftmost 8-pixel mask for BGs
+        bg_color = 0x0;
+        bg_pattern = 0x0;
     }
 
     // Sprites pixel color
@@ -612,6 +622,8 @@ void ppu_t::render( uint16_t dot, u_int16_t scanline )
     }
     
     sp_color = 0x0;
+    bool sprite_hit = false;
+    uint8_t sp_to_bg_priority = 0x1;
     if ( render_state == render_states::visible_scanline )
     {
         for (auto sprite = 0; sprite < 8; ++sprite)
@@ -626,10 +638,17 @@ void ppu_t::render( uint16_t dot, u_int16_t scanline )
                 shift_regs.sprite_pattern_tables_hi[ sprite ] <<= 1;
 
                 uint8_t pattern = lo_bit | (hi_bit << 1);
+
+                if ( BIT_CHECK_LO(regs.PPUSTATUS, 6) && pattern && sprite_indices_current_scanline[ sprite ] == 0 )
+                { // Sprite Zero check
+                    regs.PPUSTATUS |= 0x40;
+                }
                 
-                if (pattern && !sp_color)
+                if ( !sprite_hit && pattern )
                 {
+                    sprite_hit = true;
                     uint8_t palette_id = latches.sprite_attribute_latch[ sprite ] & 0b11;
+                    sp_to_bg_priority = BIT_CHECK_HI(latches.sprite_attribute_latch[ sprite ], 5);
 
                     static uint8_t palette_set[3];
                     palette_set[0] = memory->ppu_mem.palette[0x11+palette_id*4];
@@ -639,23 +658,46 @@ void ppu_t::render( uint16_t dot, u_int16_t scanline )
                     sp_color = MFB_RGB(palette_id_to_red(palette_set[pattern-1]), 
                                        palette_id_to_green(palette_set[pattern-1]),
                                        palette_id_to_blue(palette_set[pattern-1]));
+
                 }
             }
         }
     }
 
-    // Sprite Zero check
-    if ( !sprite0 && sp_color > 0 )
-    {
-        sprite0 = true;
-        LOG_D("Sprite0 @ (%d,%d)", dot, scanline);
-        regs.PPUSTATUS |= 0x40;
+    if ( BIT_CHECK_LO(regs.PPUMASK, 2) && dot < 8 )
+    { // Leftmost 8-pixel mask for sprites
+        sp_color = 0x0;
+    }
+
+    // Priority multiplexing
+    uint32_t color = 0x0;
+    if ( bg_pattern == 0x0 && sp_color == 0x0 )
+    { // BG ($3F00)
+        color = bg_color;
+    }
+    else if ( bg_pattern == 0x0 && sp_color != 0x0 )
+    { // Sprite
+        color = sp_color;
+    }
+    else if ( bg_pattern != 0x0 && sp_color == 0x0 )
+    { // BG
+        color = bg_color;
+    }
+    else
+    { // Priority check
+        if ( sp_to_bg_priority == 0 )
+        { // Foreground
+            color = sp_color;
+        }
+        else
+        { // Background
+            color = bg_color;
+        }
     }
 
     // Render Pixel
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
     {
-        uint32_t color = sp_color > 0 ? sp_color : bg_color;
         uint32_t pixel_index = (scanline * NES_WIDTH) + dot;
         pixel_index = pixel_index % (NES_WIDTH * NES_HEIGHT);
         window_buffer[ pixel_index ] = color;

@@ -8,11 +8,25 @@
 
 namespace 
 {
-const char* nes_test_rom = "../data/nestest.nes";
+constexpr const char* nes_test_rom = "../data/nestest.nes";
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
 bool pause = false;
+
+//#def bg_endian
+#ifdef bg_endian
+const uint32_t rgba_mask_r = 0xFF000000;
+const uint32_t rgba_mask_g = 0x00FF0000;
+const uint32_t rgba_mask_b = 0x0000FF00;
+#else
+//const uint32_t rgba_mask_r = 0x000000FF;
+//const uint32_t rgba_mask_g = 0x0000FF00;
+//const uint32_t rgba_mask_b = 0x00FF0000;
+#endif
+
+constexpr uint16_t screen_width  = NES_WIDTH * 3;
+constexpr uint16_t screen_height = NES_HEIGHT * 3; 
 
 void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed)
 {
@@ -43,6 +57,12 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
     }
 
 }
+
+/*
+double clamp(double x, double lower, double upper)
+{
+    return fmin(fmax(x, lower), upper);
+}*/
 
 } // anonymous
 
@@ -124,7 +144,7 @@ int main(int argc, char *argv[])
             struct mfb_window *nt_window = 0x0;
             nes::clear_window_buffer( 255, 0, 0 );
             
-            window = mfb_open_ex( "NesScape", NES_WIDTH, NES_HEIGHT, WF_RESIZABLE );
+            window = mfb_open_ex( "NesScape", screen_width, screen_height, WF_RESIZABLE );
             mfb_set_user_data( window, (void*)&emu );
             mfb_set_keyboard_callback(window, keyboard_callback);
 
@@ -180,7 +200,62 @@ int main(int argc, char *argv[])
                     if ( state < 0 ) break;
                 }
 
-                int32_t state = mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT );
+                // Blit screen to reference plate
+                //uint32_t test_buffer[ screen_width * screen_height ];
+                uint32_t reference[ screen_width * screen_height ];
+                for ( auto y = 0; y < screen_height; ++y )
+                for ( auto x = 0; x < screen_width; ++x )
+                {
+                    reference[ ( y * screen_width ) + x ] = nes::window_buffer[ ((y / 3) * NES_WIDTH) + (x / 3) ];
+                }
+                
+                // Effects
+                //const float centerX = screen_width / 3;
+                //const float centerY = screen_height / 3;
+                for ( auto y = 0; y < screen_height; ++y )
+                for ( auto x = 0; x < screen_width; ++x )
+                {
+                    // Tearing
+                    //auto index = (y * screen_width) + x;
+                    if ( y == ((emu.ppu.frame_num / 2) % screen_height) )
+                    {
+                        //reference[ index ] = reference[ index + 2 ];
+                    }
+
+                    // CRT - RGB Mask
+                    /*
+                    switch ( x % 3 )
+                    {
+                        case 0:
+                        {
+                            reference[index] = (reference[(y * screen_width) + x] & (rgba_mask_r | rgba_mask_g));
+                        } break;
+                        case 1:
+                        {
+                            reference[index] = (reference[(y * screen_width) + x] & (rgba_mask_g | rgba_mask_b));
+                        } break;
+                        case 2:
+                        {
+                            reference[index] = (reference[(y * screen_width) + x] & (rgba_mask_b | rgba_mask_r));
+                        } break;
+                    }*/
+
+                    //// Chromatic Aberration
+                    /*
+                    int offsetX = std::max(3.f, 3 * ((x - centerX) / centerX));
+                    int offsetY = std::max(3.f, 2 * ((y - centerY) / centerY));
+                    int yy1 = clamp(y-offsetY, 0, screen_height);
+                    int yy2 = clamp(y+offsetY, 0, screen_height);
+                    int xx1 = clamp(x-offsetX, 0, screen_width);
+                    int xx2 = clamp(x+offsetX, 0, screen_width);
+                    
+                    test_buffer[index]  = (reference[(y   * screen_width) +   x] & rgba_mask_g);
+                    test_buffer[index] += (reference[(yy1 * screen_width) + xx1] & rgba_mask_r);
+                    test_buffer[index] += (reference[(yy2 * screen_width) + xx2] & rgba_mask_b);
+                    */
+                }
+
+                int32_t state = mfb_update_ex( window, reference, screen_width, screen_height );
                 if ( state < 0 ) break;
             } while (mfb_wait_sync( window ));
             mfb_close( window );

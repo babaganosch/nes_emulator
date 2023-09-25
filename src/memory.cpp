@@ -67,8 +67,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
                 if (!peek) {
                     // Clear vblank status bit
                     ppu->regs.PPUSTATUS &= ~0x80;
-                    // Reset PPUADDR and write toggle
-                    ppu_mem.v.data = 0x0000;
+                    // Reset write toggle
                     ppu_mem.w = 0;
                 }
                 return value;

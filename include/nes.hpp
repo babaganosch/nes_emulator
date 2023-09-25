@@ -54,14 +54,14 @@ struct gamepad_t
     {
         struct __attribute__((packed))
         {
-            uint8_t A : 1;
-            uint8_t B : 1;
+            uint8_t A      : 1;
+            uint8_t B      : 1;
             uint8_t select : 1;
-            uint8_t start : 1;
-            uint8_t up : 1;
-            uint8_t down : 1;
-            uint8_t left : 1;
-            uint8_t right : 1;
+            uint8_t start  : 1;
+            uint8_t up     : 1;
+            uint8_t down   : 1;
+            uint8_t left   : 1;
+            uint8_t right  : 1;
         };
         uint8_t data{0};
     };
@@ -432,15 +432,14 @@ struct ppu_t
 
     mem_t* memory{nullptr};
     bool recently_power_on{false};
-    uint8_t frame_num{0};
+    uint32_t frame_num{0};
     render_states render_state{render_states::pre_render_scanline};
+    uint8_t  sprite_indices_next_scanline[8];
+    uint8_t  sprite_indices_current_scanline[8];
 
-    uint32_t bg_color{0};
-    uint32_t sp_color{0};
-    bool sprite0{false};
     void bg_evaluation( uint16_t dot, uint16_t scanline );
     void sp_evaluation( uint16_t dot, uint16_t scanline );
-    void render( uint16_t dot, u_int16_t scanline );
+    void render_pixel( uint16_t dot, u_int16_t scanline );
 
     // Rendering cycle stages from PPU Frame Timing Diagram
     // https://www.nesdev.org/wiki/PPU_rendering
