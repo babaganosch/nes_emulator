@@ -1033,16 +1033,12 @@ OP_FUNCTION(LDY)
 //
 OP_FUNCTION(LSR)
 {
-    uint8_t* operand = nullptr;
+    uint8_t* operand = &cpu.regs.A;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
         operand = cpu.fetch_byte_ref( address );
         cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    else
-    {
-        operand = &cpu.regs.A;
     }
     if (operand)
     {
@@ -1054,7 +1050,7 @@ OP_FUNCTION(LSR)
     }
     else
     {
-        cpu.tick_clock();
+        LOG_E("LSR attempted on nullptr");
     }
 }
 
@@ -1162,16 +1158,12 @@ OP_FUNCTION(PLP)
 //
 OP_FUNCTION(ROL)
 {
-    uint8_t* operand = nullptr;
+    uint8_t* operand = &cpu.regs.A;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
         operand = cpu.fetch_byte_ref( address );
         cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    else
-    {
-        operand = &cpu.regs.A;
     }
     if (operand)
     {
@@ -1186,7 +1178,7 @@ OP_FUNCTION(ROL)
     }
     else
     {
-        cpu.tick_clock();
+        LOG_E("ROL attempted on nullptr");
     }
 }
 
@@ -1199,16 +1191,12 @@ OP_FUNCTION(ROL)
 //
 OP_FUNCTION(ROR)
 {
-    uint8_t* operand = nullptr;
+    uint8_t* operand = &cpu.regs.A;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode != addr_mode_accumulator)
     {
         operand = cpu.fetch_byte_ref( address );
         cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    else
-    {
-        operand = &cpu.regs.A;
     }
     if (operand)
     {
@@ -1223,7 +1211,7 @@ OP_FUNCTION(ROR)
     }
     else
     {
-        cpu.tick_clock();
+        LOG_E("ROR attempted on nullptr");
     }
 }
 
@@ -1701,7 +1689,7 @@ OP_FUNCTION(ANC)
 //
 OP_FUNCTION(JAM)
 {
-    LOG_E("JAM occured, dumping status..");
+    LOG_E("JAM occured, dumping state..");
     LOG_E("PC: %04X", cpu.regs.PC);
     LOG_E("SP: %02X", cpu.regs.SP);
     LOG_E("P:  %02X", cpu.regs.SR);

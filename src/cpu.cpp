@@ -19,7 +19,7 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
     regs.PC = 0xFFFC;
 
     cycles = 0u;
-    queue_nmi = false;
+    nmi_pending = false;
 }
 
 uint16_t cpu_t::execute()
@@ -29,13 +29,13 @@ uint16_t cpu_t::execute()
 
     // Fetch instruction
     uint8_t ins_num = fetch_byte( regs.PC++ );
-
+    
     // Perform instruction
     op_code_t& op_code = op_codes[ins_num];
     op_code.function(*this, op_code.addr_mode );
 
     // Has NMI occurred?
-    if (queue_nmi) nmi();
+    if (nmi_pending) nmi();
 
     return delta_cycles;
 }
@@ -76,7 +76,7 @@ void cpu_t::nmi()
     push_byte_to_stack( regs.SR );
     regs.I  = 1;
     regs.PC = vectors.NMI;
-    queue_nmi = false;
+    nmi_pending = false;
 }
 
 uint8_t cpu_t::peek_byte( uint16_t address )

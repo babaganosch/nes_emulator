@@ -255,7 +255,7 @@ struct cpu_t
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
     cpu_callback_t callback{nullptr};
-    bool queue_nmi{false};
+    bool nmi_pending{false};
     VARIANT variant{NTSC};
     uint16_t pal_clock_buffer{0};
 
@@ -439,7 +439,7 @@ struct ppu_t
 
     void bg_evaluation( uint16_t dot, uint16_t scanline );
     void sp_evaluation( uint16_t dot, uint16_t scanline );
-    void render_pixel( uint16_t dot, u_int16_t scanline );
+    void render_pixel(  uint16_t dot, uint16_t scanline );
 
     // Rendering cycle stages from PPU Frame Timing Diagram
     // https://www.nesdev.org/wiki/PPU_rendering

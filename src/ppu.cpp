@@ -3,6 +3,12 @@
 #include "nes.hpp"
 #include "logging.hpp"
 
+/*
+* There's a lot of magical numbers in this file related to dot and scanline timings.
+* These numbers are based on a timing diagram found on nesdev.org
+* https://www.nesdev.org/w/images/default/4/4f/Ppu.svg
+*/
+
 namespace nes
 {
 
@@ -111,8 +117,6 @@ RESULT ppu_t::execute()
         y = (y + 1) % 262; // NTSC = 262 scanlines
     }
     
-    ///////////////// Rendering
-
     if ( scanline == 261 )
     { // Pre-render scanline (261)
         render_state = render_states::pre_render_scanline;
@@ -123,7 +127,7 @@ RESULT ppu_t::execute()
         }
         if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
-            if ( (frame_num++ % 2) != 0 )
+            if ( BIT_CHECK_HI(regs.PPUMASK, 3) && ((frame_num++ % 2) != 0) )
             {
                 x = 0;
                 y = 0;
@@ -150,14 +154,14 @@ RESULT ppu_t::execute()
             // scanline 241, where the VBlank NMI also occurs.
             regs.PPUSTATUS |= 0x80;
             if (regs.PPUCTRL & 0x80) {
-                memory->cpu->queue_nmi = true;
+                memory->cpu->nmi_pending = true;
             }
         }
     }
 
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
-    render_pixel( dot - 2, scanline );
+    render_pixel( dot, scanline );
     
     return RESULT_OK;
 }
@@ -185,10 +189,6 @@ void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
         {
             case( 1 ):
             { // NT 1
-                if ((dot < 258) || (dot > 320 && dot < 337) )
-                {
-                    reload_shift_registers();
-                }
                 if ( dot == 257 )
                 {
                     v_update_hori_v_eq_hori_t();
@@ -243,7 +243,7 @@ void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
                 }
             } break;
             case( 0 ):
-            { // BG msbits 2 & Update V
+            { // BG msbits 2 & Update V & Reload Shift Registers
                 if ( dot < 257 || dot > 320 )
                 {
                     vram_fetch_bg_msbits( 1 );
@@ -252,6 +252,10 @@ void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
                     {
                         v_update_inc_vert_v();
                     }
+                }
+                if ( dot < 257 || (dot > 320 && dot < 337) )
+                {
+                    reload_shift_registers();
                 }
             } break;
         }
@@ -310,7 +314,7 @@ void ppu_t::vram_fetch_bg_lsbits( bool step )
 
 void ppu_t::vram_fetch_bg_msbits( bool step )
 {
-    uint16_t t_addr = (latches.nt_latch * 16) + memory->ppu_mem.v.fine_y;
+    uint16_t t_addr = (latches.nt_latch * 16) + memory->ppu_mem.v.fine_y + 8;
     if ( BIT_CHECK_HI(regs.PPUCTRL, 4) )
     {
         t_addr += 0x1000;
@@ -322,7 +326,7 @@ void ppu_t::vram_fetch_bg_msbits( bool step )
     else
     {
         vram_address_multiplexer = (vram_address_multiplexer & 0x00FF) | (t_addr & 0xFF00);
-        latches.pt_latch |= ((uint16_t) memory->ppu_memory_read( vram_address_multiplexer + 8, false )) << 8;
+        latches.pt_latch |= ((uint16_t) memory->ppu_memory_read( vram_address_multiplexer, false )) << 8;
     }
 }
 
@@ -338,7 +342,7 @@ void ppu_t::v_update_inc_vert_v()
 {
     if (++memory->ppu_mem.v.fine_y == 0)
     {
-        if (++memory->ppu_mem.v.coarse_y == 29)
+        if (memory->ppu_mem.v.coarse_y++ == 29)
         {
             memory->ppu_mem.v.coarse_y = 0;
             memory->ppu_mem.v.nametable ^= 0x10;
@@ -379,18 +383,17 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
         return;
     }
 
+    // Sprite byte structure
+    // [0] y-coordinate
+    // [1] tile-index
+    // [2] attribute data
+    // [3] x-coordinate
+    oam_t& oam = memory->ppu_mem.oam;
+    soam_t& soam = memory->ppu_mem.soam;
+
     if ( render_state == render_states::visible_scanline )
     { 
         // Secondary OAM clear and sprite evaluation for next scanline
-
-        // Sprite byte structure
-        // [0] y-coordinate
-        // [1] tile-index
-        // [2] attribute data
-        // [3] x-coordinate
-
-        oam_t& oam = memory->ppu_mem.oam;
-        soam_t& soam = memory->ppu_mem.soam;
 
         if ( dot == 65 )
         { // Reset stuff
@@ -471,13 +474,16 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 
         }
 
-        if ( dot >= 257 && dot <= 320 )
-        { // Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
-            if ( dot == 257 )
-            { // Clear sprite indices for old scanline
-                memset( sprite_indices_current_scanline, 0xFF, sizeof(uint8_t) * 8 );
-            }
+        if ( dot == 257 )
+        { // Clear sprite indices for old scanline
+            memset( sprite_indices_current_scanline, 0xFF, sizeof(uint8_t) * 8 );
+        }
+    }
 
+    if ( render_state == render_states::visible_scanline || render_state == render_states::pre_render_scanline )
+    {
+        if ( dot > 256 && dot < 321 )
+        { // Cycles 257-320: Sprite fetches (8 sprites total, 8 cycles per sprite)
             uint8_t eight_tick = dot % 8;
             switch ( eight_tick )
             {
@@ -492,7 +498,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                     sprite_indices_current_scanline[ sprite_fetch ] = sprite_indices_next_scanline[ sprite_fetch ];
 
                     // Set X counter for sprite
-                    sprite_counters[ sprite_fetch ] = sprite_x;
+                    sprite_counters[ sprite_fetch ] = sprite_x + 1;
 
                     // Fill attribute latch for sprite
                     latches.sprite_attribute_latch[ sprite_fetch ] = sprite_attr;
@@ -544,7 +550,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                 } break;
                 case( 7 ):
                 { // Sprite msbits 1
-                    sprite_fetch++;
+                    ++sprite_fetch %= 8;
                 } break;
                 case( 0 ):
                 { // Sprite msbits 2
@@ -552,11 +558,10 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                 } break;
             }
         }
-
     }
 }
 
-void ppu_t::render_pixel( uint16_t dot, u_int16_t scanline )
+void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
 {
     uint32_t bg_color{0};
     uint32_t bg_pattern{0};
@@ -575,14 +580,6 @@ void ppu_t::render_pixel( uint16_t dot, u_int16_t scanline )
         uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
                               (((palette_hi >> fine_x) & 0x1) << 1));
 
-        shift_regs.pt_lo.data <<= 1;
-        shift_regs.pt_hi.data <<= 1;
-        shift_regs.at_hi <<= 1;
-        shift_regs.at_lo <<= 1;
-        // Pull in bit from AT bit-latches
-        shift_regs.at_hi |= ((latches.at_latch & 0b10) >> 1);
-        shift_regs.at_lo |= (latches.at_latch & 0b01);
-
         if ( bg_pattern == 0x0 ) 
         {
             uint32_t palette_bg = memory->ppu_mem.palette[0x00];
@@ -600,6 +597,19 @@ void ppu_t::render_pixel( uint16_t dot, u_int16_t scanline )
                             palette_id_to_green(palette_set[bg_pattern-1]),
                             palette_id_to_blue(palette_set[bg_pattern-1]));
         }
+    }
+
+    // Shifting of shift registers
+    if ( (dot < NES_WIDTH && scanline < NES_HEIGHT) || (dot > 320 && dot < 336) )
+    {
+        // Shift BG registers
+        shift_regs.pt_lo.data <<= 1;
+        shift_regs.pt_hi.data <<= 1;
+        shift_regs.at_hi <<= 1;
+        shift_regs.at_lo <<= 1;
+        // Pull in bit from AT bit-latches
+        shift_regs.at_hi |= ((latches.at_latch & 0b10) >> 1);
+        shift_regs.at_lo |= (latches.at_latch & 0b01);
     }
 
     if ( BIT_CHECK_LO(regs.PPUMASK, 1) && dot < 8 )
@@ -630,7 +640,7 @@ void ppu_t::render_pixel( uint16_t dot, u_int16_t scanline )
         {
             int16_t sprite_x_counter = sprite_counters[ sprite ];
             
-            if ( sprite_x_counter > -8 && sprite_x_counter <= 0 )
+            if ( sprite_x_counter <= 0 )
             { // Trigger!
                 bool lo_bit = BIT_CHECK_HI(shift_regs.sprite_pattern_tables_lo[ sprite ], 7);
                 bool hi_bit = BIT_CHECK_HI(shift_regs.sprite_pattern_tables_hi[ sprite ], 7);
