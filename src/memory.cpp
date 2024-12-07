@@ -1,5 +1,6 @@
 #include "nes.hpp"
 #include "logging.hpp"
+#include <memory>
 
 namespace nes
 {
@@ -103,7 +104,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
                 }
                 if (!is_palette)
                 {
-                    addr = addr % 0x3F00;
+                    addr %= 0x3F00;
                 }
                 ppu_mem.v.data = addr;
                 return data;
@@ -257,7 +258,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 }
                 if (!is_palette)
                 {
-                    addr = addr % 0x3F00;
+                    addr %= 0x3F00;
                 }
                 ppu_mem.v.data = addr;
                 ppu_mem.write_latch = value;
@@ -340,23 +341,16 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
 
     else if ( address < 0x3F00 )
     { // nametables
-        uint16_t t_addr = address - 0x2000;
+        uint16_t t_addr = address % 0x2000;
         switch( ppu_mem.nt_mirroring )
         {
             case( ppu_mem_t::nametable_mirroring::horizontal ):
             {
-                t_addr %= 0x1000;
-                if ( t_addr >= 0x0800 )
-                { // B
-                    if ( t_addr >= 0x0C00 )
-                    { // Mirror B
-                        t_addr -= 0x0400;
-                    }
-                    t_addr -= 0x0400;
-                } 
-                else if ( t_addr >= 0x0400 )
-                { // Mirror A
-                    t_addr -= 0x0400;
+                t_addr %= 0x2000;
+                t_addr %= 0x0400;
+                if ( address >= 0x2800 )
+                {
+                    t_addr += 0x0400;
                 }
             } break;
             case( ppu_mem_t::nametable_mirroring::vertical ):
@@ -372,8 +366,7 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
                 LOG_E("Unimplemented nametable mirroring mode: %d", ppu_mem.nt_mirroring );
             } break;
         }
-        address = t_addr;
-        return ppu_mem.vram[ address ];
+        return ppu_mem.vram[ t_addr ];
     }
 
     else if ( address < 0x3FFF )
@@ -404,23 +397,16 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
 
     else if (address < 0x3F00) 
     { // nametables
-        uint16_t t_addr = address - 0x2000;
+        uint16_t t_addr = address % 0x2000;
         switch( ppu_mem.nt_mirroring )
         {
             case( ppu_mem_t::nametable_mirroring::horizontal ):
             {
-                t_addr %= 0x1000;
-                if ( t_addr >= 0x0800 )
-                { // B
-                    if ( t_addr >= 0x0C00 )
-                    { // Mirror B
-                        t_addr -= 0x0400;
-                    }
-                    t_addr -= 0x0400;
-                } 
-                else if ( t_addr >= 0x0400 )
-                { // Mirror A
-                    t_addr -= 0x0400;
+                t_addr %= 0x2000;
+                t_addr %= 0x0400;
+                if ( address >= 0x2800 )
+                {
+                    t_addr += 0x0400;
                 }
             } break;
             case( ppu_mem_t::nametable_mirroring::vertical ):
@@ -436,8 +422,7 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
                 LOG_E("Unimplemented nametable mirroring mode: %d", ppu_mem.nt_mirroring );
             } break;
         }
-        address = t_addr;
-        ppu_mem.vram[ address ] = value;
+        ppu_mem.vram[ t_addr ] = value;
         return;
     } 
 

@@ -2,7 +2,6 @@
 #define NES_HPP
 
 #include <cstdint>
-#include <memory>
 
 namespace nes
 {
@@ -465,6 +464,7 @@ struct emu_t
 
     void init(ines_rom_t &rom);
     RESULT step(int32_t cycles);
+    uint16_t step_vblank();
 };
 
 } // nes

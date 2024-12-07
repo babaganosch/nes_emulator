@@ -334,7 +334,7 @@ void ppu_t::v_update_inc_hori_v()
 {
     if (++memory->ppu_mem.v.coarse_x == 0)
     {
-        memory->ppu_mem.v.nametable ^= 0x01;
+        memory->ppu_mem.v.nametable ^= 0b01;
     }
 }
 
@@ -345,7 +345,7 @@ void ppu_t::v_update_inc_vert_v()
         if (memory->ppu_mem.v.coarse_y++ == 29)
         {
             memory->ppu_mem.v.coarse_y = 0;
-            memory->ppu_mem.v.nametable ^= 0x10;
+            memory->ppu_mem.v.nametable ^= 0b10;
         }
     }
 }
@@ -353,7 +353,7 @@ void ppu_t::v_update_inc_vert_v()
 void ppu_t::v_update_hori_v_eq_hori_t()
 {
     // v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
-    uint16_t mask = 0b111101111100000; // (note: 15 bits, not 16)
+    uint16_t mask = 0b1111101111100000; // (note: 15 bits, not 16.  Highest bit is 1 here)
     memory->ppu_mem.v.data &= mask;
     memory->ppu_mem.v.data |= (memory->ppu_mem.t.data & ~mask);
 }
@@ -361,7 +361,7 @@ void ppu_t::v_update_hori_v_eq_hori_t()
 void ppu_t::v_update_vert_v_eq_vert_t()
 {
     // v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
-    uint16_t mask = 0b000010000011111; // (note: 15 bits, not 16)
+    uint16_t mask = 0b1000010000011111; // (note: 15 bits, not 16.  Highest bit is 1 here)
     memory->ppu_mem.v.data &= mask;
     memory->ppu_mem.v.data |= (memory->ppu_mem.t.data & ~mask);
 }

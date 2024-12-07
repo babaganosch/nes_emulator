@@ -1,10 +1,10 @@
 #include <cstdio>
-#include <chrono>
 #include <MiniFB.h>
 
 #include "nes.hpp"
 #include "nes_validator.hpp"
 #include "render.hpp"
+#include "logging.hpp"
 
 namespace 
 {
@@ -18,7 +18,6 @@ uint32_t front_buffer[ window_buffer_size ];
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
-bool pause = false;
 
 void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed)
 {
@@ -41,11 +40,6 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
     if ( key == KB_KEY_ESCAPE )
     {
         mfb_close(window);
-    }
-
-    if ( key == KB_KEY_BACKSPACE )
-    {
-        pause = !pause;
     }
 
 }
@@ -141,24 +135,13 @@ int main(int argc, char *argv[])
                 nes::clear_nt_window_buffer( 255, 0, 0 );
             }
 
-            float delta_time;
-            uint16_t cycles_per_frame;
-            std::chrono::steady_clock::time_point last_update;
-            std::chrono::steady_clock::time_point now;
-            last_update = std::chrono::steady_clock::now();
-
             do
             {
-                now = std::chrono::steady_clock::now();
-                delta_time = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000000.0f;
-                last_update = now;
-                // 29786 around 60 NES frames per 60 "real" frames
-                cycles_per_frame = ((uint16_t)!pause) * 29786.0f * ((1.0f / 60.0f) / delta_time);
 
                 nes::clear_window_buffer( 255, 0, 0 );
 
-                ret = emu.step( cycles_per_frame );
-                if ( ret != nes::RESULT_OK ) break;
+                // Run NES one frame (about 29786 cycles per frame for 60 FPS)
+                emu.step_vblank();
 
                 if (debug)
                 {

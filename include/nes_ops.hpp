@@ -1,8 +1,6 @@
 #ifndef NES_OPS_HPP
 #define NES_OPS_HPP
 
-#include <cstdint>
-
 #include "nes.hpp"
 
 namespace nes

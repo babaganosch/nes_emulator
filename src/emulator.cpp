@@ -22,9 +22,14 @@ void emu_t::init(ines_rom_t &rom)
     memory.init( rom );
 
     // Mirroring
+    LOG_D("iNES header.flags_6: 0x%02X", rom.header.flags_6);
+    LOG_D("iNES header.flags_7: 0x%02X", rom.header.flags_7);
     if (BIT_CHECK_HI(rom.header.flags_6, 0))
     {
         memory.ppu_mem.nt_mirroring = ppu_mem_t::nametable_mirroring::vertical;
+        LOG_D("Vertical mirroring (horizontal arrangement)");
+    } else {
+        LOG_D("Horizontal mirroring (vertical arrangement)");
     }
 
     // Map PRG ROM
@@ -63,6 +68,19 @@ RESULT emu_t::step(int32_t cycles)
         cycles -= cpu.execute();
     }
     return RESULT_OK;
+}
+
+uint16_t emu_t::step_vblank()
+{
+    uint16_t extra_cycles_executed = 0;
+    while (true)
+    {
+        bool start_in_vblank = ppu.render_state == ppu_t::render_states::vertical_blanking_line;
+        extra_cycles_executed += cpu.execute();
+        bool end_in_vblank = ppu.render_state == ppu_t::render_states::vertical_blanking_line;
+        if (start_in_vblank && !end_in_vblank) break;
+    }
+    return extra_cycles_executed;
 }
 
 
