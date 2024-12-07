@@ -1,6 +1,7 @@
 #include "nes_ops.hpp"
 #include "nes.hpp"
 #include "logging.hpp"
+#include <stdio.h>
 
 #define CALC_Z_FLAG(VALUE) cpu.regs.Z = (((VALUE & 0xFF) == 0x00) ? 1 : 0 )
 #define CALC_N_FLAG(VALUE) cpu.regs.N = (((VALUE & 0x80) > 0x00) ? 1 : 0 )
