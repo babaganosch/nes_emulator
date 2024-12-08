@@ -322,7 +322,8 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             return;
         }
 
-        LOG_W("Failed to write %02X @ $%04X (unmapped APU address space)", value, address);
+        // Mute APU write warnings
+        // LOG_W("Failed to write %02X @ $%04X (unmapped APU address space)", value, address);
         return;
     }
 

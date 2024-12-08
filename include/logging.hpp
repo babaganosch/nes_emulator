@@ -1,9 +1,6 @@
 #ifndef LOGGING_HPP
 #define LOGGING_HPP
 
-//#undef DEBUG
-#undef WARNINGS
-
 namespace nes
 {
 
