@@ -22,9 +22,19 @@ void emu_t::init(ines_rom_t &rom)
     memory.init( rom );
     bool error = false;
 
-    // Mirroring
     LOG_D("iNES header.flags_6: 0x%02X", rom.header.flags_6);
     LOG_D("iNES header.flags_7: 0x%02X", rom.header.flags_7);
+
+    // Mapper
+    const uint8_t mapper = (rom.header.flags_7 & 0xF0) | ((rom.header.flags_6 & 0xF0) >> 4);
+    if (mapper > 0x00)
+    {
+        LOG_W("Mapper: %u (unimplemented)", mapper);
+    } else {
+        LOG_D("Mapper: %u", mapper);
+    }
+
+    // Mirroring
     if (BIT_CHECK_HI(rom.header.flags_6, 0))
     {
         memory.ppu_mem.nt_mirroring = ppu_mem_t::nametable_mirroring::vertical;
@@ -37,15 +47,6 @@ void emu_t::init(ines_rom_t &rom)
     if (BIT_CHECK_HI(rom.header.flags_6, 1))
     {
         LOG_W("Cartridge contains some kind of persistent memory (unimplemented)");
-    }
-
-    // Mapper
-    const uint8_t mapper = (rom.header.flags_7 & 0xF0) | ((rom.header.flags_6 & 0xF0) >> 4);
-    if (mapper > 0x00)
-    {
-        LOG_W("Mapper: %u (unimplemented)", mapper);
-    } else {
-        LOG_D("Mapper: %u", mapper);
     }
 
     // Map PRG ROM
@@ -68,6 +69,9 @@ void emu_t::init(ines_rom_t &rom)
         error = true;
     }
 
+    // If error, return early to avoid segfaults due to unloaded RAM
+    if (error) throw RESULT_ERROR;
+
     // Try to grab the interrupt vectors
     cpu.vectors.NMI = cpu.peek_short( 0xFFFA );
     cpu.vectors.RESET = cpu.peek_short( 0xFFFC );
@@ -75,11 +79,9 @@ void emu_t::init(ines_rom_t &rom)
 
     // Reset program counter to reset vector
     cpu.regs.PC = cpu.vectors.RESET;
-
-    if (error) throw RESULT_ERROR;
 }
 
-RESULT emu_t::step(int32_t cycles)
+RESULT emu_t::step_cycles(int32_t cycles)
 {
     while (cycles > 0)
     {
