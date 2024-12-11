@@ -9,6 +9,9 @@ namespace nes
 #define NES_WIDTH  256
 #define NES_HEIGHT 240
 
+constexpr uint32_t PRG_PAGE_SIZE = 16 * 1024;
+constexpr uint32_t CHR_PAGE_SIZE = 8 * 1024;
+
 #define BIT_CHECK_HI(value, bit) (((value >> bit) & 0x1) == 0x1)
 #define BIT_CHECK_LO(value, bit) (((value >> bit) & 0x1) == 0x0)
 #define UINT16(LO, HI) (((uint16_t) HI << 8) | LO)
@@ -46,6 +49,16 @@ struct cpu_t;
 struct ppu_t;
 struct apu_t;
 struct ines_rom_t;
+struct mem_t;
+
+struct mapper_t {
+    mem_t* memory{nullptr};
+    virtual void init( mem_t* memory );
+    virtual uint8_t cpu_read( uint16_t address );
+    virtual uint8_t ppu_read( uint16_t address );
+    virtual void cpu_write( uint16_t address, uint8_t value );
+    virtual void ppu_write( uint16_t address, uint8_t value );
+};
 
 struct gamepad_t
 {
@@ -157,6 +170,9 @@ struct cartridge_mem_t
 {
     // PPU: $0000 - $1FFF
     uint8_t* chr_rom;                 // PPU: $0000 - $1FFF
+    uint8_t* chr_ram;                 // PPU: $0000 - $1FFF
+
+    uint8_t** chr_mode = &chr_rom;
 
     // CPU: $4020 - $FFFF
     uint8_t expansion_rom[0x1FE0];    // CPU: $4020 - $5FFF
@@ -183,6 +199,8 @@ struct mem_t
 
     ines_rom_t* ines_rom;
     cartridge_mem_t cartridge_mem;
+
+    mapper_t* mapper;
 
     gamepad_t gamepad[2];
     uint8_t   gamepad_strobe{0};

@@ -58,7 +58,7 @@ RESULT validator::execute()
     // Clear validation str
     *emu->cpu.nestest_validation_str = '\0';
 
-    ret = emu->step(1);
+    ret = emu->step_cycles(1);
     if (ret != RESULT_OK) return ret; 
 
     ret = construct_output_post_line();

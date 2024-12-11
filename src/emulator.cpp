@@ -17,68 +17,9 @@ void cpu_clock_callback(void *cookie)
 void emu_t::init(ines_rom_t &rom)
 {
     emulator_ref = this;
-    cpu.init(&cpu_clock_callback, memory);
-    ppu.init(memory);
     memory.init( rom );
-    bool error = false;
-
-    LOG_D("iNES header.flags_6: 0x%02X", rom.header.flags_6);
-    LOG_D("iNES header.flags_7: 0x%02X", rom.header.flags_7);
-
-    // Mapper
-    const uint8_t mapper = (rom.header.flags_7 & 0xF0) | ((rom.header.flags_6 & 0xF0) >> 4);
-    if (mapper > 0x00)
-    {
-        LOG_W("Mapper: %u (unimplemented)", mapper);
-    } else {
-        LOG_D("Mapper: %u", mapper);
-    }
-
-    // Mirroring
-    if (BIT_CHECK_HI(rom.header.flags_6, 0))
-    {
-        memory.ppu_mem.nt_mirroring = ppu_mem_t::nametable_mirroring::vertical;
-        LOG_D("Vertical mirroring (horizontal arrangement)");
-    } else {
-        LOG_D("Horizontal mirroring (vertical arrangement)");
-    }
-
-    // Persistent memory on cartridge
-    if (BIT_CHECK_HI(rom.header.flags_6, 1))
-    {
-        LOG_W("Cartridge contains some kind of persistent memory (unimplemented)");
-    }
-
-    // Map PRG ROM
-    if (rom.header.prg_size == 1) {
-        memory.cartridge_mem.prg_lower_bank = memory.ines_rom->prg_pages[0];
-        memory.cartridge_mem.prg_upper_bank = memory.ines_rom->prg_pages[0];
-    } else if (rom.header.prg_size == 2) {
-        memory.cartridge_mem.prg_lower_bank = memory.ines_rom->prg_pages[0];
-        memory.cartridge_mem.prg_upper_bank = memory.ines_rom->prg_pages[1];
-    } else {
-        LOG_E("TODO: Solve mapping for more than two PRG ROM banks. PRG pages: %u encountered.", rom.header.prg_size);
-        error = true;
-    }
-
-    // Map CHR ROM
-    if (rom.header.chr_size == 1) {
-        memory.cartridge_mem.chr_rom = memory.ines_rom->chr_pages[0];
-    } else {
-        LOG_E("TODO: Solve mapping for zero or more than one CHR ROM bank. CHR pages: %u encountered.", rom.header.chr_size);
-        error = true;
-    }
-
-    // If error, return early to avoid segfaults due to unloaded RAM
-    if (error) throw RESULT_ERROR;
-
-    // Try to grab the interrupt vectors
-    cpu.vectors.NMI = cpu.peek_short( 0xFFFA );
-    cpu.vectors.RESET = cpu.peek_short( 0xFFFC );
-    cpu.vectors.IRQBRK = cpu.peek_short( 0xFFFE );
-
-    // Reset program counter to reset vector
-    cpu.regs.PC = cpu.vectors.RESET;
+    cpu.init( &cpu_clock_callback, memory );
+    ppu.init( memory );
 }
 
 RESULT emu_t::step_cycles(int32_t cycles)

@@ -9,8 +9,6 @@ namespace nes
 namespace
 {
 constexpr char INES_MAGIC[4] = { 'N', 'E', 'S', 0x1A };
-constexpr uint32_t PRG_PAGE_SIZE = 16 * 1024;
-constexpr uint32_t CHR_PAGE_SIZE = 8 * 1024;
 constexpr uint32_t INES_HEADER_SIZE = 16u;
 } // anonymous
 
@@ -96,6 +94,9 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
         LOG_E("iNES header magic not valid.");
         throw RESULT_INVALID_INES_HEADER;
     }
+
+    LOG_D("iNES header.flags_6: 0x%02X", header.flags_6);
+    LOG_D("iNES header.flags_7: 0x%02X", header.flags_7);
 
     prg_pages = new uint8_t*[header.prg_size];
     chr_pages = new uint8_t*[header.chr_size];

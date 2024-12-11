@@ -1,5 +1,6 @@
 #include "nes.hpp"
 #include "logging.hpp"
+#include "mappers.hpp"
 #include <memory>
 
 namespace nes
@@ -13,6 +14,41 @@ void mem_t::init( ines_rom_t &rom )
     {
         //cpu_mem.ram[i] = rand() * 0xFF;
     }
+
+    // Clear CHR ram
+    if (cartridge_mem.chr_ram) {
+        delete cartridge_mem.chr_ram;
+        cartridge_mem.chr_ram = nullptr;
+    }
+
+    // Mapper (0-255 only)
+    uint8_t mapper_identifier = ((ines_rom->header.flags_7 & 0xF0) | ((ines_rom->header.flags_6 & 0xF0) >> 4) % 256);
+    mapper = mappers_lut[mapper_identifier];
+    LOG_D("Mapper: %u", mapper_identifier);
+    if (!mapper) {
+        LOG_E("Mapper unimplemented");
+        throw RESULT_ERROR;
+    }
+
+    // Map PRG ROM and CHR ROM/RAM
+    mapper->init( this );
+
+    // Mirroring
+    if (BIT_CHECK_HI(ines_rom->header.flags_6, 0))
+    {
+        ppu_mem.nt_mirroring = ppu_mem_t::nametable_mirroring::vertical;
+        LOG_D("Vertical mirroring (horizontal arrangement)");
+    } else {
+        LOG_D("Horizontal mirroring (vertical arrangement)");
+    }
+
+    // Persistent memory on cartridge
+    if (BIT_CHECK_HI(ines_rom->header.flags_6, 1))
+    {
+        LOG_W("Cartridge contains some kind of persistent memory (unimplemented)");
+    }
+
+    LOG_I("Memory layout initiated successfully");
 }
 
 uint8_t mem_t::memory_read( MEMORY_BUS bus, uint16_t address, bool peek )
@@ -136,10 +172,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
 
     else
     { // cartridge space
-        if ( address < 0x6000 ) return cartridge_mem.expansion_rom[ address - 0x4020 ];
-        if ( address < 0x8000 ) return cartridge_mem.sram[ address  - 0x6000];
-        if ( address < 0xC000 ) return cartridge_mem.prg_lower_bank[ address - 0x8000 ];
-        else return cartridge_mem.prg_upper_bank[ address - 0xC000 ];
+        return mapper->cpu_read( address );
     }
     
     return 0x00;
@@ -327,6 +360,12 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         return;
     }
 
+    else if ( address >= 0x6000 && address <= 0xFFFF )
+    {
+        mapper->cpu_write( address, value );
+        return;
+    }
+
 }
 
 ///////////////////////////// PPU
@@ -337,7 +376,7 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
     (void) peek;
     if ( address < 0x2000 )
     { // patterntables
-        return cartridge_mem.chr_rom[ address ];
+        return mapper->ppu_read( address );
     }
 
     else if ( address < 0x3F00 )
@@ -347,7 +386,6 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
         {
             case( ppu_mem_t::nametable_mirroring::horizontal ):
             {
-                t_addr %= 0x2000;
                 t_addr %= 0x0400;
                 if ( address >= 0x2800 )
                 {
@@ -392,7 +430,7 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
 { // Writing to VRAM
     if ( address < 0x2000 )
     { // pattern tables
-        cartridge_mem.chr_rom[ address ] = value;
+        mapper->ppu_write( address, value );
         return;
     }
 
@@ -403,7 +441,6 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
         {
             case( ppu_mem_t::nametable_mirroring::horizontal ):
             {
-                t_addr %= 0x2000;
                 t_addr %= 0x0400;
                 if ( address >= 0x2800 )
                 {

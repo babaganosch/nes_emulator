@@ -13,10 +13,16 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
     memory = &mem;
     memory->cpu = this;
 
+    // Try to grab the interrupt vectors
+    vectors.NMI = peek_short( 0xFFFA );
+    vectors.RESET = peek_short( 0xFFFC );
+    vectors.IRQBRK = peek_short( 0xFFFE );
+
     regs.SR = 0x24;
     regs.A  = regs.X = regs.Y = 0x0;
     regs.SP = 0xFD;
-    regs.PC = 0xFFFC;
+    regs.PC = vectors.RESET;
+    // regs.PC = 0xFFFC;
 
     cycles = 0u;
     nmi_pending = false;
