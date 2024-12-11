@@ -22,7 +22,6 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
     regs.A  = regs.X = regs.Y = 0x0;
     regs.SP = 0xFD;
     regs.PC = vectors.RESET;
-    // regs.PC = 0xFFFC;
 
     cycles = 0u;
     nmi_pending = false;
