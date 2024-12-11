@@ -100,7 +100,7 @@ mapper_t* mappers_lut[256] = {
     nullptr,                    // 91
     nullptr,                    // 92
     nullptr,                    // 93
-    nullptr,                    // 94
+    new mapper_un1rom_t(),      // 94
     nullptr,                    // 95
     nullptr,                    // 96
     nullptr,                    // 97
@@ -186,7 +186,7 @@ mapper_t* mappers_lut[256] = {
     nullptr,                    // 177
     nullptr,                    // 178
     nullptr,                    // 179
-    nullptr,                    // 180
+    new mapper_unrom_t(),       // 180
     nullptr,                    // 181
     nullptr,                    // 182
     nullptr,                    // 183
@@ -282,7 +282,7 @@ void mapper_t::init( mem_t* memory_ref ) {
         memory->cartridge_mem.chr_rom = memory->ines_rom->chr_pages[0];
     } else
     { // RAM
-        memory->cartridge_mem.chr_mode = &memory->cartridge_mem.chr_ram;
+        memory->cartridge_mem.chr_mode = &(memory->cartridge_mem.chr_ram);
         memory->cartridge_mem.chr_ram = new uint8_t[CHR_PAGE_SIZE];
     }
 }
@@ -295,7 +295,8 @@ uint8_t mapper_t::cpu_read( uint16_t address ) {
 }
 
 uint8_t mapper_t::ppu_read( uint16_t address ) {
-    return memory->cartridge_mem.chr_rom[ address ];
+    
+    return ((uint8_t*) *memory->cartridge_mem.chr_mode)[address];
 }
 
 void mapper_t::cpu_write( uint16_t address, uint8_t value ) {
@@ -303,25 +304,34 @@ void mapper_t::cpu_write( uint16_t address, uint8_t value ) {
 }
 
 void mapper_t::ppu_write( uint16_t address, uint8_t value ) {
-    memory->cartridge_mem.chr_rom[ address ] = value;
+    ((uint8_t*) *memory->cartridge_mem.chr_mode)[ address ] = value;
 }
 
 //////// mapper 000 - NROM
 
 
 //////// mapper 002 - UxROM
-uint8_t mapper_uxrom_t::ppu_read( uint16_t address ) {
-    return memory->cartridge_mem.chr_ram[ address ];
-}
-
 void mapper_uxrom_t::cpu_write( uint16_t address, uint8_t value ) {
     uint8_t bank = address & 0b00000111;
     memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[bank];
 }
 
-void mapper_uxrom_t::ppu_write( uint16_t address, uint8_t value ) {
-    memory->cartridge_mem.chr_ram[ address ] = value;
+//////// mapper 094 - UN1ROM
+void mapper_un1rom_t::cpu_write( uint16_t address, uint8_t value ) {
+    uint8_t bank = (address & 0b00011100) >> 2;
+    memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[bank];
 }
 
+//////// mapper 180 - UNROM
+void mapper_unrom_t::init( mem_t* memory_ref ) {
+    memory = memory_ref;
+    /* TODO: IMPLEMENT */
+    throw;
+}
+
+void mapper_unrom_t::cpu_write( uint16_t address, uint8_t value ) {
+    uint8_t bank = address & 0b00000111;
+    memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[bank];
+}
 
 } // nes

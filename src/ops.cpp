@@ -27,8 +27,8 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t target )
     }
 }
 
-const bool I = false; // Illegal  OP
-const bool O = true;  // Official OP
+constexpr bool I = false; // Illegal  OP
+constexpr bool O = true;  // Official OP
 
 } // anonymous
 
