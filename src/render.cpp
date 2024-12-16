@@ -195,7 +195,7 @@ static void ppu_get_chr(emu_t& emu, uint16_t address, uint8_t* out_data, bool bg
         }
     }
 
-    uint8_t* chr_data = (uint8_t*)emu.memory.cartridge_mem.chr_rom + address + chr_offset;
+    uint8_t* chr_data = (uint8_t*)emu.memory.cartridge_mem.chr_rom.data + address + chr_offset;
 
     // low bits
     for (uint32_t y = 0; y < 8; ++y)

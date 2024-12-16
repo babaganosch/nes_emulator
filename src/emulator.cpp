@@ -1,5 +1,6 @@
 #include "nes.hpp"
 #include "logging.hpp"
+#include "mappers.hpp"
 
 namespace nes
 {
@@ -17,6 +18,19 @@ void cpu_clock_callback(void *cookie)
 void emu_t::init(ines_rom_t &rom)
 {
     emulator_ref = this;
+
+    mappers_lut[0]   = new mapper_nrom_t();
+    mappers_lut[1]   = new mapper_mmc1_t();
+    mappers_lut[2]   = new mapper_uxrom_t();
+    mappers_lut[94]  = new mapper_un1rom_t();
+    mappers_lut[180] = new mapper_unrom_configured_t();
+
+    uint8_t mappers_instantiated = 0;
+    for (uint8_t i = 0; i < 255; ++i) {
+        if (mappers_lut[i]) ++mappers_instantiated;
+    }
+    LOG_D("Emulator instantiated %u mappers", mappers_instantiated);
+
     memory.init( rom );
     cpu.init( &cpu_clock_callback, memory );
     ppu.init( memory );

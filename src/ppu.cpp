@@ -527,7 +527,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                         y_offset = 7 - y_offset;
                     }
 
-                    uint8_t* chr_data = (uint8_t*)*memory->cartridge_mem.chr_mode + (sprite_tile*16) + chr_offset + y_offset;
+                    uint8_t* chr_data = (uint8_t*)memory->cartridge_mem.chr_rom.data + (sprite_tile*16) + chr_offset + y_offset;
                     uint8_t lo = *chr_data;
                     uint8_t hi = *(chr_data+8);
 

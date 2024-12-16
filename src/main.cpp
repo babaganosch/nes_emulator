@@ -137,7 +137,6 @@ int main(int argc, char *argv[])
 
             do
             {
-
                 nes::clear_window_buffer( 255, 0, 0 );
 
                 // Run NES one frame (about 29786 cycles per frame for 60 FPS)

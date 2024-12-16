@@ -15,12 +15,6 @@ void mem_t::init( ines_rom_t &rom )
         //cpu_mem.ram[i] = rand() * 0xFF;
     }
 
-    // Clear CHR ram
-    if (cartridge_mem.chr_ram) {
-        delete cartridge_mem.chr_ram;
-        cartridge_mem.chr_ram = nullptr;
-    }
-
     // Mapper (0-255 only)
     uint8_t mapper_identifier = ((ines_rom->header.flags_7 & 0xF0) | ((ines_rom->header.flags_6 & 0xF0) >> 4) % 256);
     mapper = mappers_lut[mapper_identifier];
@@ -360,7 +354,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         return;
     }
 
-    else if ( address >= 0x6000 && address <= 0xFFFF )
+    else if ( address >= 0x4020 && address <= 0xFFFF )
     {
         mapper->cpu_write( address, value );
         return;
@@ -396,9 +390,14 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
             {
                 t_addr %= 0x800;
             } break;
-            case( ppu_mem_t::nametable_mirroring::single_screen ):
+            case( ppu_mem_t::nametable_mirroring::single_screen_lower ):
             {
                 t_addr %= 0x400;
+            } break;
+            case( ppu_mem_t::nametable_mirroring::single_screen_higher ):
+            {
+                t_addr %= 0x400;
+                t_addr += 0x400;
             } break;
             default:
             {
@@ -420,6 +419,16 @@ uint8_t mem_t::ppu_memory_read( uint16_t address, bool peek )
         }
 
         return ppu_mem.palette[ wrapped_addr ];
+    }
+
+    else if ( address < 0x6000 )
+    { // expansion rom?
+        return cartridge_mem.expansion_rom[ address - 0x4020 ];
+    }
+
+    else if ( address < 0x8000 )
+    { // sram?
+        return cartridge_mem.sram[ address - 0x6000 ];
     }
     
     LOG_E("PPU memory read on weird address (%04X)", address );
@@ -451,9 +460,14 @@ void mem_t::ppu_memory_write( uint8_t value, uint16_t address )
             {
                 t_addr %= 0x800;
             } break;
-            case( ppu_mem_t::nametable_mirroring::single_screen ):
+            case( ppu_mem_t::nametable_mirroring::single_screen_lower ):
             {
                 t_addr %= 0x400;
+            } break;
+            case( ppu_mem_t::nametable_mirroring::single_screen_higher ):
+            {
+                t_addr %= 0x400;
+                t_addr += 0x400;
             } break;
             default:
             {

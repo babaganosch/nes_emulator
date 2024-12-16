@@ -150,10 +150,11 @@ struct ppu_mem_t
 
     enum class nametable_mirroring
     {
-        horizontal    = 0,
-        vertical      = 1,
-        single_screen = 2,
-        four_screen   = 3
+        horizontal           = 0,
+        vertical             = 1,
+        single_screen_lower  = 2,
+        single_screen_higher = 3,
+        four_screen          = 4
     };
 
     vram_shift_regs_t v; // Current vram address
@@ -169,10 +170,15 @@ struct ppu_mem_t
 struct cartridge_mem_t
 {
     // PPU: $0000 - $1FFF
-    uint8_t* chr_rom;                 // PPU: $0000 - $1FFF
-    uint8_t* chr_ram;                 // PPU: $0000 - $1FFF
-
-    uint8_t** chr_mode = &chr_rom;
+    union chr_rom_t
+    { 
+        struct __attribute__((packed))
+        { // 4KB banked windows
+            uint8_t chr_bank_4kb_lower[0x1000]; // PPU: $0000 - $0FFF (4KB)
+            uint8_t chr_bank_4kb_upper[0x1000]; // PPU: $1000 - $1FFF (4KB)
+        };
+        uint8_t data[0x2000];
+    } chr_rom;
 
     // CPU: $4020 - $FFFF
     uint8_t expansion_rom[0x1FE0];    // CPU: $4020 - $5FFF
