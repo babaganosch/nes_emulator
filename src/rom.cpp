@@ -35,7 +35,7 @@ void ines_rom_t::clear_contents()
         for (auto i = 0; i < header.chr_size; ++i)
         {
             delete chr_pages[i];
-            chr_pages = nullptr;
+            chr_pages[i] = nullptr;
         }
     }
     delete chr_pages;
