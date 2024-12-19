@@ -77,8 +77,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
     
     else if ( address < 0x4000 )
     { // ppu registers
-        address %= 0x0008;
-        address += 0x2000;
+        address = (address % 0x0008) + 0x2000;
         switch ( address )
         {
             case( 0x2000 ):
@@ -182,8 +181,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
 
     else if ( address < 0x4000 )
     { // ppu registers
-        address %= 0x0008;
-        address += 0x2000;
+        address = (address % 0x0008) + 0x2000;
         switch (address)
         {
             case( 0x2000 ):

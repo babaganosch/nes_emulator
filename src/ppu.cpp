@@ -428,10 +428,34 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                         // 1a. If Y-coordinate is in range, copy remaining bytes of 
                         //     sprite data (OAM[n][1] thru OAM[n][3]) into secondary OAM.
                         uint8_t& yy = soam.arr2d[ soam_counter ][0];
+                        
                         bool is_8x16 = BIT_CHECK_HI(regs.PPUCTRL, 5);
+
                         if ( (scanline >= yy) && (scanline <= (yy + (is_8x16 ? 15 : 7))) )
                         {
-                            memcpy( soam.arr2d[ soam_counter ], oam.arr2d[ oam_n ], sizeof(uint8_t) * 4 );
+                            soam.arr2d[ soam_counter ][1] = oam_read_buffer[1];
+                            soam.arr2d[ soam_counter ][2] = oam_read_buffer[2];
+                            soam.arr2d[ soam_counter ][3] = oam_read_buffer[3];
+
+                            if (is_8x16) {
+                                uint8_t& at = soam.arr2d[ soam_counter ][2];
+                                bool flip_y = BIT_CHECK_HI(at, 7);
+
+                                if (scanline > yy + 7) 
+                                { // bot tile
+                                    yy -= 8;
+                                    if (flip_y) {
+                                        yy += 16;
+                                    }
+                                } 
+                                else if (scanline >= yy) 
+                                { // top tile
+                                    if (flip_y) {
+                                        yy += 16;
+                                    }
+                                }
+                            }
+
                             // Store sprite index for sprite 0 checking
                             sprite_indices_next_scanline[ soam_counter ] = oam_n;
                             soam_counter++;
@@ -511,7 +535,11 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                     bool is_8x16 = BIT_CHECK_HI(regs.PPUCTRL, 5);
                     if (is_8x16) 
                     {
-                        // Skip for now..
+                        if (BIT_CHECK_HI(sprite_tile, 0))
+                        {
+                            chr_offset = 0x1000;
+                        }
+                        sprite_tile &= 0xFE;
                     } 
                     else
                     {

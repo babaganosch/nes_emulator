@@ -141,15 +141,13 @@ uint8_t* cpu_t::fetch_byte_ref( uint16_t address )
 
 void cpu_t::write_byte( uint8_t data, uint8_t* ref )
 {
-    if (ref)
-    {
-        *ref = data;
-    }
-    else
+    if (!ref)
     {
         LOG_E("CPU write byte to nullptr");
         throw RESULT_ERROR;
     }
+    
+    *ref = data;
     tick_clock();
 }
 
