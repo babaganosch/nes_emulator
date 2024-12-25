@@ -84,6 +84,8 @@ inline uint8_t palette_id_to_blue(uint32_t id)
 {
     return color_2c02[id*3+2];
 }
+
+static bool old_nmi_enable = false;
 } // anonymous
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
@@ -93,6 +95,11 @@ RESULT ppu_t::init(mem_t &mem)
     memory = &mem;
     memory->ppu = this;
     recently_power_on = true;
+
+    vblank_suppression = false;
+
+    allow_nmi = true;
+
     frame_num = 0;
     cycles = 0;
     x = 0;
@@ -116,7 +123,15 @@ RESULT ppu_t::execute()
         x = 0;
         y = (y + 1) % 262; // NTSC = 262 scanlines
     }
-    
+
+    if (memory->cpu->nmi_control.trigger_countdown > 0) memory->cpu->nmi_control.trigger_countdown--;
+
+    bool nmi_enable = BIT_CHECK_HI(regs.PPUCTRL, 7);
+    if (!old_nmi_enable && nmi_enable)
+    {
+        allow_nmi = true;
+    }
+
     if ( scanline == 261 )
     { // Pre-render scanline (261)
         render_state = render_states::pre_render_scanline;
@@ -125,6 +140,7 @@ RESULT ppu_t::execute()
             regs.PPUSTATUS &= ~0x80;
             regs.PPUSTATUS &= ~0x40;
         }
+
         if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
             if ( BIT_CHECK_HI(regs.PPUMASK, 3) && ((frame_num++ % 2) != 0) )
@@ -148,16 +164,33 @@ RESULT ppu_t::execute()
     else if ( scanline <= 260 )
     { // Vertical blanking lines (241-260)
         render_state = render_states::vertical_blanking_line;
+        
         if ( scanline == 241 && dot == 1 )
         {
             // The VBlank flag of the PPU is set at tick 1 (the second tick) of
             // scanline 241, where the VBlank NMI also occurs.
-            regs.PPUSTATUS |= 0x80;
-            if (regs.PPUCTRL & 0x80) {
-                memory->cpu->nmi_pending = true;
+            if ( !vblank_suppression ) 
+            { // If PPUSTATUS ($2002) is read this clock, block setting of vblank flag
+                regs.PPUSTATUS |= 0x80;
             }
         }
+        
+        if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
+            // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
+            memory->cpu->nmi_control.trigger_countdown = 5;
+            memory->cpu->nmi_control.pending = true;
+            allow_nmi = false;
+        }
+
     }
+
+    if (memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 2 && vblank_suppression) {
+        memory->cpu->nmi_control.pending = false;
+        memory->cpu->nmi_control.trigger_countdown = 0;
+    }
+
+    old_nmi_enable = nmi_enable;
+    vblank_suppression = false;
 
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
@@ -448,7 +481,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                                         yy += 16;
                                     }
                                 } 
-                                else if (scanline >= yy) 
+                                else
                                 { // top tile
                                     if (flip_y) {
                                         yy += 16;
@@ -732,6 +765,9 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
             color = bg_color;
         }
     }
+
+    // Hide weird artifact on first scanline
+    //if (scanline == 0) color = 0x0;
 
     // Render Pixel
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )

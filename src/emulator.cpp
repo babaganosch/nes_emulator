@@ -20,7 +20,7 @@ void emu_t::init(ines_rom_t &rom)
     emulator_ref = this;
 
     mappers_lut[0]   = new mapper_nrom_t();
-    mappers_lut[1]   = new mapper_mmc1_t();
+    mappers_lut[1]   = new mapper_mmc1b_t();
     mappers_lut[2]   = new mapper_uxrom_t();
     mappers_lut[94]  = new mapper_un1rom_t();
     mappers_lut[180] = new mapper_unrom_configured_t();

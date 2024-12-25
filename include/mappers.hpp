@@ -18,8 +18,8 @@ extern mapper_t* mappers_lut[256];
 //////// mapper 000 - NROM
 struct mapper_nrom_t : public mapper_t { };
 
-//////// mapper 001 - MMC1
-struct mapper_mmc1_t : public mapper_t {
+//////// mapper 001 - MMC1B
+struct mapper_mmc1b_t : public mapper_t {
     void cpu_write( uint16_t address, uint8_t value ) override;
 
     uint8_t prg_bank_mode{3};

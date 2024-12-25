@@ -49,8 +49,8 @@ void mapper_t::ppu_write( uint16_t address, uint8_t value ) {
     memory->cartridge_mem.chr_rom.data[ address ] = value;
 }
 
-//////// mapper 001 - MMC1
-void mapper_mmc1_t::cpu_write( uint16_t address, uint8_t value ) {
+//////// mapper 001 - MMC1B
+void mapper_mmc1b_t::cpu_write( uint16_t address, uint8_t value ) {
     mapper_t::cpu_write( address, value );
 
     if ( address < 0x8000 ) return;

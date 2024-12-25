@@ -26,9 +26,9 @@ void ines_rom_t::clear_contents()
             delete prg_pages[i];
             prg_pages[i] = nullptr;
         }
+        delete[] prg_pages;
+        prg_pages = nullptr;
     }
-    delete prg_pages;
-    prg_pages = nullptr;
 
     if (chr_pages)
     {
@@ -37,9 +37,9 @@ void ines_rom_t::clear_contents()
             delete chr_pages[i];
             chr_pages[i] = nullptr;
         }
+        delete[] chr_pages;
+        chr_pages = nullptr;
     }
-    delete chr_pages;
-    chr_pages = nullptr;
 
     memset(&header, 0, INES_HEADER_SIZE);
 }
@@ -58,6 +58,12 @@ void ines_rom_t::load_from_file(const char* filepath)
     }
 
     uint8_t* data = (uint8_t*)malloc(file_size * sizeof(uint8_t));
+    if (data == nullptr) // Check if malloc failed
+    {
+        LOG_E("Failed to allocate memory for ROM data.");
+        throw RESULT_ERROR;
+    }
+
     file.read((char*)data, file_size);
     file.close();
 

@@ -275,12 +275,17 @@ struct cpu_t
         PAL
     };
 
+    struct nmi_control_t
+    {
+        bool pending{false};
+        uint8_t trigger_countdown{0};
+    } nmi_control;
+
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
-    cpu_callback_t callback{nullptr};
-    bool nmi_pending{false};
     VARIANT variant{NTSC};
     uint16_t pal_clock_buffer{0};
+    cpu_callback_t callback{nullptr};
 
     mem_t* memory{nullptr};
     
@@ -455,6 +460,8 @@ struct ppu_t
 
     mem_t* memory{nullptr};
     bool recently_power_on{false};
+    bool vblank_suppression{false};
+    bool allow_nmi{false};
     uint32_t frame_num{0};
     render_states render_state{render_states::pre_render_scanline};
     uint8_t  sprite_indices_next_scanline[8];

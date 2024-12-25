@@ -91,12 +91,13 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             case( 0x2002 ):
             { // PPUSTATUS < read
                 uint8_t value = ppu->regs.PPUSTATUS;
-                if (!peek) {
-                    // Clear vblank status bit
-                    ppu->regs.PPUSTATUS &= ~0x80;
-                    // Reset write toggle
-                    ppu_mem.w = 0;
-                }
+                if (peek) return value;
+                
+                // Clear vblank status bit and mute it briefly
+                ppu->vblank_suppression = true;
+                ppu->regs.PPUSTATUS &= ~0x80;
+                // Reset write toggle
+                ppu_mem.w = 0;
                 return value;
             } break;
             case( 0x2003 ):

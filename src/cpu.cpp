@@ -19,12 +19,14 @@ void cpu_t::init(cpu_callback_t cb, mem_t &mem)
     vectors.IRQBRK = peek_short( 0xFFFE );
 
     regs.SR = 0x24;
-    regs.A  = regs.X = regs.Y = 0x0;
+    regs.A  = regs.X = regs.Y = 0x00;
     regs.SP = 0xFD;
     regs.PC = vectors.RESET;
 
     cycles = 0u;
-    nmi_pending = false;
+
+    nmi_control.pending = false;
+    nmi_control.trigger_countdown = 0u;
 }
 
 uint16_t cpu_t::execute()
@@ -40,7 +42,10 @@ uint16_t cpu_t::execute()
     op_code.function(*this, op_code.addr_mode );
 
     // Has NMI occurred?
-    if (nmi_pending) nmi();
+    if ( nmi_control.pending && !nmi_control.trigger_countdown ) {
+        nmi_control.pending = false;
+        nmi();
+    }
 
     return delta_cycles;
 }
@@ -81,7 +86,6 @@ void cpu_t::nmi()
     push_byte_to_stack( regs.SR );
     regs.I  = 1;
     regs.PC = vectors.NMI;
-    nmi_pending = false;
 }
 
 uint8_t cpu_t::peek_byte( uint16_t address )
