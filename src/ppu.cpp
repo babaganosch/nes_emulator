@@ -97,6 +97,7 @@ RESULT ppu_t::init(mem_t &mem)
     recently_power_on = true;
 
     vblank_suppression = false;
+    frame_skip_suppression = false;
 
     allow_nmi = true;
 
@@ -127,9 +128,13 @@ RESULT ppu_t::execute()
     if (memory->cpu->nmi_control.trigger_countdown > 0) memory->cpu->nmi_control.trigger_countdown--;
 
     bool nmi_enable = BIT_CHECK_HI(regs.PPUCTRL, 7);
+    bool nmi_disabled = false;
     if (!old_nmi_enable && nmi_enable)
     {
         allow_nmi = true;
+    } else if (old_nmi_enable && !nmi_enable)
+    {
+        nmi_disabled = true;
     }
 
     if ( scanline == 261 )
@@ -143,10 +148,16 @@ RESULT ppu_t::execute()
 
         if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
-            if ( BIT_CHECK_HI(regs.PPUMASK, 3) && ((frame_num++ % 2) != 0) )
+
+            if ((frame_num++ % 2) != 0)
             {
-                x = 0;
-                y = 0;
+                // Note: I should probably check the transitions from 0->1 and 1->0 here (check the old values)
+                if (( BIT_CHECK_HI(regs.PPUMASK, 3) && !frame_skip_suppression ) ||
+                    ( BIT_CHECK_LO(regs.PPUMASK, 3) && frame_skip_suppression ))
+                {
+                    x = 0;
+                    y = 0;
+                }
             }
         }
     }
@@ -170,27 +181,30 @@ RESULT ppu_t::execute()
             // The VBlank flag of the PPU is set at tick 1 (the second tick) of
             // scanline 241, where the VBlank NMI also occurs.
             if ( !vblank_suppression ) 
-            { // If PPUSTATUS ($2002) is read this clock, block setting of vblank flag
+            { // If PPUSTATUS ($2002) is read this clock, suppress vblank flag
                 regs.PPUSTATUS |= 0x80;
             }
-        }
-        
-        if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
-            // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
-            memory->cpu->nmi_control.trigger_countdown = 5;
-            memory->cpu->nmi_control.pending = true;
-            allow_nmi = false;
         }
 
     }
 
-    if (memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 2 && vblank_suppression) {
-        memory->cpu->nmi_control.pending = false;
+    if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
+        // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
+        memory->cpu->nmi_control.trigger_countdown = 5;
+        memory->cpu->nmi_control.pending = true;
+        allow_nmi = false;
+    }
+
+    bool nmi_unstable = memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 2;
+    if ( nmi_unstable && (vblank_suppression || nmi_disabled)) {
+        // NMI can be interrupted if PPUSTATUS gets read just right before triggering or PPUCTRL NMI enable gets disabled
         memory->cpu->nmi_control.trigger_countdown = 0;
+        memory->cpu->nmi_control.pending = false;
     }
 
     old_nmi_enable = nmi_enable;
     vblank_suppression = false;
+    frame_skip_suppression = false;
 
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
