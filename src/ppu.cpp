@@ -140,6 +140,7 @@ RESULT ppu_t::execute()
     if ( scanline == 261 )
     { // Pre-render scanline (261)
         render_state = render_states::pre_render_scanline;
+
         if ( dot == 1 )
         { // vblank and sprite0 hit cleared at dot 1 of pre-render line.
             regs.PPUSTATUS &= ~0x80;
@@ -185,14 +186,16 @@ RESULT ppu_t::execute()
                 regs.PPUSTATUS |= 0x80;
             }
         }
-
     }
 
-    if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
-        // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
-        memory->cpu->nmi_control.trigger_countdown = 5;
-        memory->cpu->nmi_control.pending = true;
-        allow_nmi = false;
+    if ( render_state == render_states::vertical_blanking_line || render_state == render_states::pre_render_scanline)
+    { // Trigger NMI if PPUSTATUS & PPUCTRL permits
+        if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
+            // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
+            memory->cpu->nmi_control.trigger_countdown = 5;
+            memory->cpu->nmi_control.pending = true;
+            allow_nmi = false;
+        }
     }
 
     bool nmi_unstable = memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 2;

@@ -92,7 +92,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             { // PPUSTATUS < read
                 uint8_t value = ppu->regs.PPUSTATUS;
                 if (peek) return value;
-
+                
                 // Clear vblank status bit and mute it briefly
                 ppu->vblank_suppression = true;
                 ppu->regs.PPUSTATUS &= ~0x80;
