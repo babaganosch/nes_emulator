@@ -136,6 +136,7 @@ RESULT ppu_t::execute()
     {
         nmi_disabled = true;
     }
+    old_nmi_enable = nmi_enable;
 
     if ( scanline == 261 )
     { // Pre-render scanline (261)
@@ -145,6 +146,7 @@ RESULT ppu_t::execute()
         { // vblank and sprite0 hit cleared at dot 1 of pre-render line.
             regs.PPUSTATUS &= ~0x80;
             regs.PPUSTATUS &= ~0x40;
+            old_nmi_enable = false;
         }
 
         if ( dot == 339 )
@@ -192,9 +194,11 @@ RESULT ppu_t::execute()
     { // Trigger NMI if PPUSTATUS & PPUCTRL permits
         if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
             // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
-            memory->cpu->nmi_control.trigger_countdown = 5;
-            memory->cpu->nmi_control.pending = true;
-            allow_nmi = false;
+            if (!memory->cpu->nmi_control.pending) {
+                memory->cpu->nmi_control.trigger_countdown = 5;
+                memory->cpu->nmi_control.pending = true;
+                allow_nmi = false;
+            }
         }
     }
 
@@ -205,7 +209,6 @@ RESULT ppu_t::execute()
         memory->cpu->nmi_control.pending = false;
     }
 
-    old_nmi_enable = nmi_enable;
     vblank_suppression = false;
     frame_skip_suppression = false;
 
@@ -783,8 +786,8 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
         }
     }
 
-    // Hide weird artifact on first scanline
-    //if (scanline == 0) color = 0x0;
+    // Overscan
+    if (scanline < 8 || scanline >= NES_HEIGHT - 8 ) color = 0x0;
 
     // Render Pixel
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
