@@ -9,12 +9,8 @@
 namespace 
 {
 constexpr const char* nes_test_rom = "../data/nestest.nes";
-constexpr const uint16_t screen_multiplier = 2u;
-constexpr const uint16_t screen_width  = NES_WIDTH * screen_multiplier;
-constexpr const uint16_t screen_height = NES_HEIGHT * screen_multiplier;
-constexpr const uint32_t window_buffer_size = screen_width * screen_height;
+constexpr const uint16_t screen_multiplier = 3u;
 
-uint32_t front_buffer[ window_buffer_size ];
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
@@ -124,7 +120,7 @@ int main(int argc, char *argv[])
             struct mfb_window *nt_window = 0x0;
             nes::clear_window_buffer( 255, 0, 0 );
             
-            window = mfb_open_ex( "NesScape", screen_width, screen_height, WF_RESIZABLE );
+            window = mfb_open_ex( "NesScape", NES_WIDTH * screen_multiplier, NES_HEIGHT * screen_multiplier, WF_RESIZABLE );
             mfb_set_target_fps( 60 );
             mfb_set_user_data( window, (void*)&emu );
             mfb_set_keyboard_callback(window, keyboard_callback);
@@ -161,20 +157,10 @@ int main(int argc, char *argv[])
                     nes::clear_nt_window_buffer( 255, 0, 0 );
                     nes::dump_nametables(emu);
                     
-                    int32_t state = mfb_update_ex( nt_window, nes::nt_window_buffer, NES_WIDTH * 2, NES_HEIGHT * 2 );
-                    if ( state < 0 ) break;
+                    if ( mfb_update_ex( nt_window, nes::nt_window_buffer, NES_WIDTH * 2, NES_HEIGHT * 2) < 0 ) break;
                 }
 
-                for ( uint16_t x = 0; x < screen_width; ++x )
-                for ( uint16_t y = 0; y < screen_height; ++y )
-                { // Blit contents to "front buffer"
-                    auto xx = x / screen_multiplier;
-                    auto yy = ( y / screen_multiplier ) * NES_WIDTH;
-                    front_buffer[ (y * screen_width) + x ] = nes::window_buffer[ yy + xx ];
-                }
-
-                int32_t state = mfb_update_ex( window, front_buffer, screen_width, screen_height );
-                if ( state < 0 ) break;
+                if ( mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT ) < 0 ) break;
             } while (mfb_wait_sync( window ));
             mfb_close( window );
             printf("Exiting gracefully...\n");

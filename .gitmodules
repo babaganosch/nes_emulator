@@ -4,3 +4,6 @@
 [submodule "thirdparty/imgui"]
 	path = thirdparty/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "thirdparty/miniaudio"]
+	path = thirdparty/miniaudio
+	url = https://github.com/mackron/miniaudio.git
