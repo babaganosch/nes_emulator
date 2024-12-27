@@ -86,6 +86,7 @@ inline uint8_t palette_id_to_blue(uint32_t id)
 }
 
 static bool old_nmi_enable = false;
+static bool allow_nmi = false;
 } // anonymous
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
@@ -98,8 +99,6 @@ RESULT ppu_t::init(mem_t &mem)
 
     vblank_suppression = false;
     frame_skip_suppression = false;
-
-    allow_nmi = true;
 
     frame_num = 0;
     cycles = 0;
@@ -128,14 +127,8 @@ RESULT ppu_t::execute()
     if (memory->cpu->nmi_control.trigger_countdown > 0) memory->cpu->nmi_control.trigger_countdown--;
 
     bool nmi_enable = BIT_CHECK_HI(regs.PPUCTRL, 7);
-    bool nmi_disabled = false;
-    if (!old_nmi_enable && nmi_enable)
-    {
-        allow_nmi = true;
-    } else if (old_nmi_enable && !nmi_enable)
-    {
-        nmi_disabled = true;
-    }
+    bool nmi_disabled = (old_nmi_enable && !nmi_enable);
+    allow_nmi |= (!old_nmi_enable && nmi_enable);
     old_nmi_enable = nmi_enable;
 
     if ( scanline == 261 )
@@ -156,7 +149,7 @@ RESULT ppu_t::execute()
             {
                 // Note: I should probably check the transitions from 0->1 and 1->0 here (check the old values)
                 if (( BIT_CHECK_HI(regs.PPUMASK, 3) && !frame_skip_suppression ) ||
-                    ( BIT_CHECK_LO(regs.PPUMASK, 3) && frame_skip_suppression ))
+                    ( BIT_CHECK_LO(regs.PPUMASK, 3) &&  frame_skip_suppression ))
                 {
                     x = 0;
                     y = 0;
@@ -406,7 +399,7 @@ void ppu_t::v_update_inc_vert_v()
 void ppu_t::v_update_hori_v_eq_hori_t()
 {
     // v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
-    uint16_t mask = 0b1111101111100000; // (note: 15 bits, not 16.  Highest bit is 1 here)
+    uint16_t mask = 0b111101111100000; // (note: 15 bits, not 16.)
     memory->ppu_mem.v.data &= mask;
     memory->ppu_mem.v.data |= (memory->ppu_mem.t.data & ~mask);
 }
@@ -414,7 +407,7 @@ void ppu_t::v_update_hori_v_eq_hori_t()
 void ppu_t::v_update_vert_v_eq_vert_t()
 {
     // v: GHIA.BC DEF..... <- t: GHIA.BC DEF.....
-    uint16_t mask = 0b1000010000011111; // (note: 15 bits, not 16.  Highest bit is 1 here)
+    uint16_t mask = 0b000010000011111; // (note: 15 bits, not 16.)
     memory->ppu_mem.v.data &= mask;
     memory->ppu_mem.v.data |= (memory->ppu_mem.t.data & ~mask);
 }
@@ -492,20 +485,16 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 
                             if (is_8x16) {
                                 uint8_t& at = soam.arr2d[ soam_counter ][2];
-                                bool flip_y = BIT_CHECK_HI(at, 7);
 
                                 if (scanline > yy + 7) 
                                 { // bot tile
                                     yy -= 8;
-                                    if (flip_y) {
-                                        yy += 16;
-                                    }
-                                } 
-                                else
-                                { // top tile
-                                    if (flip_y) {
-                                        yy += 16;
-                                    }
+                                    
+                                }
+                                
+                                if (BIT_CHECK_HI(at, 7)) 
+                                { // flip y
+                                    yy += 16;
                                 }
                             }
 

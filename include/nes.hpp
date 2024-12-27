@@ -462,7 +462,6 @@ struct ppu_t
     bool recently_power_on{false};
     bool vblank_suppression{false};
     bool frame_skip_suppression{false};
-    bool allow_nmi{false};
     uint32_t frame_num{0};
     render_states render_state{render_states::pre_render_scanline};
     uint8_t  sprite_indices_next_scanline[8];
