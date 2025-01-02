@@ -8,9 +8,14 @@ namespace nes
 namespace
 {
 emu_t* emulator_ref;
-void cpu_clock_callback(void *cookie)
+void callback_execute_ppu(void *cookie)
 {
     emulator_ref->ppu.execute();
+}
+
+void callback_execute_apu(void *cookie)
+{
+    emulator_ref->apu.execute();
 }
 
 } // anonymous
@@ -32,8 +37,9 @@ void emu_t::init(ines_rom_t &rom)
     LOG_D("Emulator instantiated %u mappers", mappers_instantiated);
 
     memory.init( rom );
-    cpu.init( &cpu_clock_callback, memory );
+    cpu.init( &callback_execute_ppu, &callback_execute_apu, memory );
     ppu.init( memory );
+    apu.init( memory );
 }
 
 RESULT emu_t::step_cycles(int32_t cycles)

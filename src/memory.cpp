@@ -92,7 +92,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
             { // PPUSTATUS < read
                 uint8_t value = ppu->regs.PPUSTATUS;
                 if (peek) return value;
-                
+
                 // Clear vblank status bit and mute it briefly
                 ppu->vblank_suppression = true;
                 ppu->regs.PPUSTATUS &= ~0x80;
@@ -327,15 +327,53 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             return;
         }
 
-        // todo take care of cycles here, somehow!
         // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
         // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
         memcpy( ppu_mem.oam.data, source, 256 );
+        uint16_t wait_cycles = 513 + (cpu->cycles % 2) == 0 ? 0 : 1;
+        cpu->tick_clock( wait_cycles );
         return;
     }
 
     else if ( address < 0x4020 )
     { // apu and I/O registers
+
+        if ( address < 0x4004 )
+        { // Pulse 1
+            apu->pulse_1.write( address, value );
+            return;
+        } else if ( address < 0x4008 )
+        { // Pulse 2
+            apu->pulse_2.write( address, value );
+            return;
+        } else if ( address == 0x4015 )
+        { // Status
+            apu->status.data = value;
+
+            // TODO: Change in APU instead
+
+            // Pulse 1
+            if (apu->status.pulse_1 == 0) 
+            {
+                apu->pulse_1.muted = true;
+                apu->pulse_1.length_counter = 0;
+            } else {
+                apu->pulse_1.muted = false;
+            }
+
+            // Pulse 2
+            if (apu->status.pulse_2 == 0) 
+            {
+                apu->pulse_2.muted = true;
+                apu->pulse_2.length_counter = 0;
+            } else {
+                apu->pulse_2.muted = false;
+            }
+        } else if ( address == 0x4017 )
+        { // Frame Counter
+            apu->frame_counter.data = value;
+            // TODO: Change in APU instead
+        }
 
         if ( address == 0x4016 )
         {

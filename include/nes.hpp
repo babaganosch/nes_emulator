@@ -2,6 +2,7 @@
 #define NES_HPP
 
 #include <cstdint>
+#include <miniaudio.h>
 
 namespace nes
 {
@@ -285,13 +286,14 @@ struct cpu_t
     uint16_t delta_cycles{0};
     VARIANT variant{NTSC};
     uint16_t pal_clock_buffer{0};
-    cpu_callback_t callback{nullptr};
+    cpu_callback_t ppu_callback{nullptr};
+    cpu_callback_t apu_callback{nullptr};
 
     mem_t* memory{nullptr};
     
     void tick_clock();
-    void tick_clock( uint8_t cycles );
-    void init(cpu_callback_t cb, mem_t &mem);
+    void tick_clock( uint16_t cycles );
+    void init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem);
     void nmi();
     uint16_t execute();
 
@@ -483,14 +485,139 @@ struct ppu_t
     void v_update_vert_v_eq_vert_t();
     void reload_shift_registers();
     
-    RESULT init(mem_t &mem);
-    RESULT execute();
+    void init(mem_t &mem);
+    void execute();
+};
+
+struct oscillator_t
+{
+    oscillator_t( ma_waveform_type type );
+    ~oscillator_t();
+    
+    void change_volume( double volume );
+    void change_frequency( double frequency, bool reset_phase );
+
+    ma_waveform wave;
+    ma_device_config deviceConfig;
+    ma_device device;
+    ma_waveform_config waveConfig;
+};
+
+struct apu_t
+{
+    ~apu_t();
+
+    struct pulse_t {
+        union
+        { // 0x4000  /  0x4004
+            struct __attribute__((packed))
+            {
+                uint8_t volume              : 4;
+                uint8_t constant_volume     : 1;
+                uint8_t length_counter_halt : 1;
+                uint8_t duty                : 2;
+            };
+            uint8_t data{0};
+        } envelope;
+
+        union
+        { // 0x4001  /  0x4005
+            struct __attribute__((packed))
+            {
+                uint8_t shift   : 3;
+                uint8_t negate  : 1;
+                uint8_t divider : 3;
+                uint8_t enable  : 1;
+            };
+            uint8_t data{0};
+        } sweep;
+
+        // 0x4002  /  0x4006
+        uint8_t timer_low{0};
+
+        union
+        { // 0x4003  /  0x4007
+            struct __attribute__((packed))
+            {
+                uint8_t timer_high : 3;
+                uint8_t load       : 5;
+            };
+            uint8_t data{0};
+        } length_counter_load;
+
+        enum class playback_mode_t
+        {
+            one_shot = 0,
+            looping  = 1  // length counter halt
+        };
+
+        enum class volume_mode_t
+        {
+            envelope = 0,
+            constant = 1
+        };
+
+        void write( uint16_t address, uint8_t value );
+        void tick_length_counter();
+        void tick_envelope();
+        void tick_sweep( bool two_compliment );
+
+        uint8_t envelope_divider{0};
+        uint8_t sweep_divider{0};
+        uint16_t length_counter{0};
+        uint16_t raw_period{0};
+        playback_mode_t playback_mode;
+        volume_mode_t volume_mode;
+        bool muted{false};
+        oscillator_t* oscillator{nullptr};
+    };
+
+    union
+    { // 0x4015
+        struct __attribute__((packed))
+        {
+            uint8_t pulse_1  : 1;
+            uint8_t pulse_2  : 1;
+            uint8_t triangle : 1;
+            uint8_t noise    : 1;
+            uint8_t dmc      : 1;
+            uint8_t unused   : 3;
+        }; // For write-only
+        uint8_t data{0};
+    } status;
+
+    union
+    { // 0x4017
+        struct __attribute__((packed))
+        {
+            uint8_t unused            : 6;
+            uint8_t interrupt_inhibit : 1;
+            uint8_t sequencer_mode    : 1;
+        };
+        uint8_t data{0};
+    } frame_counter;
+
+    void init(mem_t &mem);
+    void execute();
+
+    pulse_t pulse_1;
+    pulse_t pulse_2;
+
+    mem_t* memory{nullptr};
+    uint16_t cycle{0};
+    
+
+    oscillator_t* triangle{nullptr};
+    oscillator_t* noise{nullptr};
+    oscillator_t* dmc{nullptr};
+
 };
 
 struct emu_t
 {
     cpu_t cpu;
     ppu_t ppu;
+    apu_t apu;
     mem_t memory;
 
     void init(ines_rom_t &rom);

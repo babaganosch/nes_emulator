@@ -91,7 +91,7 @@ static bool allow_nmi = false;
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
 
-RESULT ppu_t::init(mem_t &mem)
+void ppu_t::init(mem_t &mem)
 {
     memory = &mem;
     memory->ppu = this;
@@ -109,10 +109,10 @@ RESULT ppu_t::init(mem_t &mem)
     regs.PPUSTATUS = 0x00;
     regs.OAMADDR = 0x00;
 
-    return RESULT_OK;
+    LOG_I("PPU initiated successfully");
 }
 
-RESULT ppu_t::execute()
+void ppu_t::execute()
 {
     cycles++;
 
@@ -208,8 +208,6 @@ RESULT ppu_t::execute()
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
     render_pixel( dot, scanline );
-    
-    return RESULT_OK;
 }
 
 void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )

@@ -7,9 +7,10 @@
 namespace nes
 {
 
-void cpu_t::init(cpu_callback_t cb, mem_t &mem)
+void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem)
 {
-    callback = cb;
+    ppu_callback = ppu_cb;
+    apu_callback = apu_cb;
     memory = &mem;
     memory->cpu = this;
 
@@ -55,24 +56,28 @@ void cpu_t::tick_clock()
     delta_cycles++;
     cycles++;
     memory->cpu_cycles = cycles;
-    if (callback)
+    if (ppu_callback)
     { // NTSC PPU runs at 3x the CPU clock speed
-        callback(nullptr);
-        callback(nullptr);
-        callback(nullptr);
+        ppu_callback(nullptr);
+        ppu_callback(nullptr);
+        ppu_callback(nullptr);
         if (variant == PAL)
         { // PAL PPU runs at 3.2x the CPU clock speed
             pal_clock_buffer++;
             if (pal_clock_buffer >= 5)
             {
-                callback(nullptr);
+                ppu_callback(nullptr);
                 pal_clock_buffer = 0;
             }
         }
     }
+    if (apu_callback)
+    {
+        apu_callback(nullptr);
+    }
 }
 
-void cpu_t::tick_clock( uint8_t ticks )
+void cpu_t::tick_clock( uint16_t ticks )
 {
     while ( ticks-- > 0 )
     {
