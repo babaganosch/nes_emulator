@@ -146,6 +146,7 @@ struct ppu_mem_t
             uint16_t fine_y    : 3;
             uint16_t padding   : 1;
         };
+        uint8_t  entry;
         uint16_t data{0};
     };
 
@@ -286,6 +287,8 @@ struct cpu_t
     uint16_t delta_cycles{0};
     VARIANT variant{NTSC};
     uint16_t pal_clock_buffer{0};
+    bool irq_pending{false};
+    bool irq_inhibit{false};
     cpu_callback_t ppu_callback{nullptr};
     cpu_callback_t apu_callback{nullptr};
 
@@ -295,6 +298,7 @@ struct cpu_t
     void tick_clock( uint16_t cycles );
     void init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem);
     void nmi();
+    void irq();
     uint16_t execute();
 
     uint8_t  peek_byte( uint16_t address );
@@ -565,10 +569,14 @@ struct apu_t
         uint8_t envelope_divider{0};
         uint8_t sweep_divider{0};
         uint16_t length_counter{0};
+        bool length_counter_halt{false};
         uint16_t raw_period{0};
         playback_mode_t playback_mode;
         volume_mode_t volume_mode;
+
         bool muted{false};
+        bool start_flag{false};
+        bool sweep_reload{false};
         oscillator_t* oscillator{nullptr};
     };
 
@@ -576,13 +584,25 @@ struct apu_t
     { // 0x4015
         struct __attribute__((packed))
         {
-            uint8_t pulse_1  : 1;
-            uint8_t pulse_2  : 1;
-            uint8_t triangle : 1;
-            uint8_t noise    : 1;
-            uint8_t dmc      : 1;
-            uint8_t unused   : 3;
+            uint8_t w_pulse_1  : 1;
+            uint8_t w_pulse_2  : 1;
+            uint8_t w_triangle : 1;
+            uint8_t w_noise    : 1;
+            uint8_t w_dmc      : 1;
+            uint8_t w_unused   : 3;
         }; // For write-only
+
+        struct __attribute__((packed))
+        {
+            uint8_t r_pulse_1  : 1;
+            uint8_t r_pulse_2  : 1;
+            uint8_t r_triangle : 1;
+            uint8_t r_noise    : 1;
+            uint8_t r_dmc      : 1;
+            uint8_t r_unused   : 1;
+            uint8_t r_frame_interrupt : 1;
+            uint8_t r_dmc_interrupt   : 1;
+        }; // For read-only
         uint8_t data{0};
     } status;
 
@@ -599,14 +619,17 @@ struct apu_t
 
     void init(mem_t &mem);
     void execute();
+    void quarter_frame();
+    void half_frame();
 
     pulse_t pulse_1;
     pulse_t pulse_2;
 
     mem_t* memory{nullptr};
     uint16_t cycle{0};
+    uint8_t reset_frame_counter{0};
+    bool frame_interrupt{false};
     
-
     oscillator_t* triangle{nullptr};
     oscillator_t* noise{nullptr};
     oscillator_t* dmc{nullptr};

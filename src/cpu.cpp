@@ -29,11 +29,12 @@ void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem)
     nmi_control.pending = false;
     nmi_control.trigger_countdown = 0u;
 }
-
+static int debug_run = 0;
 uint16_t cpu_t::execute()
 {
     // Reset CPU instruction delta
     delta_cycles = 0u;
+    debug_run++;
 
     // Fetch instruction
     uint8_t ins_num = fetch_byte( regs.PC++ );
@@ -46,8 +47,12 @@ uint16_t cpu_t::execute()
     if ( nmi_control.pending && !nmi_control.trigger_countdown ) {
         nmi_control.pending = false;
         nmi();
+    } else if ( irq_pending && irq_inhibit == 0 ) {
+        irq_pending = false;
+        irq();
     }
 
+    irq_inhibit = regs.I;
     return delta_cycles;
 }
 
@@ -91,6 +96,14 @@ void cpu_t::nmi()
     push_byte_to_stack( regs.SR );
     regs.I  = 1;
     regs.PC = vectors.NMI;
+}
+
+void cpu_t::irq()
+{ // interrupt request
+    push_short_to_stack( regs.PC );
+    push_byte_to_stack( regs.SR );
+    regs.I  = 1;
+    regs.PC = vectors.IRQBRK;
 }
 
 uint8_t cpu_t::peek_byte( uint16_t address )

@@ -1233,7 +1233,7 @@ OP_FUNCTION(RTI)
     uint8_t status = cpu.pull_byte_from_stack();
     cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
     uint16_t new_pc = cpu.pull_short_from_stack();
-    cpu.regs.PC = new_pc;    
+    cpu.regs.PC = new_pc;
 }
 
 /////////////////////////////////////////////////////////

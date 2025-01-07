@@ -68,14 +68,12 @@ oscillator_t::~oscillator_t()
 
 void oscillator_t::change_volume( double volume )
 {
-    volume = volume > 0.4 ? 0.4 : volume;
+    volume = volume > 1.0 ? 1.0 : volume;
     ma_waveform_set_amplitude( &wave, volume );
 }
 
 void oscillator_t::change_frequency( double frequency, bool reset_phase )
 {
-    frequency = frequency < 50 ? 50 : frequency;
-    frequency = frequency > 1600 ? 1600 : frequency;
     if (reset_phase) ma_waveform_seek_to_pcm_frame( &wave, 0 );
     ma_waveform_set_frequency( &wave, frequency);
 }
@@ -102,6 +100,7 @@ void apu_t::pulse_t::write( uint16_t address, uint8_t value )
         case ( 0x1 ): 
         { // Sweep
             sweep.data = value;
+            sweep_reload = true;
         } break;
         case ( 0x2 ): 
         { // Timer low
@@ -112,79 +111,91 @@ void apu_t::pulse_t::write( uint16_t address, uint8_t value )
             oscillator->change_frequency( freq, false );
         } break;
         case ( 0x3 ): 
-        { // Length counter
+        { // Length counter load
             length_counter_load.data = value;
             uint16_t t = (length_counter_load.timer_high << 8) | timer_low;
             raw_period = t;
-            if (!muted) length_counter = length_counter_lut[length_counter_load.load];
+            if (!muted) length_counter = length_counter_lut[length_counter_load.load]; // +1 to mute on zero?
             float freq = CPU_FREQ_NTCS / (16.0 * (t+1));
             oscillator->change_frequency( freq, true );
+            start_flag = true;
         } break;
     }
 }
 
 void apu_t::pulse_t::tick_length_counter()
 {
-    if (!muted && length_counter > 0 && playback_mode == playback_mode_t::one_shot)
+    if (!muted && length_counter > 0 && !envelope.length_counter_halt)
     {
         length_counter--;
     }
+
+    //length_counter_halt = length_counter == 0 || envelope.length_counter_halt || muted;
 }
 
 void apu_t::pulse_t::tick_sweep( bool two_compliment )
 {
     // Calculate the period
-    if (sweep.enable)
+    if (sweep_divider == 0 && sweep.shift > 0)
     {
-        uint8_t temp = sweep.shift;
-        uint8_t count = 0;
-        while (temp > 0)
-        {
-            count++;
-            temp >>= 1;
-        }
-        uint16_t change_amount = raw_period >> count;
+        uint16_t change_amount = raw_period >> sweep.shift;
+        
         if (sweep.negate) {
             change_amount = ~change_amount;
-            change_amount += two_compliment;
+            change_amount += two_compliment ? 1 : 0;
+            change_amount &= 0x7FF;
         }
-        raw_period = raw_period + change_amount;
-        if (raw_period & 0x8000) raw_period = 0; // Result went negative
+        raw_period += change_amount;
+        raw_period &= 0x7FF;
     }
 
     // Update the period
+    // 1.
     if (sweep_divider == 0 && sweep.enable && sweep.shift > 0)
     {
         if (raw_period >= 8 && raw_period <= 0x7FF)
         { // Should set period and not mute
             float freq = CPU_FREQ_NTCS / (16.0 * (raw_period+1));
-            oscillator->change_frequency( freq, true );
+            oscillator->change_frequency( freq, false );
         }
-    } else if (sweep_divider == 0)
+    }
+    
+    // 2.
+    if (sweep_divider == 0 || sweep_reload)
     {
         sweep_divider = sweep.divider;
+        sweep_reload = false;
     } else
     {
         sweep_divider--;
     }
+    
 }
 
 void apu_t::pulse_t::tick_envelope()
 {
-    if (envelope_divider > 0)
+    if (start_flag)
     {
-        if (--envelope_divider == 0)
+        envelope_divider = 15;
+        start_flag = false;
+    } else
+    {
+        if (envelope_divider > 0)
         {
-            if (playback_mode == playback_mode_t::looping)
+            if (--envelope_divider == 0)
             {
-                envelope_divider = 15;
-            } else
-            {
-                envelope_divider = 0;
+                if (playback_mode == playback_mode_t::looping)
+                {
+                    envelope_divider = 15;
+                } else
+                {
+                    envelope_divider = 0;
+                }
             }
         }
     }
 
+    // Move to mixer.
     if (muted || length_counter == 0 || raw_period < 8 || raw_period > 0x7FF)
     {
         oscillator->change_volume( 0 );
@@ -205,77 +216,100 @@ void apu_t::init(mem_t &mem)
     if (!pulse_1.oscillator) pulse_1.oscillator = new oscillator_t( ma_waveform_type_square );
     if (!pulse_2.oscillator) pulse_2.oscillator = new oscillator_t( ma_waveform_type_square );
     
+    cycle = 8; // Power up shenanigans
     LOG_I("APU initiated successfully");
-    
+
+}
+
+void apu_t::quarter_frame()
+{
+    pulse_1.tick_envelope();
+    pulse_2.tick_envelope();
+}
+
+void apu_t::half_frame()
+{
+    pulse_1.tick_sweep( false );
+    pulse_2.tick_sweep( true );
+    pulse_1.tick_length_counter();
+    pulse_2.tick_length_counter();
 }
 
 void apu_t::execute()
 {
     // Run the sequencer
     // NTSC timings
+
+    // Phase reset, todo?
+    //if (pulse_1.start_flag || pulse_2.start_flag) {
+        //cycle = frame_counter.sequencer_mode == 0 ? 29828 : 37280;
+    //}
     uint16_t clock = cycle++;
+
+    if (reset_frame_counter > 0 && --reset_frame_counter == 0)
+    {
+        cycle = 0;
+        clock = 0;
+        if (frame_counter.sequencer_mode == 1) {
+            quarter_frame();
+            half_frame();
+        }
+    }
+
     if (frame_counter.sequencer_mode == 0)
     { // Four steps
-        if (clock == 7457)
+        if (clock == 7456)
         { // 1
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock == 14913)
+            quarter_frame();
+        } else if (clock == 14912)
         { // 2
-            pulse_1.tick_length_counter();
-            pulse_2.tick_length_counter();
-            pulse_1.tick_sweep( false );
-            pulse_2.tick_sweep( true );
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock == 22371)
+            half_frame();
+            quarter_frame();
+        } else if (clock == 22370)
         { // 3
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock == 29828)
+            quarter_frame();
+        } else if (clock == 29827)
         { // 4.1
-            
-        } else if (clock == 29829)
+            if (frame_counter.interrupt_inhibit == 0)
+            {
+                frame_interrupt = true;
+            }
+        } else if (clock == 29828)
         { // 4.2
-            pulse_1.tick_length_counter();
-            pulse_2.tick_length_counter();
-            pulse_1.tick_sweep( false );
-            pulse_2.tick_sweep( true );
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock >= 29830) 
+            half_frame();
+            quarter_frame();
+            if (frame_counter.interrupt_inhibit == 0)
+            {
+                frame_interrupt = true;
+            }
+        } else if (clock >= 29829)
         { // 4.3
             cycle = 0;
+            if (frame_counter.interrupt_inhibit == 0)
+            {
+                frame_interrupt = true;
+                memory->cpu->irq_pending = true;
+            }
         }
     } else
     { // Five steps
-        if (clock == 7457)
+        if (clock == 7456)
         { // 1
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock == 14913)
+            quarter_frame();
+        } else if (clock == 14912) // 912
         { // 2
-            pulse_1.tick_length_counter();
-            pulse_2.tick_length_counter();
-            pulse_1.tick_sweep( false );
-            pulse_2.tick_sweep( true );
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock == 22371)
+            half_frame();
+            quarter_frame();
+        } else if (clock == 22370)
         { // 3
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
+            quarter_frame();
         } 
         // 4 (empty)
-        else if (clock == 37281)
+        else if (clock == 37280)
         { // 5
-            pulse_1.tick_length_counter();
-            pulse_2.tick_length_counter();
-            pulse_1.tick_sweep( false );
-            pulse_2.tick_sweep( true );
-            pulse_1.tick_envelope();
-            pulse_2.tick_envelope();
-        } else if (clock >= 37282) cycle = 0;
+            half_frame();
+            quarter_frame();
+        } else if (clock >= 37281) cycle = 0;
     }
 }
 
