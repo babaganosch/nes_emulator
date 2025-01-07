@@ -150,15 +150,14 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
     else if ( address == 0x4015 )
     { // APU Status 
         // Move to APU as well
-        apu->status.r_pulse_1 = !apu->pulse_1.envelope.length_counter_halt && apu->pulse_1.length_counter > 0 ? 1 : 0;
-        apu->status.r_pulse_2 = !apu->pulse_2.envelope.length_counter_halt && apu->pulse_2.length_counter > 0 ? 1 : 0;
+        apu->status.r_pulse_1 = apu->pulse_1.length_counter > 0 && !apu->pulse_1.muted ? 1 : 0;
+        apu->status.r_pulse_2 = apu->pulse_2.length_counter > 0 && !apu->pulse_2.muted ? 1 : 0;
 
         if (apu->frame_interrupt) apu->status.r_frame_interrupt = 1;
         else apu->status.r_frame_interrupt = 0;
         
         uint8_t status = apu->status.data;
         apu->frame_interrupt = 0;
-        LOG_D("read %02X", apu->status.data & 0b11);
         return status;
     }
 
@@ -356,12 +355,10 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         if ( address < 0x4004 )
         { // Pulse 1
             apu->pulse_1.write( address, value );
-            if (apu->pulse_1.envelope.length_counter_halt) LOG_E("P1 mute cycle: %u", apu->cycle);
             return;
         } else if ( address < 0x4008 )
         { // Pulse 2
             apu->pulse_2.write( address, value );
-            if (apu->pulse_2.envelope.length_counter_halt) LOG_E("P2 mute cycle: %u", apu->cycle);
             return;
         } else if ( address == 0x4015 )
         { // Status

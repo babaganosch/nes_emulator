@@ -125,12 +125,10 @@ void apu_t::pulse_t::write( uint16_t address, uint8_t value )
 
 void apu_t::pulse_t::tick_length_counter()
 {
-    if (!muted && length_counter > 0 && !envelope.length_counter_halt)
+    if (!muted && length_counter > 0 && length_counter_halt == 0)
     {
         length_counter--;
     }
-
-    //length_counter_halt = length_counter == 0 || envelope.length_counter_halt || muted;
 }
 
 void apu_t::pulse_t::tick_sweep( bool two_compliment )
@@ -311,6 +309,11 @@ void apu_t::execute()
             quarter_frame();
         } else if (clock >= 37281) cycle = 0;
     }
+
+
+    // TODO: Move in to some kind of post-cycle function (halt flag is set at the end of the tick?)
+    pulse_1.length_counter_halt = pulse_1.envelope.length_counter_halt;
+    pulse_2.length_counter_halt = pulse_2.envelope.length_counter_halt;
 }
 
 
