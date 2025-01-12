@@ -81,7 +81,7 @@ void apu_t::pulse_t::write( uint16_t address, uint8_t value )
         { // Length counter load
             length_counter_load.data = value;
             period = (length_counter_load.timer_high << 8) | timer_low;
-            length_counter_tmp = length_counter_lut[length_counter_load.load]; // +1 to mute on zero?
+            length_counter_tmp = length_counter_lut[length_counter_load.load];
             float freq = CPU_FREQ_NTCS / (16.0 * (period+1));
             oscillator->change_frequency( freq, true );
             start_flag = true;
@@ -142,26 +142,28 @@ void apu_t::pulse_t::tick_sweep( bool two_compliment )
 
 void apu_t::pulse_t::tick_envelope()
 {
-    if (start_flag)
-    {
-        envelope_divider = 15;
-        start_flag = false;
-    } else
+    if (!start_flag)
     {
         if (envelope_divider > 0)
-        {
-            if (--envelope_divider == 0)
+        { 
+            envelope_divider--;
+        } else 
+        { // clocked at zero
+            envelope_divider = envelope.volume;
+            // decay is clocked
+            if (envelope_decay > 0)
             {
-                if (length_counter_halt == 1)
-                { // Looping
-                    //envelope_decay = 15;
-                    envelope_divider = 15; //envelope.volume;
-                } else
-                { // One-shot
-                    envelope_divider = 0;
-                }
+                envelope_decay--;
+            } else if (length_counter_halt == 1)
+            { // looping, reload!
+                envelope_decay = 15;
             }
         }
+    } else
+    {
+        start_flag = false;
+        envelope_decay = 15;
+        envelope_divider = envelope.volume;
     }
 
     // Move to mixer.
@@ -173,9 +175,8 @@ void apu_t::pulse_t::tick_envelope()
         oscillator->change_volume( envelope.volume / 15.0 );
     } else
     { // Envelope controlled volume
-        oscillator->change_volume( envelope_divider / 15.0 );
+        oscillator->change_volume( envelope_decay / 15.0 );
     }
-    //oscillator->change_volume( 0 );
 }
 
 

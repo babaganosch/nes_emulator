@@ -95,7 +95,7 @@ struct apu_t
         void tick_sweep( bool two_compliment );
 
         uint8_t envelope_divider{0};
-        uint8_t envelope_decay{0};
+        uint8_t envelope_decay{0xF};
         uint8_t sweep_divider{0};
         uint8_t length_counter{0};
         uint8_t length_counter_tmp{0};
