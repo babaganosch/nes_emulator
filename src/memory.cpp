@@ -152,6 +152,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         // Move to APU as well
         apu->status.r_pulse_1 = apu->pulse_1.length_counter > 0 && !apu->pulse_1.muted ? 1 : 0;
         apu->status.r_pulse_2 = apu->pulse_2.length_counter > 0 && !apu->pulse_2.muted ? 1 : 0;
+        apu->status.r_triangle = apu->triangle.length_counter > 0 && !apu->triangle.muted ? 1 : 0;
 
         if (apu->frame_interrupt) apu->status.r_frame_interrupt = 1;
         else apu->status.r_frame_interrupt = 0;
@@ -354,12 +355,15 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
 
         if ( address < 0x4004 )
         { // Pulse 1
-            apu->pulse_1.write( address, value );
-            return;
+            return apu->pulse_1.write( address, value );
         } else if ( address < 0x4008 )
         { // Pulse 2
-            apu->pulse_2.write( address, value );
-            return;
+            return apu->pulse_2.write( address, value );
+        } else if ( address < 0x400C )
+        {
+            return apu->triangle.write( address, value );
+        } else if ( address == 0x4010 )
+        {
         } else if ( address == 0x4015 )
         { // Status
             apu->status.data = value;
@@ -367,7 +371,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             // TODO: Change in APU instead
 
             // Pulse 1
-            if (apu->status.r_pulse_1 == 0) 
+            if (apu->status.w_pulse_1 == 0) 
             {
                 apu->pulse_1.muted = true;
                 apu->pulse_1.length_counter = 0;
@@ -376,12 +380,21 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             }
 
             // Pulse 2
-            if (apu->status.r_pulse_2 == 0) 
+            if (apu->status.w_pulse_2 == 0) 
             {
                 apu->pulse_2.muted = true;
                 apu->pulse_2.length_counter = 0;
             } else {
                 apu->pulse_2.muted = false;
+            }
+
+            // Triangle
+            if (apu->status.w_triangle == 0)
+            {
+                apu->triangle.muted = true;
+                apu->triangle.length_counter = 0;
+            } else {
+                apu->triangle.muted = false;
             }
 
         } else if ( address == 0x4017 )
