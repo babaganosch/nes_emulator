@@ -142,7 +142,12 @@ void apu_t::pulse_t::tick_sweep( bool two_compliment )
 
 void apu_t::pulse_t::tick_envelope()
 {
-    if (!start_flag)
+    if (start_flag)
+    {
+        start_flag = false;
+        envelope_decay = 15;
+        envelope_divider = envelope.volume;
+    } else
     {
         if (envelope_divider > 0)
         { 
@@ -159,11 +164,6 @@ void apu_t::pulse_t::tick_envelope()
                 envelope_decay = 15;
             }
         }
-    } else
-    {
-        start_flag = false;
-        envelope_decay = 15;
-        envelope_divider = envelope.volume;
     }
 
     // Move to mixer.

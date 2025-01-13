@@ -29,29 +29,33 @@ void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem)
     nmi_control.pending = false;
     nmi_control.trigger_countdown = 0u;
 }
-static int debug_run = 0;
+
+static uint8_t old_ins = 0;
 uint16_t cpu_t::execute()
 {
     // Reset CPU instruction delta
     delta_cycles = 0u;
-    debug_run++;
 
     // Fetch instruction
-    uint8_t ins_num = fetch_byte( regs.PC++ );
+    current_instruction = fetch_byte( regs.PC++ );
+
+    // Check for IRQ
+    bool allow_irq = irq_pending && !(old_ins == 0x58 && current_instruction == 0x40); // not RTI after CLI
+    bool nmi_pending = nmi_control.pending;
     
     // Perform instruction
-    op_code_t& op_code = op_codes[ins_num];
+    op_code_t& op_code = op_codes[current_instruction];
     op_code.function(*this, op_code.addr_mode );
 
     // Has NMI occurred?
-    if ( nmi_control.pending && !nmi_control.trigger_countdown ) {
+    if ( nmi_pending && !nmi_control.trigger_countdown ) {
         nmi_control.pending = false;
         nmi();
-    } else if ( irq_pending && irq_inhibit == 0 ) {
-        irq_pending = false;
+    } else if ( allow_irq && irq_inhibit == 0) {
         irq();
     }
 
+    old_ins = current_instruction;
     irq_inhibit = regs.I;
     return delta_cycles;
 }
@@ -94,16 +98,30 @@ void cpu_t::nmi()
 { // non-maskable interrupt
     push_short_to_stack( regs.PC );
     push_byte_to_stack( regs.SR );
-    regs.I  = 1;
-    regs.PC = vectors.NMI;
+    // Set I, fetch low nibble
+    regs.I = 1;
+    regs.PC &= 0xFF00;
+    regs.PC |= vectors.NMI & 0x00FF;
+    tick_clock();
+    // Fetch high nibble
+    regs.PC &= 0x00FF;
+    regs.PC |= vectors.NMI & 0xFF00;
+    tick_clock();
 }
 
 void cpu_t::irq()
 { // interrupt request
     push_short_to_stack( regs.PC );
     push_byte_to_stack( regs.SR );
-    regs.I  = 1;
-    regs.PC = vectors.IRQBRK;
+    // Set I, fetch low nibble
+    regs.I = 1;
+    regs.PC &= 0xFF00;
+    regs.PC |= vectors.IRQBRK & 0x00FF;
+    tick_clock();
+    // Fetch high nibble
+    regs.PC &= 0x00FF;
+    regs.PC |= vectors.IRQBRK & 0xFF00;
+    tick_clock();
 }
 
 uint8_t cpu_t::peek_byte( uint16_t address )

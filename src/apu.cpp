@@ -112,7 +112,6 @@ void apu_t::execute()
             if (frame_counter.interrupt_inhibit == 0)
             {
                 frame_interrupt = true;
-                memory->cpu->irq_pending = true;
             }
         }
     } else
@@ -144,7 +143,7 @@ void apu_t::execute()
     if (pulse_1.length_counter_tmp > 0 && !pulse_1.muted) { pulse_1.length_counter = pulse_1.length_counter_tmp; } pulse_1.length_counter_tmp = 0;
     if (pulse_2.length_counter_tmp > 0 && !pulse_2.muted) { pulse_2.length_counter = pulse_2.length_counter_tmp; } pulse_2.length_counter_tmp = 0;
     if (triangle.length_counter_tmp > 0 && !triangle.muted) { triangle.length_counter = triangle.length_counter_tmp; } triangle.length_counter_tmp = 0;
-
+    memory->cpu->irq_pending = frame_interrupt;
 }
 
 

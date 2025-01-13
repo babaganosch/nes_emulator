@@ -106,7 +106,6 @@ void apu_t::triangle_t::tick_linear_counter()
     }
 
     // Move to mixer.
-    //LOG_D("%u %u %u", muted, length_counter, linear_counter);
     if (muted || length_counter == 0 || linear_counter == 0)
     {
         ma_device_stop(&oscillator->device);

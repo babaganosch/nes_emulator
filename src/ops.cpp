@@ -501,7 +501,7 @@ ADDRESS_MODE(accumulator)
 //////////////////////////////////////////// OPs
 OP_FUNCTION(___)
 {
-    LOG_E("UNIMPLEMENTED OP-CODE ENCOUNTERED!");
+    LOG_E("UNIMPLEMENTED OP-CODE ENCOUNTERED (0x%02X)!", cpu.current_instruction);
     throw;
 }
 
@@ -695,7 +695,14 @@ OP_FUNCTION(BRK)
     cpu.push_short_to_stack( cpu.regs.PC + 1 );
     cpu.push_byte_to_stack( cpu.regs.SR | 0x10 );
     cpu.regs.I  = 1;
-    cpu.regs.PC = cpu.vectors.NMI;
+    LOG_E("BRK!");
+    cpu.regs.PC &= 0xFF00;
+    cpu.regs.PC |= cpu.vectors.IRQBRK & 0x00FF;
+    cpu.tick_clock();
+    // Fetch high nibble
+    cpu.regs.PC &= 0x00FF;
+    cpu.regs.PC |= cpu.vectors.IRQBRK & 0xFF00;
+    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1234,6 +1241,11 @@ OP_FUNCTION(RTI)
     cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
     uint16_t new_pc = cpu.pull_short_from_stack();
     cpu.regs.PC = new_pc;
+
+    if (cpu.irq_pending && cpu.regs.I == 0)
+    { // IRQ queued, trigger it right away.
+        cpu.irq();
+    }
 }
 
 /////////////////////////////////////////////////////////

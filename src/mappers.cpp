@@ -92,21 +92,25 @@ void mapper_mmc1b_t::cpu_write( uint16_t address, uint8_t value ) {
             } else if ( address < 0xC000 )
             { // CHR Bank 0
                 u_int32_t size = chr_bank_mode == 0 ? CHR_8KB_SIZE : CHR_4KB_SIZE;
-                uint8_t bank = chr_bank_mode == 0 ? (pb & 0b11110) >> 1 : pb & 0b11111;
+                uint32_t  offset = chr_bank_mode == 0 ? 0 : (pb & 0b1 ? CHR_4KB_SIZE : 0);
+                uint8_t   bank = (pb & 0b11110) >> 1;
                 uint8_t** src = memory->ines_rom->chr_pages;
                 if (memory->ines_rom->header.chr_size == 0) 
                 { // CHR RAM
                     src = memory->ines_rom->prg_pages;
                 }
-                memcpy(memory->cartridge_mem.chr_rom.data, src[bank], size);
+                memcpy(memory->cartridge_mem.chr_rom.data, src[bank] + offset, size);
+                
             } else if ( address < 0xE000 )
             { // CHR Bank 1
                 uint8_t** src = memory->ines_rom->chr_pages;
+                uint32_t  offset = chr_bank_mode == 0 ? 0 : (pb & 0b1 ? CHR_4KB_SIZE : 0);
+                uint8_t   bank = (pb & 0b11110) >> 1;
                 if (memory->ines_rom->header.chr_size == 0) 
                 { // CHR RAM
                     src = memory->ines_rom->prg_pages;
                 }
-                memcpy(memory->cartridge_mem.chr_rom.chr_bank_4kb_upper, src[pb], CHR_4KB_SIZE);
+                memcpy(memory->cartridge_mem.chr_rom.chr_bank_4kb_upper, src[bank] + offset, CHR_4KB_SIZE);
             } else
             { // PRG bank
                 switch (prg_bank_mode)
