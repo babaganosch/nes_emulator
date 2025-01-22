@@ -501,7 +501,7 @@ ADDRESS_MODE(accumulator)
 //////////////////////////////////////////// OPs
 OP_FUNCTION(___)
 {
-    LOG_E("UNIMPLEMENTED OP-CODE ENCOUNTERED (0x%02X)!", cpu.current_instruction);
+    LOG_E("UNIMPLEMENTED OP-CODE ENCOUNTERED (0x%02X)!", cpu.cur_ins);
     throw;
 }
 
@@ -692,16 +692,18 @@ OP_FUNCTION(BPL)
 OP_FUNCTION(BRK)
 {
     addr_mode( cpu, true, false );
+    // Save return address and decide interrupt vector
     cpu.push_short_to_stack( cpu.regs.PC + 1 );
+    uint16_t vector = cpu.nmi_control.pending ? cpu.vectors.NMI : cpu.vectors.IRQBRK;
     cpu.push_byte_to_stack( cpu.regs.SR | 0x10 );
+    // Set I and fetch low nibble
     cpu.regs.I  = 1;
-    LOG_E("BRK!");
     cpu.regs.PC &= 0xFF00;
-    cpu.regs.PC |= cpu.vectors.IRQBRK & 0x00FF;
+    cpu.regs.PC |= vector & 0x00FF;
     cpu.tick_clock();
     // Fetch high nibble
     cpu.regs.PC &= 0x00FF;
-    cpu.regs.PC |= cpu.vectors.IRQBRK & 0xFF00;
+    cpu.regs.PC |= vector & 0xFF00;
     cpu.tick_clock();
 }
 
@@ -769,8 +771,8 @@ OP_FUNCTION(CLD)
 OP_FUNCTION(CLI)
 {
     addr_mode( cpu, false, false );
-    cpu.regs.I = 0;
     cpu.tick_clock();
+    cpu.regs.I = 0;
 }
 
 /////////////////////////////////////////////////////////
@@ -1324,8 +1326,8 @@ OP_FUNCTION(SED)
 OP_FUNCTION(SEI)
 {
     addr_mode( cpu, false, false );
-    cpu.regs.I = 1;
     cpu.tick_clock();
+    cpu.regs.I = 1;
 }
 
 /////////////////////////////////////////////////////////

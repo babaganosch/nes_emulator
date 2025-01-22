@@ -186,16 +186,16 @@ void ppu_t::execute()
     if ( render_state == render_states::vertical_blanking_line || render_state == render_states::pre_render_scanline)
     { // Trigger NMI if PPUSTATUS & PPUCTRL permits
         if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
-            // NMI seems to trigger about 5 PPU clocks post NMI trigger via PPU
+            // NMI seems unstable about 3 PPU clocks post NMI trigger via PPU
             if (!memory->cpu->nmi_control.pending) {
-                memory->cpu->nmi_control.trigger_countdown = 5;
+                memory->cpu->nmi_control.trigger_countdown = 3;
                 memory->cpu->nmi_control.pending = true;
                 allow_nmi = false;
             }
         }
     }
 
-    bool nmi_unstable = memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 2;
+    bool nmi_unstable = memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 0;
     if ( nmi_unstable && (vblank_suppression || nmi_disabled)) {
         // NMI can be interrupted if PPUSTATUS gets read just right before triggering or PPUCTRL NMI enable gets disabled
         memory->cpu->nmi_control.trigger_countdown = 0;

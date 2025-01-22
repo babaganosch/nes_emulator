@@ -7,44 +7,42 @@
 namespace nes
 {
 
-#define CPU_FREQ_NTCS 1789772
-#define CPU_FREQ_PAL  1662607
-
 #define DEVICE_FORMAT       ma_format_f32
 #define DEVICE_CHANNELS     2
-#define DEVICE_SAMPLE_RATE  48000
+#define DEVICE_SAMPLE_RATE  44100
+
+/*
+    48000 / 60 = 800 samples per frame
+    29781 / 800 = ~37.2
+
+    44100 / 60 = 745 samples per frame
+    29781 / 735 = ~40.5
+*/
 
 struct mem_t;
-void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
+
 extern const uint8_t length_counter_lut[];
 
-struct square_oscillator_t
+struct audio_interface_t
 {
-    square_oscillator_t();
-    ~square_oscillator_t();
+    audio_interface_t();
+    ~audio_interface_t();
     
-    void change_duty( double duty );
-    void change_volume( double volume );
-    void change_frequency( double frequency, bool reset_phase );
+    struct audio_data_t {
+        float* buffer{nullptr};
+        float  amplitude{0};
 
-    ma_pulsewave wave;
+        uint16_t size{0};
+        uint16_t read{0};   // read  index
+        uint16_t write{0};  // write index
+        uint16_t length{0}; // amount of stored samples
+    };
+
+    void load( float value );
+
+    audio_data_t data;
     ma_device_config deviceConfig;
     ma_device device;
-    ma_pulsewave_config waveConfig;
-};
-
-struct triangle_oscillator_t
-{
-    triangle_oscillator_t();
-    ~triangle_oscillator_t();
-    
-    void change_volume( double volume );
-    void change_frequency( double frequency );
-
-    ma_waveform wave;
-    ma_device_config deviceConfig;
-    ma_device device;
-    ma_waveform_config waveConfig;
 };
 
 struct apu_t
@@ -90,6 +88,7 @@ struct apu_t
         } length_counter_load;
 
         void write( uint16_t address, uint8_t value );
+        void tick();
         void tick_length_counter();
         void tick_envelope();
         void tick_sweep( bool two_compliment );
@@ -101,12 +100,16 @@ struct apu_t
         uint8_t length_counter_tmp{0};
 
         uint16_t period{0};
+        uint16_t timer{0};
+        uint8_t  amplitude{0};
+        uint8_t  volume{0};
+        uint8_t  duty{0b01111000};
+        uint8_t  duty_index{0};
 
         bool muted{false};
         bool start_flag{false};
         bool sweep_reload{false};
         bool length_counter_halt{false};
-        square_oscillator_t* oscillator{nullptr};
     };
 
     struct triangle_t {
@@ -136,19 +139,21 @@ struct apu_t
         } length_counter_load;
 
         void write( uint16_t address, uint8_t value );
+        void tick();
         void tick_linear_counter();
         void tick_length_counter();
 
         uint8_t linear_counter{0};
         uint8_t length_counter{0};
         uint8_t length_counter_tmp{0};
+
         uint16_t period{0};
+        uint16_t timer{0};
+        uint8_t  period_index{0};
 
         bool muted{false};
         bool linear_counter_reload{false};
         bool length_counter_halt{false};
-
-        triangle_oscillator_t* oscillator{nullptr};
     };
 
     union
@@ -188,6 +193,7 @@ struct apu_t
     } frame_counter;
 
     void init(mem_t &mem);
+    void mixer();
     void execute();
     void quarter_frame();
     void half_frame();
@@ -198,10 +204,13 @@ struct apu_t
     // noise
     // dmc
 
+    audio_interface_t* audio{nullptr};
+
     mem_t* memory{nullptr};
     uint16_t cycle{0};
     uint8_t reset_frame_counter{0};
     bool frame_interrupt{false};
+    float audio_sample_timer{0};
 
 };
 

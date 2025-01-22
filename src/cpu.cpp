@@ -30,32 +30,32 @@ void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem)
     nmi_control.trigger_countdown = 0u;
 }
 
-static uint8_t old_ins = 0;
 uint16_t cpu_t::execute()
 {
     // Reset CPU instruction delta
     delta_cycles = 0u;
 
     // Fetch instruction
-    current_instruction = fetch_byte( regs.PC++ );
+    uint8_t old_ins = cur_ins;
+    cur_ins = fetch_byte( regs.PC++ );
 
-    // Check for IRQ
-    bool allow_irq = irq_pending && !(old_ins == 0x58 && current_instruction == 0x40); // not RTI after CLI
-    bool nmi_pending = nmi_control.pending;
+    // Check for interrupts (ignore IRQ if CLI followed by RTI)
+    bool allow_irq = irq_pending && !(old_ins == 0x58 && cur_ins == 0x40);
+    bool nmi_pending = nmi_control.pending && nmi_control.trigger_countdown <= 1;
     
     // Perform instruction
-    op_code_t& op_code = op_codes[current_instruction];
+    op_code_t& op_code = op_codes[cur_ins];
     op_code.function(*this, op_code.addr_mode );
 
     // Has NMI occurred?
-    if ( nmi_pending && !nmi_control.trigger_countdown ) {
+    if ( nmi_pending ) {
         nmi_control.pending = false;
+        irq_pending = false;
         nmi();
     } else if ( allow_irq && irq_inhibit == 0) {
         irq();
     }
 
-    old_ins = current_instruction;
     irq_inhibit = regs.I;
     return delta_cycles;
 }
@@ -113,14 +113,20 @@ void cpu_t::irq()
 { // interrupt request
     push_short_to_stack( regs.PC );
     push_byte_to_stack( regs.SR );
+    uint16_t vector = vectors.IRQBRK;
+    if (nmi_control.pending)
+    { // IRQ hijacked by NMI
+        vector = vectors.NMI;
+        nmi_control.pending = false;
+    }
     // Set I, fetch low nibble
     regs.I = 1;
     regs.PC &= 0xFF00;
-    regs.PC |= vectors.IRQBRK & 0x00FF;
+    regs.PC |= vector & 0x00FF;
     tick_clock();
     // Fetch high nibble
     regs.PC &= 0x00FF;
-    regs.PC |= vectors.IRQBRK & 0xFF00;
+    regs.PC |= vector & 0xFF00;
     tick_clock();
 }
 

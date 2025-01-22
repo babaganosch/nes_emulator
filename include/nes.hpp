@@ -283,7 +283,7 @@ struct cpu_t
         uint8_t trigger_countdown{0};
     } nmi_control;
 
-    uint8_t  current_instruction{0};
+    uint8_t  cur_ins{0};
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
     VARIANT variant{NTSC};

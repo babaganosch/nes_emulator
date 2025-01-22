@@ -136,7 +136,10 @@ int main(int argc, char *argv[])
                 nes::clear_window_buffer( 255, 0, 0 );
 
                 // Run NES one frame (about 29786 cycles per frame for 60 FPS)
+                //emu.step_vblank();
                 emu.step_vblank();
+                //emu.step_cycles(29780 / 2);
+                //emu.step_cycles(29780);
 
                 if (debug)
                 {
