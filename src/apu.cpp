@@ -142,8 +142,7 @@ void apu_t::mixer()
     // Linear approximation
     float pulse_out = 0.00752 * (pulse_1.amplitude + pulse_2.amplitude);
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
-    (void) pulse_out;
-    float output = tnd_out;
+    float output = pulse_out + tnd_out;
 
     if (audio_sample_timer >= 38+extra) 
     { // Store a sample
