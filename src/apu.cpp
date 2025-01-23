@@ -4,6 +4,8 @@
 
 #include "nes.hpp"
 #include "logging.hpp"
+#include <atomic>
+#include <iostream>
 
 namespace nes
 {
@@ -18,42 +20,69 @@ const uint8_t length_counter_lut[32] = {
     0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16, 0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E  // 0x10 - 0x1F
 };
 
+//static float compensation = 1.0;
+std::atomic_int cycles_since_last{0};
+static int compensation_cycles = 3;
+
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
     float* pFramesOut = (float*)pOutput;
     audio_interface_t::audio_data_t* data = (audio_interface_t::audio_data_t*)pDevice->pUserData;
     float amplitude = data->amplitude;
 
+    void*  buffer;
+    float* tmp_buffer = data->tmp_buffer;
+    bool   freeze_frames = false;
+
+    LOG_D("drift: %u", ma_rb_pointer_distance(&data->ring_buffer));
+    std::cout << cycles_since_last << std::endl;
+    cycles_since_last.store(0);
+
+    ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
+    if (drift > 7000)
+    { // Correction of drift
+        compensation_cycles = 4;
+    } else if (drift < 4000)
+    {
+        compensation_cycles = 3;
+    }
+
+    size_t sizeInBytes = frameCount * sizeof(float);
+    if (ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS) {
+        //freeze_frames = true;
+    }
+    size_t framesGot = sizeInBytes / sizeof(float);
+    
+    memcpy(tmp_buffer, buffer, sizeInBytes);
+
+    ma_result res = ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
+    if (res != MA_SUCCESS) {
+        //freeze_frames = true;
+    }
+
     for (ma_uint32 frame = 0; frame < frameCount; ++frame)
     {
-        ma_uint32 read = data->read;
-        if (data->length > frameCount)
+        if (!freeze_frames && (frame < framesGot))
         {
-            data->length--;
-            amplitude = data->buffer[read];
-               
-            data->read = (data->read + 1) % data->size;
-        } else {
-            LOG_W("Sound too fast!");
+            amplitude = tmp_buffer[frame];
         }
-        
-        for (ma_uint32 iChannel = 0; iChannel < pDevice->playback.channels; iChannel += 1)
+
+        for (ma_uint32 iChannel = 0; iChannel < pDevice->playback.channels; ++iChannel)
         {
             pFramesOut[frame*pDevice->playback.channels + iChannel] = amplitude;
         }
     }
 
+    // Store current amplitude so it's possible to "freeze" future frames if needed
     data->amplitude = amplitude;
-    
-    LOG_D("length: %u (%u)", data->length, frameCount);
 
     (void)pInput;   /* Unused. */
 }
 
 audio_interface_t::audio_interface_t()
 {
-    data.size   = 0x2000;
-    data.buffer = new float[data.size];
+    size_t size = DEVICE_SAMPLE_RATE * sizeof(float);
+    ma_rb_init(size, NULL, NULL, &data.ring_buffer);
 
     deviceConfig = ma_device_config_init(ma_device_type_playback);
     deviceConfig.playback.format   = ma_format_f32;
@@ -74,20 +103,24 @@ audio_interface_t::audio_interface_t()
     }
 }
 
+audio_interface_t::~audio_interface_t()
+{
+    ma_rb_uninit(&data.ring_buffer);
+}
+
+static void* buffer;
 void audio_interface_t::load( float value )
 {
-    data.buffer[data.write] = value;
-    //if (data.length <= 4800)
-    { // Don't move write past the read pointer
-        data.write = (data.write + 1) % data.size;
-        data.length++;
-    }
+    // Is this a joke?
+    size_t sizeInBytes = sizeof(float);
+    ma_rb_acquire_write(&data.ring_buffer, &sizeInBytes, &buffer);
+    memcpy(buffer, &value, sizeInBytes);
+    ma_rb_commit_write(&data.ring_buffer, sizeInBytes);
 }
 
 apu_t::~apu_t()
 { // Shutdown
-    
-    // TODO Delete tnd group
+    if (audio) delete audio;
 }
 
 void apu_t::init(mem_t &mem)
@@ -102,15 +135,24 @@ void apu_t::init(mem_t &mem)
 
 }
 
+static bool extra = true;
+static int count = 0;
 void apu_t::mixer()
 {
     // Linear approximation
     float pulse_out = 0.00752 * (pulse_1.amplitude + pulse_2.amplitude);
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
-    float output = pulse_out + tnd_out;
+    (void) pulse_out;
+    float output = tnd_out;
 
-    if (audio_sample_timer >= 42.0) {
+    if (audio_sample_timer >= 38+extra) 
+    { // Store a sample
         audio_sample_timer = 0;
+        extra = true;
+        if (count++ == compensation_cycles) {
+            extra = false;
+            count = 0;
+        }
         audio->load(output);
     }
 
@@ -138,6 +180,7 @@ void apu_t::execute()
     // NTSC timings
     uint16_t clock = cycle++;
     audio_sample_timer += 1.0;
+    cycles_since_last++;
 
     if (reset_frame_counter > 0 && --reset_frame_counter == 0)
     {
@@ -224,31 +267,6 @@ void apu_t::execute()
     // dmc.tick();
 
     mixer();
-
-    // TODO: Make the compensator dynamic depending on how many samples behind we are in the audio callback
-    //float rate_compensator = 1.0;
-
-    /*
-    if (pulse_group->data.length > 3000) rate_compensator1 = 1.001;
-    else if (pulse_group->data.length < 2000) rate_compensator1 = 1.0;
-
-    if (tnd_group->data.length > 3000) rate_compensator2 = 1.001;
-    else if (tnd_group->data.length < 2000) rate_compensator2 = 1.0;
-    */
-
-    if (audio_sample_timer >= 42.0) {
-        audio_sample_timer = 0.0;
-        /*
-        * 42 works best for me, but it should be 41? Either it's because 42 is the meaning of life, or it is
-        * because the CPU is clocking slightly faster than what is expected (~29786 per frame).
-        */
-
-        /*
-        pulse_group->load( 0, pulse_1.amplitude );
-        pulse_group->load( 1, pulse_2.amplitude );
-        tnd_group->load( 0, triangle_levels[triangle.period_index]);
-        */
-    }
     
 }
 

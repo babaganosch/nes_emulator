@@ -6,6 +6,9 @@
 #include "render.hpp"
 #include "logging.hpp"
 
+#include <thread>
+#include <chrono>
+
 namespace 
 {
 constexpr const char* nes_test_rom = "../data/nestest.nes";
@@ -137,9 +140,33 @@ int main(int argc, char *argv[])
 
                 // Run NES one frame (about 29786 cycles per frame for 60 FPS)
                 //emu.step_vblank();
-                emu.step_vblank();
-                //emu.step_cycles(29780 / 2);
+                //emu.step_vblank();
+                //emu.step_cycles(29780 / 4);
                 //emu.step_cycles(29780);
+
+                //// TODO: Tidy up this shi-
+                // The reason it looks like this (for now) is to balance the load over the 16 milliseconds
+                // for the audio thread to not go bonkers..
+
+                auto start = std::chrono::high_resolution_clock::now();
+                emu.step_cycles( 7445 );
+                auto end = std::chrono::high_resolution_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
+
+                start = std::chrono::high_resolution_clock::now();
+                emu.step_cycles( 7445 );
+                end = std::chrono::high_resolution_clock::now();
+                elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
+
+                start = std::chrono::high_resolution_clock::now();
+                emu.step_cycles( 7445 );
+                end = std::chrono::high_resolution_clock::now();
+                elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
+
+                emu.step_cycles( 7445 );
 
                 if (debug)
                 {

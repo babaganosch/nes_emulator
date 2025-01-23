@@ -9,7 +9,8 @@ namespace nes
 
 #define DEVICE_FORMAT       ma_format_f32
 #define DEVICE_CHANNELS     2
-#define DEVICE_SAMPLE_RATE  44100
+#define DEVICE_SAMPLE_RATE  48000
+#define FRAMES_PER_CB       480
 
 /*
     48000 / 60 = 800 samples per frame
@@ -29,13 +30,11 @@ struct audio_interface_t
     ~audio_interface_t();
     
     struct audio_data_t {
-        float* buffer{nullptr};
+        ma_rb  ring_buffer;
+        float  tmp_buffer[FRAMES_PER_CB];
+        float  storage[DEVICE_SAMPLE_RATE];
         float  amplitude{0};
-
-        uint16_t size{0};
-        uint16_t read{0};   // read  index
-        uint16_t write{0};  // write index
-        uint16_t length{0}; // amount of stored samples
+        size_t stored{0};
     };
 
     void load( float value );
