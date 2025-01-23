@@ -39,12 +39,18 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     cycles_since_last.store(0);
 
     ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
-    if (drift > 7000)
+    if (drift > 9000)
+    { // Correction of drift
+        compensation_cycles = 5;
+    } else if (drift > 7000)
     { // Correction of drift
         compensation_cycles = 4;
     } else if (drift < 4000)
     {
         compensation_cycles = 3;
+    } else if (drift < 2500)
+    {
+        compensation_cycles = 2;
     }
 
     size_t sizeInBytes = frameCount * sizeof(float);
