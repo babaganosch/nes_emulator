@@ -51,9 +51,9 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
             if (korv < 0) korv = 0;
             compensation_cycles = 5;
             allow_change = allow_change_max;
-        } else if (drift > 15000)
+        } else if (drift > 20000)
         {
-            ma_rb_seek_read(&data->ring_buffer, 7500);
+            ma_rb_seek_read(&data->ring_buffer, 10000);
             korv += 1;
             compensation_cycles = 0;
             allow_change = allow_change_max;
@@ -64,7 +64,7 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
             compensation_cycles += 1;
             if (compensation_cycles > 5) compensation_cycles = 5;
             allow_change = allow_change_max;
-        } else if (drift < 5500)
+        } else if (drift < 8000)
         {
             compensation_cycles -= 1;
             if (compensation_cycles < 0) compensation_cycles = 0;
@@ -188,7 +188,8 @@ void apu_t::mixer()
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
     float output = pulse_out + tnd_out;
 
-    if (audio_sample_timer >= 36.0 + korv + extra) 
+    korv = 1; compensation_cycles = 4;
+    if (audio_sample_timer >= 37.0 + korv + extra) 
     { // Store a sample
         audio_sample_timer = 0;
         extra = true;

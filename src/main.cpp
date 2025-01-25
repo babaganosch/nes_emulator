@@ -8,6 +8,7 @@
 
 #include <thread>
 #include <chrono>
+#include <iostream>
 
 namespace 
 {
@@ -148,25 +149,44 @@ int main(int argc, char *argv[])
                 // The reason it looks like this (for now) is to balance the load over the 16 milliseconds
                 // for the audio thread to not go bonkers..
 
+                //auto start2 = std::chrono::high_resolution_clock::now();
+
                 auto start = std::chrono::high_resolution_clock::now();
                 emu.step_cycles( 7445 );
                 auto end = std::chrono::high_resolution_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
+                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
+
+                //std::cout << "1:" << elapsed.count() << std::endl;
 
                 start = std::chrono::high_resolution_clock::now();
                 emu.step_cycles( 7445 );
                 end = std::chrono::high_resolution_clock::now();
                 elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
+                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
+
+                //std::cout << "2:" << elapsed.count() << std::endl;
 
                 start = std::chrono::high_resolution_clock::now();
                 emu.step_cycles( 7445 );
                 end = std::chrono::high_resolution_clock::now();
                 elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
+                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
 
+                //std::cout << "3:" << elapsed.count() << std::endl;
+
+                start = std::chrono::high_resolution_clock::now();
                 emu.step_vblank();
+                end = std::chrono::high_resolution_clock::now();
+                elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
+
+                //std::cout << "4:" << elapsed.count() << std::endl;
+
+                //auto end2 = std::chrono::high_resolution_clock::now();
+                //auto elapsed2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start2);
+                //std::cout << "tot:" << elapsed2.count() << std::endl;
+
                 //emu.step_cycles( 7445 );
 
                 if (debug)
