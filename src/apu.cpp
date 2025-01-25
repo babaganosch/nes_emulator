@@ -23,7 +23,10 @@ const uint8_t length_counter_lut[32] = {
 //static float compensation = 1.0;
 std::atomic_int cycles_since_last{0};
 static int compensation_cycles = 0;
-static int korv = 0;
+static int korv = 1;
+
+static int allow_change = 100;
+static int allow_change_max = 100;
 
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
@@ -38,29 +41,39 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     std::cout << cycles_since_last << std::endl;
     cycles_since_last.store(0);
 
-    ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
+    if (allow_change <= 0)
+    {
+        ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
     
-    if (drift < frameCount)
-    {
-        korv -= 1;
-        if (korv < 0) korv = 0;
-        compensation_cycles = 0;
-    } else if (drift > 15000)
-    {
-        ma_rb_seek_read(&data->ring_buffer, 15000);
-        korv += 1;
-        compensation_cycles = 0;
-    }
+        if (drift < 3000)
+        {
+            korv -= 1;
+            if (korv < 0) korv = 0;
+            compensation_cycles = 5;
+            allow_change = allow_change_max;
+        } else if (drift > 15000)
+        {
+            ma_rb_seek_read(&data->ring_buffer, 7500);
+            korv += 1;
+            compensation_cycles = 0;
+            allow_change = allow_change_max;
+        }
 
-    if (drift > 10000)
-    {
-        compensation_cycles += 1;
-        if (compensation_cycles > 5) compensation_cycles = 5;
-    } else if (drift < 5000)
-    {
-        compensation_cycles -= 1;
-        if (compensation_cycles < 0) compensation_cycles = 0;
+        if (drift > 10000)
+        {
+            compensation_cycles += 1;
+            if (compensation_cycles > 5) compensation_cycles = 5;
+            allow_change = allow_change_max;
+        } else if (drift < 5500)
+        {
+            compensation_cycles -= 1;
+            if (compensation_cycles < 0) compensation_cycles = 0;
+            allow_change = allow_change_max;
+        }
+    } else {
+        allow_change--;
     }
+    
 
     // Higher compensation -> faster drift towards 0
     /*
@@ -175,7 +188,7 @@ void apu_t::mixer()
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
     float output = pulse_out + tnd_out;
 
-    if (audio_sample_timer >= 37.0 + korv + extra) 
+    if (audio_sample_timer >= 36.0 + korv + extra) 
     { // Store a sample
         audio_sample_timer = 0;
         extra = true;
