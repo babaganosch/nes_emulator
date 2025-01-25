@@ -22,7 +22,8 @@ const uint8_t length_counter_lut[32] = {
 
 //static float compensation = 1.0;
 std::atomic_int cycles_since_last{0};
-static int compensation_cycles = 3;
+static int compensation_cycles = 0;
+static int korv = 0;
 
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
@@ -32,43 +33,67 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
 
     void*  buffer;
     float* tmp_buffer = data->tmp_buffer;
-    bool   freeze_frames = false;
-
+    
     LOG_D("drift: %u", ma_rb_pointer_distance(&data->ring_buffer));
     std::cout << cycles_since_last << std::endl;
     cycles_since_last.store(0);
 
     ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
-    if (drift > 9000)
-    { // Correction of drift
-        compensation_cycles = 5;
-    } else if (drift > 7000)
-    { // Correction of drift
-        compensation_cycles = 4;
-    } else if (drift < 4000)
+    
+    if (drift < frameCount)
     {
-        compensation_cycles = 3;
-    } else if (drift < 2500)
+        korv -= 1;
+        if (korv < 0) korv = 0;
+        compensation_cycles = 0;
+    } else if (drift > 15000)
     {
-        compensation_cycles = 2;
+        ma_rb_seek_read(&data->ring_buffer, 15000);
+        korv += 1;
+        compensation_cycles = 0;
     }
 
-    size_t sizeInBytes = frameCount * sizeof(float);
-    if (ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS) {
-        //freeze_frames = true;
+    if (drift > 10000)
+    {
+        compensation_cycles += 1;
+        if (compensation_cycles > 5) compensation_cycles = 5;
+    } else if (drift < 5000)
+    {
+        compensation_cycles -= 1;
+        if (compensation_cycles < 0) compensation_cycles = 0;
     }
+
+    // Higher compensation -> faster drift towards 0
+    /*
+    if (drift > 15000)
+    { // Correction of drift
+        compensation_cycles = 4;
+    } else if (drift > 11000)
+    { // Correction of drift
+        compensation_cycles = 3;
+    } else if (drift > 7000)
+    {
+        compensation_cycles = 2;
+    } else if (drift > 4000)
+    {
+        compensation_cycles = 1;
+    } else {
+        compensation_cycles = 0;
+    }
+    */
+
+    LOG_E("korv: %d, compensation: %d", korv, compensation_cycles);
+
+    size_t sizeInBytes = frameCount * sizeof(float);
+    ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer);
     size_t framesGot = sizeInBytes / sizeof(float);
     
     memcpy(tmp_buffer, buffer, sizeInBytes);
 
-    ma_result res = ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
-    if (res != MA_SUCCESS) {
-        //freeze_frames = true;
-    }
+    ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
 
     for (ma_uint32 frame = 0; frame < frameCount; ++frame)
     {
-        if (!freeze_frames && (frame < framesGot))
+        if (frame < framesGot)
         {
             amplitude = tmp_buffer[frame];
         }
@@ -150,11 +175,11 @@ void apu_t::mixer()
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
     float output = pulse_out + tnd_out;
 
-    if (audio_sample_timer >= 38+extra) 
+    if (audio_sample_timer >= 37.0 + korv + extra) 
     { // Store a sample
         audio_sample_timer = 0;
         extra = true;
-        if (count++ == compensation_cycles) {
+        if (count++ >= compensation_cycles) {
             extra = false;
             count = 0;
         }

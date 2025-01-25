@@ -166,7 +166,8 @@ int main(int argc, char *argv[])
                 elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
                 std::this_thread::sleep_for(std::chrono::microseconds(4000) - elapsed);
 
-                emu.step_cycles( 7445 );
+                emu.step_vblank();
+                //emu.step_cycles( 7445 );
 
                 if (debug)
                 {
