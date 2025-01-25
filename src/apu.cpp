@@ -25,8 +25,10 @@ std::atomic_int cycles_since_last{0};
 static int compensation_cycles = 0;
 static int korv = 1;
 
+static int korv1337 = 0;
+
 static int allow_change = 100;
-static int allow_change_max = 100;
+static int allow_change_max = 10;
 
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
@@ -37,25 +39,25 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     void*  buffer;
     float* tmp_buffer = data->tmp_buffer;
     
-    LOG_D("drift: %u", ma_rb_pointer_distance(&data->ring_buffer));
-    std::cout << cycles_since_last << std::endl;
+    //LOG_D("drift: %u", ma_rb_pointer_distance(&data->ring_buffer));
+    //std::cout << cycles_since_last << std::endl;
     cycles_since_last.store(0);
+    ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
 
     if (allow_change <= 0)
     {
-        ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
     
         if (drift < 3000)
         {
             korv -= 1;
             if (korv < 0) korv = 0;
-            compensation_cycles = 5;
+            compensation_cycles = 0;
             allow_change = allow_change_max;
         } else if (drift > 20000)
         {
             ma_rb_seek_read(&data->ring_buffer, 10000);
             korv += 1;
-            compensation_cycles = 0;
+            compensation_cycles = 5;
             allow_change = allow_change_max;
         }
 
@@ -94,15 +96,23 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     }
     */
 
-    LOG_E("korv: %d, compensation: %d", korv, compensation_cycles);
+   //LOG_E("korv: %d, compensation: %d", korv, compensation_cycles);
 
     size_t sizeInBytes = frameCount * sizeof(float);
-    ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer);
+    if (ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS)
+    {
+        LOG_E("Error1 A %d", korv1337++);
+    }
     size_t framesGot = sizeInBytes / sizeof(float);
     
     memcpy(tmp_buffer, buffer, sizeInBytes);
 
-    ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
+    ma_result res = ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
+    if (res != MA_SUCCESS)
+    {
+        LOG_E("Error1 B %d   size: %u   drift: %u", korv1337++, sizeInBytes, drift);
+        if (res == MA_AT_END) LOG_W("(it's at the end)");
+    }
 
     for (ma_uint32 frame = 0; frame < frameCount; ++frame)
     {
@@ -157,9 +167,15 @@ void audio_interface_t::load( float value )
 {
     // Is this a joke?
     size_t sizeInBytes = sizeof(float);
-    ma_rb_acquire_write(&data.ring_buffer, &sizeInBytes, &buffer);
+    if (ma_rb_acquire_write(&data.ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS)
+    {
+        LOG_W("Error2 A %d", korv1337++);
+    }
     memcpy(buffer, &value, sizeInBytes);
-    ma_rb_commit_write(&data.ring_buffer, sizeInBytes);
+    if (ma_rb_commit_write(&data.ring_buffer, sizeInBytes) != MA_SUCCESS)
+    {
+        LOG_W("Error2 B %d", korv1337++);
+    }
 }
 
 apu_t::~apu_t()
@@ -188,7 +204,7 @@ void apu_t::mixer()
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
     float output = pulse_out + tnd_out;
 
-    korv = 1; compensation_cycles = 4;
+    //korv = 1; compensation_cycles = 4;
     if (audio_sample_timer >= 37.0 + korv + extra) 
     { // Store a sample
         audio_sample_timer = 0;
