@@ -61,6 +61,9 @@ uint16_t emu_t::step_vblank()
         bool end_in_vblank = ppu.render_state == ppu_t::render_states::vertical_blanking_line;
         if (start_in_vblank && !end_in_vblank) break;
     }
+
+    apu.audio->load();
+
     return extra_cycles_executed;
 }
 

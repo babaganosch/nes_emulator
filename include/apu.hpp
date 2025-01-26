@@ -16,7 +16,7 @@ namespace nes
     48000 / 60 = 800 samples per frame
     29781 / 800 = ~37.2
 
-    44100 / 60 = 745 samples per frame
+    44100 / 60 = 735 samples per frame
     29781 / 735 = ~40.5
 */
 
@@ -32,12 +32,13 @@ struct audio_interface_t
     struct audio_data_t {
         ma_rb  ring_buffer;
         float  tmp_buffer[FRAMES_PER_CB];
-        float  storage[DEVICE_SAMPLE_RATE];
         float  amplitude{0};
-        size_t stored{0};
     };
 
-    void load( float value );
+    float  storage[DEVICE_SAMPLE_RATE];
+    size_t stored{0};
+
+    void load();
 
     audio_data_t data;
     ma_device_config deviceConfig;

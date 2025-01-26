@@ -135,15 +135,34 @@ int main(int argc, char *argv[])
                 nes::clear_nt_window_buffer( 255, 0, 0 );
             }
 
-            //auto start2 = std::chrono::high_resolution_clock::now();
+            auto start = std::chrono::high_resolution_clock::now();
+            auto time = std::chrono::microseconds(0);
+
             do
             {
+                auto end = std::chrono::high_resolution_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                time += elapsed - std::chrono::microseconds(16000);
+                start = end;
+                //std::this_thread::sleep_for(std::chrono::milliseconds(16) - elapsed);
+
+                /*
+                std::cout << "fails: " << fails << std::endl;
+                std::cout << "difference: " << time.count() << std::endl;
+                std::cout << "elapsed: " << elapsed.count() << std::endl << std::endl;
+                */    
+
                 nes::clear_window_buffer( 255, 0, 0 );
 
                 // Run NES one frame (about 29786 cycles per frame for 60 FPS)
-                emu.step_vblank();
+                if (time > std::chrono::microseconds(16000))
+                {
+                    time -= std::chrono::microseconds(16000);
+                } else {
+                    emu.step_vblank();
+                }
                 //emu.step_vblank();
-                //emu.step_cycles(29780 / 4);
+                //emu.step_cycles(29780 / 2);
                 //emu.step_cycles(29780);
 
                 //// TODO: Tidy up this shi-

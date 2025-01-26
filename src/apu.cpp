@@ -22,13 +22,8 @@ const uint8_t length_counter_lut[32] = {
 
 //static float compensation = 1.0;
 std::atomic_int cycles_since_last{0};
-static int compensation_cycles = 0;
-static int korv = 1;
-
 static int korv1337 = 0;
-
-static int allow_change = 100;
-static int allow_change_max = 10;
+static int drift = 0;
 
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
@@ -39,18 +34,20 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     void*  buffer;
     float* tmp_buffer = data->tmp_buffer;
     
-    //LOG_D("drift: %u", ma_rb_pointer_distance(&data->ring_buffer));
+    LOG_D("drift: %u (%u)", ma_rb_pointer_distance(&data->ring_buffer), frameCount);
     //std::cout << cycles_since_last << std::endl;
     cycles_since_last.store(0);
-    ma_int32 drift = ma_rb_pointer_distance(&data->ring_buffer);
-
+    
+    drift = ma_rb_pointer_distance(&data->ring_buffer);
+    if (drift > 10000) ma_rb_seek_read(&data->ring_buffer, 4000);
+    //LOG_D("drift: %d", drift);
+    /*
     if (allow_change <= 0)
     {
     
         if (drift < 3000)
         {
             korv -= 1;
-            if (korv < 0) korv = 0;
             compensation_cycles = 0;
             allow_change = allow_change_max;
         } else if (drift > 20000)
@@ -61,7 +58,7 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
             allow_change = allow_change_max;
         }
 
-        if (drift > 10000)
+        if (drift > 12000)
         {
             compensation_cycles += 1;
             if (compensation_cycles > 5) compensation_cycles = 5;
@@ -75,6 +72,7 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     } else {
         allow_change--;
     }
+    */
     
 
     // Higher compensation -> faster drift towards 0
@@ -96,7 +94,7 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     }
     */
 
-   //LOG_E("korv: %d, compensation: %d", korv, compensation_cycles);
+    //LOG_E("korv: %d, compensation: %d, drift: %d", korv, compensation_cycles, drift);
 
     size_t sizeInBytes = frameCount * sizeof(float);
     if (ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS)
@@ -163,19 +161,54 @@ audio_interface_t::~audio_interface_t()
 }
 
 static void* buffer;
-void audio_interface_t::load( float value )
+void audio_interface_t::load()
 {
-    // Is this a joke?
-    size_t sizeInBytes = sizeof(float);
+    
+    //assert(stored >= 800);
+    if (stored < 800)
+    {
+        LOG_E("Something went really really wrong!");
+        //throw;
+    }
+    // 48000 / 60 = 800 samples per frame
+    
+    size_t samples = 800;
+    //if (drift > 5000) samples -= 25;
+    
+
+    float sample_offset = (float)stored / (float)samples;
+
+    size_t sizeInBytes = samples * sizeof(float);
+
+    float *tmp = new float[samples]{0};
+
+    //float tmp[samples]{0};
+    size_t j = 0;
+
+    for (size_t i = 0; i < stored; i += sample_offset)
+    {
+        if (j >= samples) break;
+        //LOG_I("Filling: %f (%d) {%d}", storage[i], j, i);
+        tmp[j++] = storage[i];
+    }
+    //LOG_D("offset: %f   size: %d   stored: %d", sample_offset, sizeInBytes, stored);
+    stored = 0;
+
+    /// TODO: Remove (it should not be needed)
+    //memset(storage, 0, DEVICE_SAMPLE_RATE * sizeof(float));
+
     if (ma_rb_acquire_write(&data.ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS)
     {
         LOG_W("Error2 A %d", korv1337++);
     }
-    memcpy(buffer, &value, sizeInBytes);
+    memcpy(buffer, tmp, sizeInBytes);
+    
     if (ma_rb_commit_write(&data.ring_buffer, sizeInBytes) != MA_SUCCESS)
     {
         LOG_W("Error2 B %d", korv1337++);
     }
+
+    delete[] tmp;
 }
 
 apu_t::~apu_t()
@@ -195,16 +228,23 @@ void apu_t::init(mem_t &mem)
 
 }
 
-static bool extra = true;
-static int count = 0;
+//static bool extra = true;
+//static int count = 0;
 void apu_t::mixer()
 {
     // Linear approximation
     float pulse_out = 0.00752 * (pulse_1.amplitude + pulse_2.amplitude);
     float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
     float output = pulse_out + tnd_out;
+    
+    if (audio->stored > DEVICE_SAMPLE_RATE) {
+        LOG_E("KAOS!");
+        throw;
+    }
+    audio->storage[audio->stored++] = output;
 
-    //korv = 1; compensation_cycles = 4;
+
+    /*
     if (audio_sample_timer >= 37.0 + korv + extra) 
     { // Store a sample
         audio_sample_timer = 0;
@@ -215,6 +255,7 @@ void apu_t::mixer()
         }
         audio->load(output);
     }
+    */
 
 }
 
