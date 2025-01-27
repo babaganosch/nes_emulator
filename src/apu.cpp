@@ -20,13 +20,37 @@ const uint8_t length_counter_lut[32] = {
     0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16, 0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E  // 0x10 - 0x1F
 };
 
-//static float compensation = 1.0;
-std::atomic_int cycles_since_last{0};
+
+//static std::atomic_bool feed_me{false};
+
+
 static int korv1337 = 0;
 static int drift = 0;
 
+/*
+
+    CB fires about every ~10ms
+    CB checks atomic-flag
+        flag not active:
+            CB consumes data from APU (480 samples)
+            CB sets atomic-flag (Hey, I need more data!)
+        flag active:
+            APU hasn't provided any data
+            Output zero on DAC (or previous amplitude or whatever)
+    MEANWHILE...
+    APU stores data every clock
+    APU sees flag is set, time to "upload" data to audio interface
+    APU splits up stored data into 480 samples
+    APU uploads data, resets flag and clears stored data
+
+    Notes: This means that the CB is always one extra step behind
+           and consumes the previous 10ms of data for the next 10ms.
+           Meaning: 10-20ms latency? That's fine.. right?
+*/
+
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
+
     float* pFramesOut = (float*)pOutput;
     audio_interface_t::audio_data_t* data = (audio_interface_t::audio_data_t*)pDevice->pUserData;
     float amplitude = data->amplitude;
@@ -34,12 +58,13 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     void*  buffer;
     float* tmp_buffer = data->tmp_buffer;
     
+    drift = ma_rb_pointer_distance(&data->ring_buffer);
     LOG_D("drift: %u (%u)", ma_rb_pointer_distance(&data->ring_buffer), frameCount);
     //std::cout << cycles_since_last << std::endl;
-    cycles_since_last.store(0);
+    //cycles_since_last.store(0);
     
-    drift = ma_rb_pointer_distance(&data->ring_buffer);
-    if (drift > 10000) ma_rb_seek_read(&data->ring_buffer, 4000);
+    
+
     //LOG_D("drift: %d", drift);
     /*
     if (allow_change <= 0)
@@ -165,14 +190,14 @@ void audio_interface_t::load()
 {
     
     //assert(stored >= 800);
-    if (stored < 800)
+    if (stored < 480)
     {
         LOG_E("Something went really really wrong!");
         //throw;
     }
     // 48000 / 60 = 800 samples per frame
     
-    size_t samples = 800;
+    size_t samples = 480;
     //if (drift > 5000) samples -= 25;
     
 
@@ -185,13 +210,11 @@ void audio_interface_t::load()
     //float tmp[samples]{0};
     size_t j = 0;
 
-    for (size_t i = 0; i < stored; i += sample_offset)
+    for (float i = 0.0; i < stored; i += sample_offset)
     {
-        if (j >= samples) break;
-        //LOG_I("Filling: %f (%d) {%d}", storage[i], j, i);
-        tmp[j++] = storage[i];
+        tmp[j++] = storage[(int)i];
     }
-    //LOG_D("offset: %f   size: %d   stored: %d", sample_offset, sizeInBytes, stored);
+    LOG_D("offset: %f   size: %d   stored: %d", sample_offset, sizeInBytes, stored);
     stored = 0;
 
     /// TODO: Remove (it should not be needed)
@@ -209,6 +232,7 @@ void audio_interface_t::load()
     }
 
     delete[] tmp;
+
 }
 
 apu_t::~apu_t()
@@ -229,7 +253,7 @@ void apu_t::init(mem_t &mem)
 }
 
 //static bool extra = true;
-//static int count = 0;
+static int count = 0;
 void apu_t::mixer()
 {
     // Linear approximation
@@ -242,6 +266,12 @@ void apu_t::mixer()
         throw;
     }
     audio->storage[audio->stored++] = output;
+
+    if (count++ > 18605) //18,613
+    { // Hey, audio needs some samples!
+        audio->load();
+        count = 0;
+    }
 
 
     /*
@@ -281,7 +311,6 @@ void apu_t::execute()
     // NTSC timings
     uint16_t clock = cycle++;
     audio_sample_timer += 1.0;
-    cycles_since_last++;
 
     if (reset_frame_counter > 0 && --reset_frame_counter == 0)
     {

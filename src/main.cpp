@@ -150,15 +150,14 @@ int main(int argc, char *argv[])
                 std::cout << "fails: " << fails << std::endl;
                 std::cout << "difference: " << time.count() << std::endl;
                 std::cout << "elapsed: " << elapsed.count() << std::endl << std::endl;
-                */    
-
-                nes::clear_window_buffer( 255, 0, 0 );
+                */
 
                 // Run NES one frame (about 29786 cycles per frame for 60 FPS)
                 if (time > std::chrono::microseconds(16000))
                 {
                     time -= std::chrono::microseconds(16000);
                 } else {
+                    nes::clear_window_buffer( 255, 0, 0 );
                     emu.step_vblank();
                 }
                 //emu.step_vblank();

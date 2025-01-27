@@ -62,8 +62,6 @@ uint16_t emu_t::step_vblank()
         if (start_in_vblank && !end_in_vblank) break;
     }
 
-    apu.audio->load();
-
     return extra_cycles_executed;
 }
 
