@@ -15,6 +15,8 @@ namespace
 emu_t* emulator_ref;
 audio_t* audio_ref;
 
+float speed = 1.0f;
+
 void callback_execute_ppu(void *cookie)
 {
     emulator_ref->ppu.execute();
@@ -42,6 +44,7 @@ void audio_callback(ma_device* device, void* output, const void* input, ma_uint3
 
     size_t size_in_bytes = frame_count * sizeof(float);
     ma_rb_acquire_read(&data->ring_buffer, &size_in_bytes, &buffer);
+
     size_t ready_frames = size_in_bytes / sizeof(float);
     memcpy(data->tmp_buffer, buffer, size_in_bytes);
     ma_rb_commit_read(&data->ring_buffer, size_in_bytes);
@@ -84,7 +87,6 @@ void emu_t::init(ines_rom_t &rom)
     audio_ref = new audio_t();
     LOG_D("Audio interface initiated");
     
-
     memory.init( rom );
     cpu.init( &callback_execute_ppu, &callback_execute_apu, memory );
     ppu.init( memory );
@@ -93,6 +95,7 @@ void emu_t::init(ines_rom_t &rom)
 
 RESULT emu_t::step_cycles(int32_t cycles)
 {
+    speed = (float)cycles / 29780.0;
     while (cycles > 0)
     {
         cycles -= cpu.execute();
@@ -118,7 +121,7 @@ void audio_t::buffer_data( float amplitude)
 {
     storage[stored_data++] = amplitude;
 
-    if (cycle_count++ > CYCLES_PER_CB)
+    if (cycle_count++ > (float)CYCLES_PER_CB * speed)
     {
         sample_data();
         cycle_count = 0;

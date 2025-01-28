@@ -9,7 +9,7 @@ namespace nes
 #define DEVICE_CHANNELS     2
 #define DEVICE_SAMPLE_RATE  48000
 #define FRAMES_PER_CB       480
-#define CYCLES_PER_CB       17864 // 10ms based upon 29781 per 16.67ms
+#define CYCLES_PER_CB       17865 // 10ms based upon 29780 per 16.67ms
 
 #define DRIFT_CORRECTION_THRESHOLD      20000
 #define DRIFT_CORRECTION_SKIP           12000 // 250ms

@@ -12,10 +12,13 @@ namespace
 {
 constexpr const char* nes_test_rom = "../data/nestest.nes";
 constexpr const uint16_t screen_multiplier = 3u;
+constexpr const uint16_t microseconds_per_frame = 16670;
 
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
+
+float speed = 1.0;
 
 void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed)
 {
@@ -31,6 +34,16 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
         case KB_KEY_DOWN:  emu->memory.gamepad[0].down   = isPressed; break;
         case KB_KEY_LEFT:  emu->memory.gamepad[0].left   = isPressed; break;
         case KB_KEY_RIGHT: emu->memory.gamepad[0].right  = isPressed; break;
+
+        case KB_KEY_1: speed = 0.33; break;
+        case KB_KEY_2: speed = 0.50; break;
+        case KB_KEY_3: speed = 0.66; break;
+        case KB_KEY_4: speed = 1.00; break;
+        case KB_KEY_5: speed = 1.33; break;
+        case KB_KEY_6: speed = 1.50; break;
+        case KB_KEY_7: speed = 1.66; break;
+        case KB_KEY_8: speed = 2.00; break;
+
         default: break;
     }
 
@@ -140,20 +153,20 @@ int main(int argc, char *argv[])
             {
                 auto end = std::chrono::high_resolution_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                time += std::chrono::microseconds(16670) - elapsed;
+                time += std::chrono::microseconds(microseconds_per_frame) - elapsed;
                 start = end;
 
-                // Run NES one frame (about 29781 cycles per frame for 60 FPS)
-                if (time > std::chrono::microseconds(16670))
+                // Run NES one frame (about 29781 cycles per frame for 60 FPS (16.67 ms per frame, not 16 flat))
+                if (time > std::chrono::microseconds(microseconds_per_frame))
                 { // Updating too fast, skip a frame
-                    time -= std::chrono::microseconds(16670);
+                    time -= std::chrono::microseconds(microseconds_per_frame);
                 } else if (time < std::chrono::microseconds(0)) 
                 { // Window minimized or something, reset the correction
                     time = std::chrono::microseconds(0);
                 } else 
                 {
-                    nes::clear_window_buffer( 255, 0, 0 );
-                    emu.step_vblank();
+                    nes::clear_window_buffer( 128, 0, 0 );
+                    emu.step_cycles(29780 * speed);
                 }
 
                 //emu.step_vblank();
