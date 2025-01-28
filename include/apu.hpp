@@ -210,7 +210,6 @@ struct apu_t
     uint16_t cycle{0};
     uint8_t reset_frame_counter{0};
     bool frame_interrupt{false};
-    float audio_sample_timer{0};
 
 };
 

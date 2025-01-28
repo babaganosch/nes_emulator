@@ -4,8 +4,6 @@
 
 #include "nes.hpp"
 #include "logging.hpp"
-#include <atomic>
-#include <iostream>
 
 namespace nes
 {
@@ -21,33 +19,7 @@ const uint8_t length_counter_lut[32] = {
 };
 
 
-//static std::atomic_bool feed_me{false};
-
-
-static int korv1337 = 0;
 static int drift = 0;
-
-/*
-
-    CB fires about every ~10ms
-    CB checks atomic-flag
-        flag not active:
-            CB consumes data from APU (480 samples)
-            CB sets atomic-flag (Hey, I need more data!)
-        flag active:
-            APU hasn't provided any data
-            Output zero on DAC (or previous amplitude or whatever)
-    MEANWHILE...
-    APU stores data every clock
-    APU sees flag is set, time to "upload" data to audio interface
-    APU splits up stored data into 480 samples
-    APU uploads data, resets flag and clears stored data
-
-    Notes: This means that the CB is always one extra step behind
-           and consumes the previous 10ms of data for the next 10ms.
-           Meaning: 10-20ms latency? That's fine.. right?
-*/
-
 void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 {
 
@@ -59,83 +31,20 @@ void audio_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_ui
     float* tmp_buffer = data->tmp_buffer;
     
     drift = ma_rb_pointer_distance(&data->ring_buffer);
-    LOG_D("drift: %u (%u)", ma_rb_pointer_distance(&data->ring_buffer), frameCount);
-    //std::cout << cycles_since_last << std::endl;
-    //cycles_since_last.store(0);
-    
-    
 
-    //LOG_D("drift: %d", drift);
-    /*
-    if (allow_change <= 0)
-    {
-    
-        if (drift < 3000)
-        {
-            korv -= 1;
-            compensation_cycles = 0;
-            allow_change = allow_change_max;
-        } else if (drift > 20000)
-        {
-            ma_rb_seek_read(&data->ring_buffer, 10000);
-            korv += 1;
-            compensation_cycles = 5;
-            allow_change = allow_change_max;
-        }
-
-        if (drift > 12000)
-        {
-            compensation_cycles += 1;
-            if (compensation_cycles > 5) compensation_cycles = 5;
-            allow_change = allow_change_max;
-        } else if (drift < 8000)
-        {
-            compensation_cycles -= 1;
-            if (compensation_cycles < 0) compensation_cycles = 0;
-            allow_change = allow_change_max;
-        }
-    } else {
-        allow_change--;
+    if (drift > 20000) {
+        ma_rb_seek_read(&data->ring_buffer, 12000);
+        LOG_W("Audio lagging behind.. Skipping 12000 samples (250ms)");
     }
-    */
-    
-
-    // Higher compensation -> faster drift towards 0
-    /*
-    if (drift > 15000)
-    { // Correction of drift
-        compensation_cycles = 4;
-    } else if (drift > 11000)
-    { // Correction of drift
-        compensation_cycles = 3;
-    } else if (drift > 7000)
-    {
-        compensation_cycles = 2;
-    } else if (drift > 4000)
-    {
-        compensation_cycles = 1;
-    } else {
-        compensation_cycles = 0;
-    }
-    */
-
-    //LOG_E("korv: %d, compensation: %d, drift: %d", korv, compensation_cycles, drift);
 
     size_t sizeInBytes = frameCount * sizeof(float);
-    if (ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS)
-    {
-        LOG_E("Error1 A %d", korv1337++);
-    }
+    ma_rb_acquire_read(&data->ring_buffer, &sizeInBytes, &buffer);
+
     size_t framesGot = sizeInBytes / sizeof(float);
     
     memcpy(tmp_buffer, buffer, sizeInBytes);
 
-    ma_result res = ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
-    if (res != MA_SUCCESS)
-    {
-        LOG_E("Error1 B %d   size: %u   drift: %u", korv1337++, sizeInBytes, drift);
-        if (res == MA_AT_END) LOG_W("(it's at the end)");
-    }
+    ma_rb_commit_read(&data->ring_buffer, sizeInBytes);
 
     for (ma_uint32 frame = 0; frame < frameCount; ++frame)
     {
@@ -188,50 +97,24 @@ audio_interface_t::~audio_interface_t()
 static void* buffer;
 void audio_interface_t::load()
 {
-    
-    //assert(stored >= 800);
-    if (stored < 480)
+    if (stored < FRAMES_PER_CB)
     {
-        LOG_E("Something went really really wrong!");
-        //throw;
+        return;
     }
-    // 48000 / 60 = 800 samples per frame
-    
-    size_t samples = 480;
-    //if (drift > 5000) samples -= 25;
-    
 
-    float sample_offset = (float)stored / (float)samples;
+    float sample_offset = (float)stored / (float)FRAMES_PER_CB;
+    size_t sizeInBytes = FRAMES_PER_CB * sizeof(float);
 
-    size_t sizeInBytes = samples * sizeof(float);
-
-    float *tmp = new float[samples]{0};
-
-    //float tmp[samples]{0};
     size_t j = 0;
-
     for (float i = 0.0; i < stored; i += sample_offset)
     {
-        tmp[j++] = storage[(int)i];
+        data.tmp_buffer[j++] = storage[(int)i];
     }
-    LOG_D("offset: %f   size: %d   stored: %d", sample_offset, sizeInBytes, stored);
     stored = 0;
 
-    /// TODO: Remove (it should not be needed)
-    //memset(storage, 0, DEVICE_SAMPLE_RATE * sizeof(float));
-
-    if (ma_rb_acquire_write(&data.ring_buffer, &sizeInBytes, &buffer) != MA_SUCCESS)
-    {
-        LOG_W("Error2 A %d", korv1337++);
-    }
-    memcpy(buffer, tmp, sizeInBytes);
-    
-    if (ma_rb_commit_write(&data.ring_buffer, sizeInBytes) != MA_SUCCESS)
-    {
-        LOG_W("Error2 B %d", korv1337++);
-    }
-
-    delete[] tmp;
+    ma_rb_acquire_write(&data.ring_buffer, &sizeInBytes, &buffer);
+    memcpy(buffer, data.tmp_buffer, sizeInBytes);
+    ma_rb_commit_write(&data.ring_buffer, sizeInBytes);
 
 }
 
@@ -252,7 +135,6 @@ void apu_t::init(mem_t &mem)
 
 }
 
-//static bool extra = true;
 static int count = 0;
 void apu_t::mixer()
 {
@@ -267,25 +149,11 @@ void apu_t::mixer()
     }
     audio->storage[audio->stored++] = output;
 
-    if (count++ > 18605) //18,613
+    if (count++ > 17864) // 17865 (16.67)   18613 (16)
     { // Hey, audio needs some samples!
         audio->load();
         count = 0;
     }
-
-
-    /*
-    if (audio_sample_timer >= 37.0 + korv + extra) 
-    { // Store a sample
-        audio_sample_timer = 0;
-        extra = true;
-        if (count++ >= compensation_cycles) {
-            extra = false;
-            count = 0;
-        }
-        audio->load(output);
-    }
-    */
 
 }
 
@@ -310,7 +178,6 @@ void apu_t::execute()
     // Run the sequencer
     // NTSC timings
     uint16_t clock = cycle++;
-    audio_sample_timer += 1.0;
 
     if (reset_frame_counter > 0 && --reset_frame_counter == 0)
     {
@@ -393,7 +260,7 @@ void apu_t::execute()
         pulse_2.tick();
     }
     triangle.tick();
-    // pulse.tick();
+    // noise.tick();
     // dmc.tick();
 
     mixer();

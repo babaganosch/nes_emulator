@@ -6,9 +6,7 @@
 #include "render.hpp"
 #include "logging.hpp"
 
-#include <thread>
 #include <chrono>
-#include <iostream>
 
 namespace 
 {
@@ -142,74 +140,25 @@ int main(int argc, char *argv[])
             {
                 auto end = std::chrono::high_resolution_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                time += elapsed - std::chrono::microseconds(16000);
+                time += std::chrono::microseconds(16670) - elapsed;
                 start = end;
-                //std::this_thread::sleep_for(std::chrono::milliseconds(16) - elapsed);
 
-                /*
-                std::cout << "fails: " << fails << std::endl;
-                std::cout << "difference: " << time.count() << std::endl;
-                std::cout << "elapsed: " << elapsed.count() << std::endl << std::endl;
-                */
-
-                // Run NES one frame (about 29786 cycles per frame for 60 FPS)
-                if (time > std::chrono::microseconds(16000))
+                // Run NES one frame (about 29781 cycles per frame for 60 FPS)
+                if (time > std::chrono::microseconds(16670))
+                { // Updating too fast, skip a frame
+                    time -= std::chrono::microseconds(16670);
+                } else if (time < std::chrono::microseconds(0)) 
+                { // Window minimized or something, reset the correction
+                    time = std::chrono::microseconds(0);
+                } else 
                 {
-                    time -= std::chrono::microseconds(16000);
-                } else {
                     nes::clear_window_buffer( 255, 0, 0 );
                     emu.step_vblank();
                 }
+
                 //emu.step_vblank();
                 //emu.step_cycles(29780 / 2);
                 //emu.step_cycles(29780);
-
-                //// TODO: Tidy up this shi-
-                // The reason it looks like this (for now) is to balance the load over the 16 milliseconds
-                // for the audio thread to not go bonkers..
-
-                //
-
-                /*
-                auto start = std::chrono::high_resolution_clock::now();
-                emu.step_cycles( 7445 );
-                auto end = std::chrono::high_resolution_clock::now();
-                auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
-
-                //std::cout << "1:" << elapsed.count() << std::endl;
-
-                start = std::chrono::high_resolution_clock::now();
-                emu.step_cycles( 7445 );
-                end = std::chrono::high_resolution_clock::now();
-                elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
-
-                //std::cout << "2:" << elapsed.count() << std::endl;
-
-                start = std::chrono::high_resolution_clock::now();
-                emu.step_cycles( 7445 );
-                end = std::chrono::high_resolution_clock::now();
-                elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
-
-                //std::cout << "3:" << elapsed.count() << std::endl;
-
-                start = std::chrono::high_resolution_clock::now();
-                emu.step_vblank();
-                //emu.step_cycles( 7445 );
-                end = std::chrono::high_resolution_clock::now();
-                elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                std::this_thread::sleep_for(std::chrono::microseconds(3500) - elapsed);
-
-                //std::cout << "4:" << elapsed.count() << std::endl;
-
-                auto end2 = std::chrono::high_resolution_clock::now();
-                auto elapsed2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2);
-                std::cout << "tot:" << elapsed2.count() << std::endl;
-                start2 = end2;
-*/
-                //emu.step_cycles( 7445 );
 
                 if (debug)
                 {
