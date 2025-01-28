@@ -2,53 +2,16 @@
 #define APU_HPP
 
 #include <cstdint>
-#include <miniaudio.h>
 
 namespace nes
 {
-
-#define DEVICE_FORMAT       ma_format_f32
-#define DEVICE_CHANNELS     2
-#define DEVICE_SAMPLE_RATE  48000
-#define FRAMES_PER_CB       480
-
-/*
-    48000 / 60 = 800 samples per frame
-    29781 / 800 = ~37.2
-
-    44100 / 60 = 735 samples per frame
-    29781 / 735 = ~40.5
-*/
 
 struct mem_t;
 
 extern const uint8_t length_counter_lut[];
 
-struct audio_interface_t
-{
-    audio_interface_t();
-    ~audio_interface_t();
-    
-    struct audio_data_t {
-        ma_rb  ring_buffer;
-        float  tmp_buffer[FRAMES_PER_CB];
-        float  amplitude{0};
-    };
-
-    float  storage[DEVICE_SAMPLE_RATE];
-    size_t stored{0};
-
-    void load();
-
-    audio_data_t data;
-    ma_device_config deviceConfig;
-    ma_device device;
-};
-
 struct apu_t
 {
-    ~apu_t();
-
     struct pulse_t {
         union
         { // 0x4000  /  0x4004
@@ -194,9 +157,9 @@ struct apu_t
 
     void init(mem_t &mem);
     void mixer();
-    void execute();
     void quarter_frame();
     void half_frame();
+    float execute();
 
     pulse_t pulse_1;
     pulse_t pulse_2;
@@ -204,7 +167,7 @@ struct apu_t
     // noise
     // dmc
 
-    audio_interface_t* audio{nullptr};
+    float output{0};
 
     mem_t* memory{nullptr};
     uint16_t cycle{0};

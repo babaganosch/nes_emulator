@@ -11,7 +11,7 @@ void apu_t::pulse_t::write( uint16_t address, uint8_t value )
         case ( 0x0 ): 
         { // Envelope
             envelope.data = value;
-            switch (value >> 6) {
+            switch (envelope.duty) {
                 case 0: duty = 0b01000000; break; // 12.5 %
                 case 1: duty = 0b01100000; break; // 25 %
                 case 2: duty = 0b01111000; break; // 50 %

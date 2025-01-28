@@ -490,6 +490,7 @@ struct ppu_t
     void v_update_vert_v_eq_vert_t();
     void reload_shift_registers();
     
+    bool check_vblank();
     void init(mem_t &mem);
     void execute();
 };
