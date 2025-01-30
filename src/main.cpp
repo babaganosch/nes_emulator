@@ -12,13 +12,13 @@ namespace
 {
 constexpr const char* nes_test_rom = "../data/nestest.nes";
 constexpr const uint16_t screen_multiplier = 3u;
-constexpr const uint16_t microseconds_per_frame = 16670;
+constexpr const uint16_t microseconds_per_frame = 16667;
 
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
 
-float speed = 1.0;
+float emu_speed = 1.0;
 
 void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, bool isPressed)
 {
@@ -35,14 +35,14 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
         case KB_KEY_LEFT:  emu->memory.gamepad[0].left   = isPressed; break;
         case KB_KEY_RIGHT: emu->memory.gamepad[0].right  = isPressed; break;
 
-        case KB_KEY_1: speed = 0.33; break;
-        case KB_KEY_2: speed = 0.50; break;
-        case KB_KEY_3: speed = 0.66; break;
-        case KB_KEY_4: speed = 1.00; break;
-        case KB_KEY_5: speed = 1.33; break;
-        case KB_KEY_6: speed = 1.50; break;
-        case KB_KEY_7: speed = 1.66; break;
-        case KB_KEY_8: speed = 2.00; break;
+        case KB_KEY_1: emu_speed = 0.33; break;
+        case KB_KEY_2: emu_speed = 0.50; break;
+        case KB_KEY_3: emu_speed = 0.66; break;
+        case KB_KEY_4: emu_speed = 1.00; break;
+        case KB_KEY_5: emu_speed = 1.33; break;
+        case KB_KEY_6: emu_speed = 1.50; break;
+        case KB_KEY_7: emu_speed = 1.66; break;
+        case KB_KEY_8: emu_speed = 2.00; break;
 
         default: break;
     }
@@ -133,7 +133,8 @@ int main(int argc, char *argv[])
 
             struct mfb_window *window = 0x0;
             struct mfb_window *nt_window = 0x0;
-            nes::clear_window_buffer( 255, 0, 0 );
+            nes::clear_framebuffer( emu.front_buffer, 255, 0, 0 );
+            nes::clear_framebuffer( emu.back_buffer, 255, 0, 0 );
             
             window = mfb_open_ex( "NesScape", NES_WIDTH * screen_multiplier, NES_HEIGHT * screen_multiplier, WF_RESIZABLE );
             mfb_set_target_fps( 60 );
@@ -143,7 +144,7 @@ int main(int argc, char *argv[])
             if (debug)
             {
                 nt_window = mfb_open_ex( "Nametables", NES_WIDTH * 2, NES_HEIGHT * 2, WF_RESIZABLE );
-                nes::clear_nt_window_buffer( 255, 0, 0 );
+                nes::clear_framebuffer( nes::nt_window_buffer, 255, 0, 0 );
             }
 
             auto start = std::chrono::high_resolution_clock::now();
@@ -165,21 +166,16 @@ int main(int argc, char *argv[])
                     time = std::chrono::microseconds(0);
                 } else 
                 {
-                    nes::clear_window_buffer( 128, 0, 0 );
-                    emu.step_cycles(29780 * speed);
+                    emu.step_cycles(29780 * emu_speed);
                 }
-
-                //emu.step_vblank();
-                //emu.step_cycles(29780 / 2);
-                //emu.step_cycles(29780);
 
                 if (debug)
                 {
                     nes::cpu_t::regs_t& regs = emu.cpu.regs;
-                    nes::draw_text( 1, 1,  "PC   A  X  Y  SR SP CYC");
-                    nes::draw_text( 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
+                    nes::draw_text( emu.front_buffer, 1, 1,  "PC   A  X  Y  SR SP CYC");
+                    nes::draw_text( emu.front_buffer, 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
                                            regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
-                    nes::draw_text( 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
+                    nes::draw_text( emu.front_buffer, 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
                                            emu.memory.gamepad[0].A > 0 ? '*' : ' ', 
                                            emu.memory.gamepad[0].B > 0 ? '*' : ' ',
                                            emu.memory.gamepad[0].select > 0 ? '*' : ' ',
@@ -189,13 +185,13 @@ int main(int argc, char *argv[])
                                            emu.memory.gamepad[0].left > 0 ? '*' : ' ',
                                            emu.memory.gamepad[0].right > 0 ? '*' : ' ');
 
-                    nes::clear_nt_window_buffer( 255, 0, 0 );
+                    nes::clear_framebuffer( nes::nt_window_buffer, 255, 0, 0 );
                     nes::dump_nametables(emu);
                     
                     if ( mfb_update_ex( nt_window, nes::nt_window_buffer, NES_WIDTH * 2, NES_HEIGHT * 2) < 0 ) break;
                 }
 
-                if ( mfb_update_ex( window, nes::window_buffer, NES_WIDTH, NES_HEIGHT ) < 0 ) break;
+                if ( mfb_update_ex( window, emu.front_buffer, NES_WIDTH, NES_HEIGHT ) < 0 ) break;
             } while (mfb_wait_sync( window ));
             mfb_close( window );
             printf("Exiting gracefully...\n");

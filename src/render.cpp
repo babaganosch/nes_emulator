@@ -248,11 +248,11 @@ static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_in
 
             if (bg && pix == 0x0) {
                 uint32_t palette_bg = emu.memory.ppu_mem.palette[0x00];
-                window_buffer[ti] = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
+                emu.back_buffer[ti] = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
             } else if (palette_set == 0x0) {
-                window_buffer[ti] = MFB_RGB(gray_palette[pix*3], gray_palette[pix*3], gray_palette[pix*3]);
+                emu.back_buffer[ti] = MFB_RGB(gray_palette[pix*3], gray_palette[pix*3], gray_palette[pix*3]);
             } else {
-                window_buffer[ti] = MFB_RGB(palette_id_to_red(palette_set[pix-1]), palette_id_to_green(palette_set[pix-1]), palette_id_to_blue(palette_set[pix-1]));
+                emu.back_buffer[ti] = MFB_RGB(palette_id_to_red(palette_set[pix-1]), palette_id_to_green(palette_set[pix-1]), palette_id_to_blue(palette_set[pix-1]));
             }
         }
     }
@@ -406,23 +406,15 @@ void dump_nametables(emu_t &emu)
     }
 }
 
-void clear_window_buffer(uint8_t r, uint8_t g, uint8_t b)
+void clear_framebuffer(uint32_t* framebuffer, uint8_t r, uint8_t g, uint8_t b)
 {
     for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT; i++)
     {
-        nes::window_buffer[i] = MFB_RGB(r, g, b);
+        framebuffer[i] = MFB_RGB(r, g, b);
     }
 }
 
-void clear_nt_window_buffer(uint8_t r, uint8_t g, uint8_t b)
-{
-    for (uint32_t i = 0; i < NES_WIDTH * NES_HEIGHT * 4; i++)
-    {
-        nes::nt_window_buffer[i] = MFB_RGB(r, g, b);
-    }
-}
-
-void draw_glyph(uint32_t x, uint32_t y, uint8_t glyph)
+void draw_glyph(uint32_t* framebuffer, uint32_t x, uint32_t y, uint8_t glyph)
 {
     for (uint8_t gy = 0; gy < 8; ++gy)
     {
@@ -431,13 +423,13 @@ void draw_glyph(uint32_t x, uint32_t y, uint8_t glyph)
             uint32_t bi = (y+gy)*NES_WIDTH+(x+gx);
             if (((font8x8_basic[glyph][gy]) & (1 << gx)) > 0)
             {
-                nes::window_buffer[bi] = MFB_RGB(255, 255, 255);
+                framebuffer[bi] = MFB_RGB(255, 255, 255);
             }
         }
     }
 }
 
-void draw_text(uint32_t x, uint32_t y, const char* text, ...)
+void draw_text(uint32_t* framebuffer, uint32_t x, uint32_t y, const char* text, ...)
 {
 
     static char _buffer[2048];
@@ -450,7 +442,7 @@ void draw_text(uint32_t x, uint32_t y, const char* text, ...)
     char* glyphs = _buffer;
     while (*glyphs != 0x0)
     {
-        draw_glyph(x, y, *glyphs);
+        draw_glyph(framebuffer, x, y, *glyphs);
         x+=8;
         glyphs++;
     }

@@ -17,8 +17,6 @@ constexpr uint32_t CHR_PAGE_SIZE = 8 * 1024;
 #define BIT_CHECK_LO(value, bit) (((value >> bit) & 0x1) == 0x0)
 #define UINT16(LO, HI) (((uint16_t) HI << 8) | LO)
 
-extern uint32_t window_buffer[];
-
 enum RESULT
 {
     RESULT_INVALID_INES_HEADER = -10,
@@ -466,11 +464,13 @@ struct ppu_t
     int16_t  sprite_counters[8];
 
     mem_t* memory{nullptr};
+    uint32_t* output{nullptr};
+
     bool recently_power_on{false};
     bool vblank_suppression{false};
     bool frame_skip_suppression{false};
-    uint32_t frame_num{0};
     render_states render_state{render_states::pre_render_scanline};
+    uint32_t frame_num{0};
     uint8_t  sprite_indices_next_scanline[8];
     uint8_t  sprite_indices_current_scanline[8];
 
@@ -491,7 +491,7 @@ struct ppu_t
     void reload_shift_registers();
     
     bool check_vblank();
-    void init(mem_t &mem);
+    void init(mem_t &mem, uint32_t* &out);
     void execute();
 };
 
@@ -502,7 +502,11 @@ struct emu_t
     apu_t apu;
     mem_t memory;
 
+    uint32_t* front_buffer{nullptr};
+    uint32_t* back_buffer{nullptr};
+
     void init(ines_rom_t &rom);
+    void swap_framebuffers();
     RESULT step_cycles(int32_t cycles);
     uint16_t step_vblank();
 };

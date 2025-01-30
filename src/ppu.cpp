@@ -91,10 +91,11 @@ static bool allow_nmi = false;
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
 
-void ppu_t::init(mem_t &mem)
+void ppu_t::init(mem_t &mem, uint32_t* &out)
 {
     memory = &mem;
     memory->ppu = this;
+    output = out;
     recently_power_on = true;
 
     vblank_suppression = false;
@@ -781,7 +782,7 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
     {
         uint32_t pixel_index = (scanline * NES_WIDTH) + dot;
         pixel_index = pixel_index % (NES_WIDTH * NES_HEIGHT);
-        window_buffer[ pixel_index ] = color;
+        output[ pixel_index ] = color;
     }
     
 }

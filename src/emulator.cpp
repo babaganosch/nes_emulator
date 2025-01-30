@@ -10,6 +10,9 @@
 namespace nes
 {
 
+uint32_t framebuffer_a[NES_WIDTH * NES_HEIGHT * 4];
+uint32_t framebuffer_b[NES_WIDTH * NES_HEIGHT * 4];
+
 namespace
 {
 emu_t* emulator_ref;
@@ -70,6 +73,8 @@ void audio_callback(ma_device* device, void* output, const void* input, ma_uint3
 void emu_t::init(ines_rom_t &rom)
 {
     emulator_ref = this;
+    front_buffer = framebuffer_a;
+    back_buffer = framebuffer_b;
 
     mappers_lut[0]   = new mapper_nrom_t();
     mappers_lut[1]   = new mapper_mmc1b_t();
@@ -78,19 +83,32 @@ void emu_t::init(ines_rom_t &rom)
     mappers_lut[180] = new mapper_unrom_configured_t();
 
     uint8_t mappers_instantiated = 0;
-    for (uint8_t i = 0; i < 255; ++i) {
+    for (uint16_t i = 0; i < 256; ++i) {
         if (mappers_lut[i]) ++mappers_instantiated;
     }
-    LOG_D("Emulator instantiated %u mappers", mappers_instantiated);
+    LOG_I("Emulator instantiated %u mappers", mappers_instantiated);
 
     if (audio_ref) delete audio_ref;
     audio_ref = new audio_t();
-    LOG_D("Audio interface initiated");
+    LOG_I("Audio interface initiated");
     
     memory.init( rom );
     cpu.init( &callback_execute_ppu, &callback_execute_apu, memory );
-    ppu.init( memory );
+    ppu.init( memory, back_buffer );
     apu.init( memory );
+}
+
+void emu_t::swap_framebuffers()
+{
+    if (back_buffer == framebuffer_a)
+    {
+        front_buffer = framebuffer_a;
+        back_buffer = framebuffer_b;
+    } else
+    {
+        front_buffer = framebuffer_b;
+        back_buffer = framebuffer_a;
+    }
 }
 
 RESULT emu_t::step_cycles(int32_t cycles)
@@ -98,7 +116,14 @@ RESULT emu_t::step_cycles(int32_t cycles)
     speed = (float)cycles / 29780.0;
     while (cycles > 0)
     {
+        bool start_in_vblank = ppu.check_vblank();
         cycles -= cpu.execute();
+        bool end_in_vblank = ppu.check_vblank();
+        if (start_in_vblank && !end_in_vblank) 
+        { // Entered vblank, flip frame buffer
+            swap_framebuffers();
+            ppu.output = back_buffer;
+        }
     }
     return RESULT_OK;
 }
@@ -111,7 +136,12 @@ uint16_t emu_t::step_vblank()
         bool start_in_vblank = ppu.check_vblank();
         cycles_executed += cpu.execute();
         bool end_in_vblank = ppu.check_vblank();
-        if (start_in_vblank && !end_in_vblank) break;
+        if (start_in_vblank && !end_in_vblank) 
+        { // Entered vblank, flip frame buffer
+            swap_framebuffers();
+            ppu.output = back_buffer;
+            break;
+        }
     }
 
     return cycles_executed;
