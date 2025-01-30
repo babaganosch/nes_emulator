@@ -42,7 +42,7 @@ void apu_t::pulse_t::tick()
 {
     if (++timer > period)
     { // Advance
-        amplitude = (duty & (1 << duty_index)) > 0 ? 1 : 0;
+        amplitude = (duty & (1 << (7-duty_index))) > 0 ? 1 : 0;
         amplitude *= volume;
         duty_index = (duty_index+1) % 8;
         timer = 0;

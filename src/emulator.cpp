@@ -10,14 +10,13 @@
 namespace nes
 {
 
-uint32_t framebuffer_a[NES_WIDTH * NES_HEIGHT * 4];
-uint32_t framebuffer_b[NES_WIDTH * NES_HEIGHT * 4];
-
 namespace
 {
 emu_t* emulator_ref;
 audio_t* audio_ref;
 
+uint32_t framebuffer_a[NES_WIDTH * NES_HEIGHT * 4];
+uint32_t framebuffer_b[NES_WIDTH * NES_HEIGHT * 4];
 float speed = 1.0f;
 
 void callback_execute_ppu(void *cookie)
@@ -100,15 +99,9 @@ void emu_t::init(ines_rom_t &rom)
 
 void emu_t::swap_framebuffers()
 {
-    if (back_buffer == framebuffer_a)
-    {
-        front_buffer = framebuffer_a;
-        back_buffer = framebuffer_b;
-    } else
-    {
-        front_buffer = framebuffer_b;
-        back_buffer = framebuffer_a;
-    }
+    uint32_t* tmp = front_buffer;
+    front_buffer = back_buffer;
+    back_buffer = tmp;
 }
 
 RESULT emu_t::step_cycles(int32_t cycles)
