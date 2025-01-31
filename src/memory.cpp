@@ -153,6 +153,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         apu->status.r_pulse_1 = apu->pulse_1.length_counter > 0 && !apu->pulse_1.muted ? 1 : 0;
         apu->status.r_pulse_2 = apu->pulse_2.length_counter > 0 && !apu->pulse_2.muted ? 1 : 0;
         apu->status.r_triangle = apu->triangle.length_counter > 0 && !apu->triangle.muted ? 1 : 0;
+        apu->status.r_noise = apu->noise.length_counter > 0 && !apu->noise.muted ? 1 : 0;
 
         if (apu->frame_interrupt) apu->status.r_frame_interrupt = 1;
         else apu->status.r_frame_interrupt = 0;
@@ -360,10 +361,14 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         { // Pulse 2
             return apu->pulse_2.write( address, value );
         } else if ( address < 0x400C )
-        {
+        { // Triangle
             return apu->triangle.write( address, value );
-        } else if ( address == 0x4010 )
-        {
+        } else if ( address < 0x4010 )
+        { // Noise
+            return apu->noise.write( address, value );
+        } else if ( address < 0x4014 )
+        { // DMC
+            // Not Implemented
         } else if ( address == 0x4015 )
         { // Status
             apu->status.data = value;
@@ -395,6 +400,15 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 apu->triangle.length_counter = 0;
             } else {
                 apu->triangle.muted = false;
+            }
+
+            // Noise
+            if (apu->status.w_noise == 0) 
+            {
+                apu->noise.muted = true;
+                apu->noise.length_counter = 0;
+            } else {
+                apu->noise.muted = false;
             }
 
         } else if ( address == 0x4017 )

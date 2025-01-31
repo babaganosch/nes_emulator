@@ -27,7 +27,7 @@ void apu_t::mixer()
 {
     // Linear approximation
     float pulse_out = 0.00752 * (pulse_1.amplitude + pulse_2.amplitude);
-    float tnd_out = 0.00851 * triangle_levels[triangle.period_index];
+    float tnd_out = (0.00851 * (float)triangle_levels[triangle.period_index]) + (0.00494 * (float)noise.amplitude);
     output = pulse_out + tnd_out;
 
 }
@@ -37,6 +37,7 @@ void apu_t::quarter_frame()
     pulse_1.tick_envelope();
     pulse_2.tick_envelope();
     triangle.tick_linear_counter();
+    noise.tick_envelope();
 }
 
 void apu_t::half_frame()
@@ -46,6 +47,7 @@ void apu_t::half_frame()
     pulse_1.tick_length_counter();
     pulse_2.tick_length_counter();
     triangle.tick_length_counter();
+    noise.tick_length_counter();
 }
 
 float apu_t::execute()
@@ -123,19 +125,21 @@ float apu_t::execute()
     pulse_1.length_counter_halt = pulse_1.envelope.length_counter_halt;
     pulse_2.length_counter_halt = pulse_2.envelope.length_counter_halt;
     triangle.length_counter_halt = triangle.linear_counter_load.control;
+    noise.length_counter_halt = noise.envelope.length_counter_halt;
 
     if (pulse_1.length_counter_tmp > 0 && !pulse_1.muted) { pulse_1.length_counter = pulse_1.length_counter_tmp; } pulse_1.length_counter_tmp = 0;
     if (pulse_2.length_counter_tmp > 0 && !pulse_2.muted) { pulse_2.length_counter = pulse_2.length_counter_tmp; } pulse_2.length_counter_tmp = 0;
     if (triangle.length_counter_tmp > 0 && !triangle.muted) { triangle.length_counter = triangle.length_counter_tmp; } triangle.length_counter_tmp = 0;
+    if (noise.length_counter_tmp > 0 && !noise.muted) { noise.length_counter = noise.length_counter_tmp; } noise.length_counter_tmp = 0;
     memory->cpu->irq_pending = frame_interrupt;
 
     // Tick oscillators
     if (cycle % 2) {
         pulse_1.tick();
         pulse_2.tick();
+        noise.tick();
     }
     triangle.tick();
-    // noise.tick();
     // dmc.tick();
 
     mixer();

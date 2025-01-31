@@ -119,6 +119,63 @@ struct apu_t
         bool length_counter_halt{false};
     };
 
+    struct noise_t {
+        union
+        { // 0x400C
+            struct __attribute__((packed))
+            {
+                uint8_t volume              : 4;
+                uint8_t constant_volume     : 1;
+                uint8_t length_counter_halt : 1;
+                uint8_t unused              : 2;
+            };
+            uint8_t data{0};
+        } envelope;
+
+        // 0x400D unused
+
+        union
+        { // 0x400E
+            struct __attribute__((packed))
+            {
+                uint8_t period : 4;
+                uint8_t unused : 3;
+                uint8_t mode   : 1;
+            };
+            uint8_t data{0};
+        } control;
+
+        union
+        { // 0x400F
+            struct __attribute__((packed))
+            {
+                uint8_t unused : 3;
+                uint8_t load   : 5;
+            };
+            uint8_t data{0};
+        } length_counter_load;
+
+        void write( uint16_t address, uint8_t value );
+        void tick();
+        void tick_length_counter();
+        void tick_envelope();
+
+        uint8_t envelope_divider{0};
+        uint8_t envelope_decay{0xF};
+        uint8_t length_counter{0};
+        uint8_t length_counter_tmp{0};
+
+        uint16_t period{0};
+        uint16_t timer{0};
+        uint16_t shift{0x0001};
+        uint8_t  amplitude{0};
+        uint8_t  volume{0};
+
+        bool muted{false};
+        bool start_flag{false};
+        bool length_counter_halt{false};
+    };
+
     union
     { // 0x4015
         struct __attribute__((packed))
@@ -164,7 +221,7 @@ struct apu_t
     pulse_t pulse_1;
     pulse_t pulse_2;
     triangle_t triangle;
-    // noise
+    noise_t noise;
     // dmc
 
     float output{0};
