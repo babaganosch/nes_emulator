@@ -26,12 +26,15 @@ void apu_t::pulse_t::write( uint16_t address, uint8_t value )
         case ( 0x2 ): 
         { // Timer low
             timer_low = value;
-            period = ((length_counter_load.timer_high << 8) | timer_low) + 1; // +1?
+            period = ((length_counter_load.timer_high << 8) | timer_low);
+            period *= 2; // Convert from CPU cycles to APU cycles
         } break;
         case ( 0x3 ): 
         { // Length counter load
             length_counter_load.data = value;
-            period = ((length_counter_load.timer_high << 8) | timer_low) + 1; // +1?
+            period = ((length_counter_load.timer_high << 8) | timer_low);
+            period *= 2; // Convert from CPU cycles to APU cycles
+            duty_index = 0;
             length_counter_tmp = length_counter_lut[length_counter_load.load];
             start_flag = true;
         } break;

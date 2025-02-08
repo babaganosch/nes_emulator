@@ -113,6 +113,7 @@ struct apu_t
         uint16_t period{0};
         uint16_t timer{0};
         uint8_t  period_index{0};
+        uint8_t  amplitude{0};
 
         bool muted{false};
         bool linear_counter_reload{false};
@@ -176,6 +177,79 @@ struct apu_t
         bool length_counter_halt{false};
     };
 
+    struct dmc_t {
+        union
+        { // 0x4010
+            struct __attribute__((packed))
+            {
+                uint8_t rate       : 4;
+                uint8_t unused     : 2;
+                uint8_t loop       : 1;
+                uint8_t irq_enable : 1;
+            };
+            uint8_t data{0};
+        } control; // flags and rate
+
+        union
+        { // 0x4011
+            struct __attribute__((packed))
+            {
+                uint8_t load   : 7;
+                uint8_t unused : 1;
+            };
+            uint8_t data{0};
+        } direct_load;
+
+        // 0x4012
+        uint8_t sample_address{0};
+
+        // 0x4013
+        uint8_t sample_length{0};
+
+        // Output
+        uint8_t output_level{0};
+        uint8_t bits_shift_register{0};
+        uint8_t bits_remaining_register{0};
+        bool silence{false};
+
+        // Memory reading
+        struct sample_buffer_t {
+            uint8_t data{0};
+            bool    empty{true};
+        } sample_buffer;
+
+        struct memory_reader_t {
+            mem_t* memory{nullptr};
+
+            uint16_t address_counter{0};
+            uint16_t bytes_remaining_counter{0};
+
+            uint8_t  tmp_data{0};
+            bool data_loaded{false}; // false = get, true = store
+
+            void tick( dmc_t* dmc );
+            void start_sample( dmc_t* dmc );
+        } memory_reader;
+
+        void write( uint16_t address, uint8_t value );
+        void tick();
+
+
+        // Could obviously be combined to one single bool, but I like
+        // the verbosity of two different bools.
+        bool get_cycle{true};
+        bool put_cycle{false};
+
+        bool interrupt_flag{false};
+        bool play{false};
+        bool playing{false};
+
+        uint16_t period{0};
+        uint16_t timer{0};
+        uint8_t amplitude{0};
+
+    };
+
     union
     { // 0x4015
         struct __attribute__((packed))
@@ -222,7 +296,7 @@ struct apu_t
     pulse_t pulse_2;
     triangle_t triangle;
     noise_t noise;
-    // dmc
+    dmc_t dmc;
 
     float output{0};
 

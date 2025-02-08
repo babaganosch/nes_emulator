@@ -1,5 +1,9 @@
 #define MA_NO_DECODING
 #define MA_NO_ENCODING
+#define MA_NO_GENERATION
+#define MA_NO_RESOURCE_MANAGER
+#define MA_NO_NODE_GRAPH
+#define MA_NO_ENGINE
 #define MINIAUDIO_IMPLEMENTATION
 
 #include "nes.hpp"
@@ -78,6 +82,7 @@ void emu_t::init(ines_rom_t &rom)
     mappers_lut[0]   = new mapper_nrom_t();
     mappers_lut[1]   = new mapper_mmc1b_t();
     mappers_lut[2]   = new mapper_uxrom_t();
+    mappers_lut[7]   = new mapper_axrom_t();
     mappers_lut[94]  = new mapper_un1rom_t();
     mappers_lut[180] = new mapper_unrom_configured_t();
 

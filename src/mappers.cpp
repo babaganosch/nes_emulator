@@ -145,6 +145,22 @@ void mapper_uxrom_t::cpu_write( uint16_t address, uint8_t value ) {
     memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[bank];
 }
 
+//////// mapper 007 - AxROM
+void mapper_axrom_t::init( mem_t* memory_ref ) {
+    mapper_t::init( memory_ref );
+    // ReMap PRG banks
+    memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[0];
+    memory->cartridge_mem.prg_upper_bank = memory->ines_rom->prg_pages[1];
+}
+
+void mapper_axrom_t::cpu_write( uint16_t address, uint8_t value ) {
+    uint8_t prg_bank = (value & 0b00000111);
+    uint8_t vram_page = (value & 0b00010000);
+    (void) vram_page; // TODO
+    memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[(prg_bank*2)];
+    memory->cartridge_mem.prg_upper_bank = memory->ines_rom->prg_pages[(prg_bank*2)+1];
+}
+
 //////// mapper 094 - UN1ROM
 void mapper_un1rom_t::cpu_write( uint16_t address, uint8_t value ) {
     uint8_t bank = (value & 0b00011100) >> 2;

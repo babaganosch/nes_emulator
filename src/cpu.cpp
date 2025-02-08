@@ -65,6 +65,7 @@ void cpu_t::tick_clock()
     delta_cycles++;
     cycles++;
     memory->cpu_cycles = cycles;
+
     if (ppu_callback)
     { // NTSC PPU runs at 3x the CPU clock speed
         ppu_callback(nullptr);
@@ -214,7 +215,7 @@ void cpu_t::push_byte_to_stack( uint8_t data )
 {
     if ( regs.SP == 0x00 )
     {
-        LOG_E("--- Stack Overflow! ---");
+        LOG_E("--- Stack Overflow! (cur ins: 0x%02X) ---", cur_ins);
         throw;
     }
     uint8_t address = regs.SP--;
@@ -232,7 +233,7 @@ uint8_t cpu_t::pull_byte_from_stack()
 {
     if ( regs.SP == 0xFF )
     {
-        LOG_E("--- Stack Underflow! ---");
+        LOG_E("--- Stack Underflow! (cur ins: 0x%02X) ---", cur_ins);
         throw;
     }
     uint8_t address = ++regs.SP;

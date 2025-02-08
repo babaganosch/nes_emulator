@@ -4,11 +4,6 @@
 namespace nes
 {
 
-constexpr uint8_t triangle_levels[32] = { // 0x00 - 0x1F
-    0x0F, 0x0E, 0x0D, 0x0C, 0x0B, 0x0A, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
-};
-
 constexpr uint8_t length_counter_lut[32] = { // 0x00 - 0x1F
     0x0A, 0xFE, 0x14, 0x02, 0x28, 0x04, 0x50, 0x06, 0xA0, 0x08, 0x3C, 0x0A, 0x0E, 0x0C, 0x1A, 0x0E,
     0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16, 0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E
@@ -18,6 +13,7 @@ void apu_t::init(mem_t &mem)
 {
     memory = &mem;
     memory->apu = this;
+    dmc.memory_reader.memory = &mem;
     
     cycle = 8; // Power up shenanigans
     LOG_I("APU initiated successfully");
@@ -26,8 +22,8 @@ void apu_t::init(mem_t &mem)
 void apu_t::mixer()
 {
     // Linear approximation
-    float pulse_out = 0.00752 * (pulse_1.amplitude + pulse_2.amplitude);
-    float tnd_out = (0.00851 * (float)triangle_levels[triangle.period_index]) + (0.00494 * (float)noise.amplitude);
+    float pulse_out = 0.00752 * ((float)pulse_1.amplitude + (float)pulse_2.amplitude);
+    float tnd_out = (0.00851 * (float)triangle.amplitude) + (0.00494 * (float)noise.amplitude) + (0.00335 * (float)dmc.output_level);
     output = pulse_out + tnd_out;
 
 }
@@ -131,18 +127,17 @@ float apu_t::execute()
     if (pulse_2.length_counter_tmp > 0 && !pulse_2.muted) { pulse_2.length_counter = pulse_2.length_counter_tmp; } pulse_2.length_counter_tmp = 0;
     if (triangle.length_counter_tmp > 0 && !triangle.muted) { triangle.length_counter = triangle.length_counter_tmp; } triangle.length_counter_tmp = 0;
     if (noise.length_counter_tmp > 0 && !noise.muted) { noise.length_counter = noise.length_counter_tmp; } noise.length_counter_tmp = 0;
-    memory->cpu->irq_pending = frame_interrupt;
 
     // Tick oscillators
-    if (cycle % 2) {
-        pulse_1.tick();
-        pulse_2.tick();
-        noise.tick();
-    }
+    pulse_1.tick();
+    pulse_2.tick();
     triangle.tick();
-    // dmc.tick();
+    noise.tick();
+    dmc.tick();
 
     mixer();
+
+    memory->cpu->irq_pending = frame_interrupt || dmc.interrupt_flag;
     
     return output;
 }

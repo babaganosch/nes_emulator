@@ -35,6 +35,7 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
         case KB_KEY_LEFT:  emu->memory.gamepad[0].left   = isPressed; break;
         case KB_KEY_RIGHT: emu->memory.gamepad[0].right  = isPressed; break;
 
+        case KB_KEY_0: emu_speed = 0.00; break;
         case KB_KEY_1: emu_speed = 0.33; break;
         case KB_KEY_2: emu_speed = 0.50; break;
         case KB_KEY_3: emu_speed = 0.66; break;
@@ -175,6 +176,7 @@ int main(int argc, char *argv[])
                     nes::draw_text( emu.front_buffer, 1, 1,  "PC   A  X  Y  SR SP CYC");
                     nes::draw_text( emu.front_buffer, 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
                                            regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
+                    nes::draw_text( emu.front_buffer, 1, 19, "EMU %d%%", (int)(emu_speed*100));
                     nes::draw_text( emu.front_buffer, 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
                                            emu.memory.gamepad[0].A > 0 ? '*' : ' ', 
                                            emu.memory.gamepad[0].B > 0 ? '*' : ' ',

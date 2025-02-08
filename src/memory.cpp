@@ -154,9 +154,12 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         apu->status.r_pulse_2 = apu->pulse_2.length_counter > 0 && !apu->pulse_2.muted ? 1 : 0;
         apu->status.r_triangle = apu->triangle.length_counter > 0 && !apu->triangle.muted ? 1 : 0;
         apu->status.r_noise = apu->noise.length_counter > 0 && !apu->noise.muted ? 1 : 0;
+        apu->status.r_dmc = apu->dmc.memory_reader.bytes_remaining_counter > 0 ? 1 : 0;
 
-        if (apu->frame_interrupt) apu->status.r_frame_interrupt = 1;
-        else apu->status.r_frame_interrupt = 0;
+        apu->status.r_frame_interrupt = apu->frame_interrupt;
+        apu->status.r_dmc_interrupt = apu->dmc.interrupt_flag;
+
+        LOG_W("Playing: %u (bytes left: %u) cycle: %u", apu->status.r_dmc, apu->dmc.memory_reader.bytes_remaining_counter, apu->cycle);
         
         uint8_t status = apu->status.data;
         apu->frame_interrupt = 0;
@@ -368,10 +371,25 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             return apu->noise.write( address, value );
         } else if ( address < 0x4014 )
         { // DMC
-            // Not Implemented
+            return apu->dmc.write( address, value );
         } else if ( address == 0x4015 )
         { // Status
             apu->status.data = value;
+            
+            // Clear DMC interrupt
+            apu->dmc.interrupt_flag = false;
+
+            if (apu->status.w_dmc)
+            {
+                LOG_E("DMC Enable");
+                apu->dmc.play = true;
+                //apu->dmc.memory_reader.start_sample( &apu->dmc );
+            } else
+            {
+                LOG_E("DMC DISABLE");
+                apu->dmc.play = false;
+                apu->dmc.memory_reader.bytes_remaining_counter = 0;
+            }
 
             // TODO: Change in APU instead
 
