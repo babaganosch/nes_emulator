@@ -7,6 +7,22 @@ namespace nes
 
 mapper_t* mappers_lut[256] = { nullptr };
 
+void instantiate_mappers()
+{
+    mappers_lut[0]   = new mapper_nrom_t();
+    mappers_lut[1]   = new mapper_mmc1b_t();
+    mappers_lut[2]   = new mapper_uxrom_t();
+    mappers_lut[7]   = new mapper_axrom_t();
+    mappers_lut[94]  = new mapper_un1rom_t();
+    mappers_lut[180] = new mapper_unrom_configured_t();
+
+    uint8_t mappers_instantiated = 0;
+    for (uint16_t i = 0; i < 256; ++i) {
+        if (mappers_lut[i]) ++mappers_instantiated;
+    }
+    LOG_I("%u mappers instantiated", mappers_instantiated);
+}
+
 //////// mapper basic behaviour
 void mapper_t::init( mem_t* memory_ref ) {
     memory = memory_ref;

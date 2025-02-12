@@ -149,6 +149,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
 
     else if ( address == 0x4015 )
     { // APU Status 
+        if (peek) return 0xFF; // NesTest workaround
         // Move to APU as well
         apu->status.r_pulse_1 = apu->pulse_1.length_counter > 0 && !apu->pulse_1.muted ? 1 : 0;
         apu->status.r_pulse_2 = apu->pulse_2.length_counter > 0 && !apu->pulse_2.muted ? 1 : 0;
@@ -381,12 +382,9 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
 
             if (apu->status.w_dmc)
             {
-                LOG_E("DMC Enable");
                 apu->dmc.play = true;
-                //apu->dmc.memory_reader.start_sample( &apu->dmc );
             } else
             {
-                LOG_E("DMC DISABLE");
                 apu->dmc.play = false;
                 apu->dmc.memory_reader.bytes_remaining_counter = 0;
             }

@@ -11,6 +11,7 @@ constexpr uint32_t CHR_8KB_SIZE = 8 * 1024;
 constexpr uint32_t CHR_4KB_SIZE = 4 * 1024;
 
 extern mapper_t* mappers_lut[256];
+void instantiate_mappers();
 /*
 *   NOTE: Instantiate each implemented mapper in the emu_t::init()
 */

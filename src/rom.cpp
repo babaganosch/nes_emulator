@@ -133,6 +133,19 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
     }
 }
 
+void ines_rom_t::construct_empty()
+{
+    clear_contents();
+    memcpy(header.magic, INES_MAGIC, 4);
+    header.prg_size = 2;
+    prg_pages = new uint8_t*[header.prg_size];
+    for (auto i = 0; i < header.prg_size; ++i)
+    {
+        prg_pages[i] = new u_int8_t[PRG_PAGE_SIZE];
+        memset(prg_pages[i], 0u, PRG_PAGE_SIZE);
+    }
+}
+
 
 
 } // nes

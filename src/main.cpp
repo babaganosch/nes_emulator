@@ -14,6 +14,9 @@ constexpr const char* nes_test_rom = "../data/nestest.nes";
 constexpr const uint16_t screen_multiplier = 3u;
 constexpr const uint16_t microseconds_per_frame = 16667;
 
+#define DEBUG_DRAW_INPUT(input) (input > 0 ? '*' : ' ')
+
+bool json_test = false;
 bool validate = false;
 bool validate_log = false;
 bool debug = false;
@@ -75,6 +78,12 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        if ( strcmp(argv[i], "-j") == 0)
+        {
+            json_test = true;
+            continue;
+        }
+
         if ( strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0 )
         {
             debug = true;
@@ -110,11 +119,16 @@ int main(int argc, char *argv[])
 
     try
     {
-        rom.load_from_file(rom_filepath);
-        emu.init(rom);
-
-        if (validate)
+        if (json_test)
+        { // Json Tests
+            rom.construct_empty();
+            emu.init_testsuite(rom);
+        } 
+        else if (validate)
         { // NesTest Validation
+            rom.load_from_file(rom_filepath);
+            emu.init(rom);
+
             nes::validator validator{};
             ret = validator.init( &emu, validate_log_filepath, validate_log ) ;
 
@@ -131,6 +145,8 @@ int main(int argc, char *argv[])
         }
         else
         { // Regular Execution
+            rom.load_from_file(rom_filepath);
+            emu.init(rom);
 
             struct mfb_window *window = 0x0;
             struct mfb_window *nt_window = 0x0;
@@ -175,17 +191,17 @@ int main(int argc, char *argv[])
                     nes::cpu_t::regs_t& regs = emu.cpu.regs;
                     nes::draw_text( emu.front_buffer, 1, 1,  "PC   A  X  Y  SR SP CYC");
                     nes::draw_text( emu.front_buffer, 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
-                                           regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
+                                        regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
                     nes::draw_text( emu.front_buffer, 1, 19, "EMU %d%%", (int)(emu_speed*100));
                     nes::draw_text( emu.front_buffer, 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
-                                           emu.memory.gamepad[0].A > 0 ? '*' : ' ', 
-                                           emu.memory.gamepad[0].B > 0 ? '*' : ' ',
-                                           emu.memory.gamepad[0].select > 0 ? '*' : ' ',
-                                           emu.memory.gamepad[0].start > 0 ? '*' : ' ',
-                                           emu.memory.gamepad[0].up > 0 ? '*' : ' ',
-                                           emu.memory.gamepad[0].down > 0 ? '*' : ' ',
-                                           emu.memory.gamepad[0].left > 0 ? '*' : ' ',
-                                           emu.memory.gamepad[0].right > 0 ? '*' : ' ');
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].A),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].B),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].select),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].start),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].up),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].down),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].left),
+                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].right));
 
                     nes::clear_framebuffer( nes::nt_window_buffer, 255, 0, 0 );
                     nes::dump_nametables(emu);

@@ -340,6 +340,7 @@ struct ines_rom_t
     ~ines_rom_t();
 
     void clear_contents();
+    void construct_empty();
     void load_from_file(const char* filepath);
     void load_from_data(const uint8_t* data, const uint32_t size);
 };
@@ -506,6 +507,7 @@ struct emu_t
     uint32_t* back_buffer{nullptr};
 
     void init(ines_rom_t &rom);
+    void init_testsuite(ines_rom_t &rom);
     void swap_framebuffers();
     RESULT step_cycles(int32_t cycles);
     uint16_t step_vblank();

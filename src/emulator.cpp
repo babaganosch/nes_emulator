@@ -79,18 +79,7 @@ void emu_t::init(ines_rom_t &rom)
     front_buffer = framebuffer_a;
     back_buffer = framebuffer_b;
 
-    mappers_lut[0]   = new mapper_nrom_t();
-    mappers_lut[1]   = new mapper_mmc1b_t();
-    mappers_lut[2]   = new mapper_uxrom_t();
-    mappers_lut[7]   = new mapper_axrom_t();
-    mappers_lut[94]  = new mapper_un1rom_t();
-    mappers_lut[180] = new mapper_unrom_configured_t();
-
-    uint8_t mappers_instantiated = 0;
-    for (uint16_t i = 0; i < 256; ++i) {
-        if (mappers_lut[i]) ++mappers_instantiated;
-    }
-    LOG_I("Emulator instantiated %u mappers", mappers_instantiated);
+    instantiate_mappers();
 
     if (audio_ref) delete audio_ref;
     audio_ref = new audio_t();
@@ -98,6 +87,18 @@ void emu_t::init(ines_rom_t &rom)
     
     memory.init( rom );
     cpu.init( &callback_execute_ppu, &callback_execute_apu, memory );
+    ppu.init( memory, back_buffer );
+    apu.init( memory );
+}
+
+void emu_t::init_testsuite(ines_rom_t &rom)
+{ // Headless CPU only
+    emulator_ref = this;
+    
+    instantiate_mappers();
+
+    memory.init( rom );
+    cpu.init( nullptr, nullptr, memory );
     ppu.init( memory, back_buffer );
     apu.init( memory );
 }
