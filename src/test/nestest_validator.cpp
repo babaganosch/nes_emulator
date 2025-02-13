@@ -1,4 +1,4 @@
-#include "nes_validator.hpp"
+#include "test/nestest_validator.hpp"
 #include "nes_ops.hpp"
 #include "nes.hpp"
 #include "logging.hpp"
@@ -6,7 +6,7 @@
 namespace nes
 {
 
-validator::~validator()
+nestest_validator::~nestest_validator()
 {
     if (key.is_open())
     {
@@ -14,7 +14,7 @@ validator::~validator()
     }
 }
 
-RESULT validator::init(emu_t* emu_ref, const char* key_path, bool validate)
+RESULT nestest_validator::init(emu_t* emu_ref, const char* key_path, bool validate)
 {
     emu = emu_ref;
     emu->cpu.nestest_validation = true;
@@ -50,7 +50,7 @@ RESULT validator::init(emu_t* emu_ref, const char* key_path, bool validate)
     return RESULT_OK;
 }
 
-RESULT validator::execute()
+RESULT nestest_validator::execute()
 {
     RESULT ret = construct_output_pre_line();
     if (ret != RESULT_OK) return ret;
@@ -75,7 +75,7 @@ RESULT validator::execute()
     return ret;
 }
 
-RESULT validator::construct_output_pre_line()
+RESULT nestest_validator::construct_output_pre_line()
 {
     line_number++;
     emu_output[0] = '\0';
@@ -214,7 +214,7 @@ RESULT validator::construct_output_pre_line()
     return RESULT_OK;
 }
 
-RESULT validator::construct_output_post_line()
+RESULT nestest_validator::construct_output_post_line()
 {
     auto index = 0;
     if (strlen(emu->cpu.nestest_validation_str) < post_fix_letters)
@@ -232,7 +232,7 @@ RESULT validator::construct_output_post_line()
     return RESULT_OK;
 }
 
-RESULT validator::validate_line()
+RESULT nestest_validator::validate_line()
 {
     std::string line;
     std::getline(key, line);

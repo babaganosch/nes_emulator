@@ -11,6 +11,8 @@
 #include "mappers.hpp"
 #include "audio.hpp"
 
+#include "test/jsontest_validator.hpp"
+
 namespace nes
 {
 
@@ -73,6 +75,11 @@ void audio_callback(ma_device* device, void* output, const void* input, ma_uint3
 
 } // anonymous
 
+emu_t::~emu_t()
+{
+    if (memory) delete memory;
+}
+
 void emu_t::init(ines_rom_t &rom)
 {
     emulator_ref = this;
@@ -84,20 +91,21 @@ void emu_t::init(ines_rom_t &rom)
     if (audio_ref) delete audio_ref;
     audio_ref = new audio_t();
     LOG_I("Audio interface initiated");
-    
-    memory.init( rom );
+
+    memory = new mem_t();
+    memory->init( rom );
     cpu.init( &callback_execute_ppu, &callback_execute_apu, memory );
     ppu.init( memory, back_buffer );
     apu.init( memory );
 }
 
-void emu_t::init_testsuite(ines_rom_t &rom)
+void emu_t::init_testsuite()
 { // Headless CPU only
     emulator_ref = this;
     
     instantiate_mappers();
+    memory = new nes::mem_dummy_t();
 
-    memory.init( rom );
     cpu.init( nullptr, nullptr, memory );
     ppu.init( memory, back_buffer );
     apu.init( memory );

@@ -212,6 +212,8 @@ struct mem_t
     uint8_t   gamepad_strobe{0};
     uint32_t  cpu_cycles{0};
 
+    uint8_t*  memory_hook{nullptr};
+
     enum MEMORY_BUS
     {
         CPU,
@@ -219,16 +221,17 @@ struct mem_t
         APU
     };
 
-    void     init( ines_rom_t &rom );
+    virtual ~mem_t() = default;
+    virtual void init( ines_rom_t &rom );
 
-    uint8_t  memory_read( MEMORY_BUS bus, uint16_t address, bool peek );
-    void     memory_write( MEMORY_BUS bus, uint8_t data, uint16_t address );
+    virtual uint8_t  memory_read( MEMORY_BUS bus, uint16_t address, bool peek );
+    virtual void     memory_write( MEMORY_BUS bus, uint8_t data, uint16_t address );
 
-    uint8_t  cpu_memory_read( uint16_t address, bool peek );
-    void     cpu_memory_write( uint8_t data, uint16_t address );
+    virtual uint8_t  cpu_memory_read( uint16_t address, bool peek );
+    virtual void     cpu_memory_write( uint8_t data, uint16_t address );
 
-    uint8_t  ppu_memory_read( uint16_t address, bool peek );
-    void     ppu_memory_write( uint8_t data, uint16_t address );
+    virtual uint8_t  ppu_memory_read( uint16_t address, bool peek );
+    virtual void     ppu_memory_write( uint8_t data, uint16_t address );
 };
 
 struct cpu_t
@@ -295,7 +298,7 @@ struct cpu_t
     
     void tick_clock();
     void tick_clock( uint16_t cycles );
-    void init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem);
+    void init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem);
     void nmi();
     void irq();
     uint16_t execute();
@@ -492,7 +495,7 @@ struct ppu_t
     void reload_shift_registers();
     
     bool check_vblank();
-    void init(mem_t &mem, uint32_t* &out);
+    void init(mem_t* mem, uint32_t* &out);
     void execute();
 };
 
@@ -501,13 +504,15 @@ struct emu_t
     cpu_t cpu;
     ppu_t ppu;
     apu_t apu;
-    mem_t memory;
+    mem_t* memory{nullptr};
 
     uint32_t* front_buffer{nullptr};
     uint32_t* back_buffer{nullptr};
 
+    ~emu_t();
+
     void init(ines_rom_t &rom);
-    void init_testsuite(ines_rom_t &rom);
+    void init_testsuite();
     void swap_framebuffers();
     RESULT step_cycles(int32_t cycles);
     uint16_t step_vblank();

@@ -11,7 +11,12 @@ solution "nes_emulator"
    project "nes_emulator"
       language "C++"
       files { "src/**.cpp" }
-      includedirs { "include/", "thirdparty/minifb/include/", "thirdparty/miniaudio/" }
+      includedirs { 
+        "include/", 
+        "thirdparty/minifb/include/", 
+        "thirdparty/miniaudio/", 
+        "thirdparty/rapidjson/include/" 
+      }
 
       links { "minifb_internal" }
 

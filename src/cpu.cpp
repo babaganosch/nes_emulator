@@ -7,11 +7,11 @@
 namespace nes
 {
 
-void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t &mem)
+void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem)
 {
     ppu_callback = ppu_cb;
     apu_callback = apu_cb;
-    memory = &mem;
+    memory = mem;
     memory->cpu = this;
 
     // Try to grab the interrupt vectors

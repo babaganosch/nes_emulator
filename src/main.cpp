@@ -2,7 +2,8 @@
 #include <MiniFB.h>
 
 #include "nes.hpp"
-#include "nes_validator.hpp"
+#include "test/nestest_validator.hpp"
+#include "test/jsontest_validator.hpp"
 #include "render.hpp"
 #include "logging.hpp"
 
@@ -29,14 +30,14 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
 
     switch ( key )
     {
-        case KB_KEY_Z:     emu->memory.gamepad[0].A      = isPressed; break;
-        case KB_KEY_X:     emu->memory.gamepad[0].B      = isPressed; break;
-        case KB_KEY_N:     emu->memory.gamepad[0].select = isPressed; break;
-        case KB_KEY_M:     emu->memory.gamepad[0].start  = isPressed; break;
-        case KB_KEY_UP:    emu->memory.gamepad[0].up     = isPressed; break;
-        case KB_KEY_DOWN:  emu->memory.gamepad[0].down   = isPressed; break;
-        case KB_KEY_LEFT:  emu->memory.gamepad[0].left   = isPressed; break;
-        case KB_KEY_RIGHT: emu->memory.gamepad[0].right  = isPressed; break;
+        case KB_KEY_Z:     emu->memory->gamepad[0].A      = isPressed; break;
+        case KB_KEY_X:     emu->memory->gamepad[0].B      = isPressed; break;
+        case KB_KEY_N:     emu->memory->gamepad[0].select = isPressed; break;
+        case KB_KEY_M:     emu->memory->gamepad[0].start  = isPressed; break;
+        case KB_KEY_UP:    emu->memory->gamepad[0].up     = isPressed; break;
+        case KB_KEY_DOWN:  emu->memory->gamepad[0].down   = isPressed; break;
+        case KB_KEY_LEFT:  emu->memory->gamepad[0].left   = isPressed; break;
+        case KB_KEY_RIGHT: emu->memory->gamepad[0].right  = isPressed; break;
 
         case KB_KEY_0: emu_speed = 0.00; break;
         case KB_KEY_1: emu_speed = 0.33; break;
@@ -51,7 +52,7 @@ void keyboard_callback(struct mfb_window *window, mfb_key key, mfb_key_mod mod, 
         default: break;
     }
 
-    if (isPressed) return; // Only react on key release below
+    if ( isPressed ) return; // Only react on key release below
     if ( key == KB_KEY_ESCAPE )
     {
         mfb_close(window);
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
 {
     const char* rom_filepath = nes_test_rom;
     const char* validate_log_filepath;
+    const char* json_test_filepath;
     for ( auto i = 1; i < argc; ++i )
     {
         if ( strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--validate") == 0 )
@@ -78,10 +80,17 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        if ( strcmp(argv[i], "-j") == 0)
+        if ( strcmp(argv[i], "-j") == 0 )
         {
             json_test = true;
-            continue;
+            if (i + 1 < argc)
+            {
+                json_test_filepath = argv[++i];
+                continue;
+            } else {
+                printf("Missing argument with path to JSON test\n");
+                return nes::RESULT_INVALID_ARGUMENTS;
+            }
         }
 
         if ( strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0 )
@@ -101,6 +110,7 @@ int main(int argc, char *argv[])
             printf("       -h | --help      (print this help)\n");
             printf("       -v | --validate  (validation execution)\n");
             printf("       -v <validation_log_path>  (validate against provided log file)\n");
+            printf("       -j <path to json test>    (validate CPU against JSON test)\n");
             return nes::RESULT_OK;
         }
 
@@ -121,15 +131,16 @@ int main(int argc, char *argv[])
     {
         if (json_test)
         { // Json Tests
-            rom.construct_empty();
-            emu.init_testsuite(rom);
+            emu.init_testsuite();
+            nes::jsontest_validator validator{};
+            ret = validator.init( &emu, json_test_filepath );
         } 
         else if (validate)
         { // NesTest Validation
             rom.load_from_file(rom_filepath);
             emu.init(rom);
 
-            nes::validator validator{};
+            nes::nestest_validator validator{};
             ret = validator.init( &emu, validate_log_filepath, validate_log ) ;
 
             while ( ret == nes::RESULT_OK )
@@ -190,18 +201,20 @@ int main(int argc, char *argv[])
                 {
                     nes::cpu_t::regs_t& regs = emu.cpu.regs;
                     nes::draw_text( emu.front_buffer, 1, 1,  "PC   A  X  Y  SR SP CYC");
-                    nes::draw_text( emu.front_buffer, 1, 10, "%04X %02X %02X %02X %02X %02X %08X",
-                                        regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
+                    nes::draw_text( emu.front_buffer, 1, 10, 
+                        "%04X %02X %02X %02X %02X %02X %08X",
+                        regs.PC, regs.A, regs.X, regs.Y, regs.SR, regs.SP, emu.cpu.cycles);
                     nes::draw_text( emu.front_buffer, 1, 19, "EMU %d%%", (int)(emu_speed*100));
-                    nes::draw_text( emu.front_buffer, 30, NES_HEIGHT - 10, "A%c B%c SE%c ST%c U%c D%c L%c R%c",
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].A),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].B),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].select),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].start),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].up),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].down),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].left),
-                        DEBUG_DRAW_INPUT(emu.memory.gamepad[0].right));
+                    nes::draw_text( emu.front_buffer, 30, NES_HEIGHT - 10, 
+                        "A%c B%c SE%c ST%c U%c D%c L%c R%c",
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].A),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].B),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].select),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].start),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].up),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].down),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].left),
+                        DEBUG_DRAW_INPUT(emu.memory->gamepad[0].right));
 
                     nes::clear_framebuffer( nes::nt_window_buffer, 255, 0, 0 );
                     nes::dump_nametables(emu);

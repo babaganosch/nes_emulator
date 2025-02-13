@@ -19,23 +19,23 @@ void apu_t::dmc_t::write( uint16_t address, uint8_t value )
             if (!control.irq_enable) interrupt_flag = false;
             
             period = period_lut[control.rate]; // 0x0 - 0xF NTSC
-            LOG_I("4010 control %02X (rate: 0x%03X) (I:%u L:%u)", value, period, control.irq_enable, control.loop);
+            //LOG_I("4010 control %02X (rate: 0x%03X) (I:%u L:%u)", value, period, control.irq_enable, control.loop);
         } break;
         case ( 0x4011 ): 
         { // Direct load
             direct_load.data = value;
             output_level = direct_load.load;
-            LOG_I("4011 direct load %02X", value);
+            //LOG_I("4011 direct load %02X", value);
         } break;
         case ( 0x4012 ): 
         { // Sample address
             sample_address = value;
-            LOG_I("4012 sample address %02X", value);
+            //LOG_I("4012 sample address %02X", value);
         } break;
         case ( 0x4013 ): 
         { // Sample length
             sample_length = value;
-            LOG_I("4013 length %02X", value);
+            //LOG_I("4013 length %02X", value);
         } break;
     }
 }

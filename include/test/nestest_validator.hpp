@@ -1,5 +1,5 @@
-#ifndef NES_VALIDATOR_HPP
-#define NES_VALIDATOR_HPP
+#ifndef NESTEST_VALIDATOR_HPP
+#define NESTEST_VALIDATOR_HPP
 
 #include "nes.hpp"
 
@@ -10,11 +10,11 @@ namespace nes
 
 const size_t emu_output_len = 96;
 
-class validator
+class nestest_validator
 {
 public:
-    validator() = default;
-    ~validator();
+    nestest_validator() = default;
+    ~nestest_validator();
 
     RESULT init(emu_t* emu_ref, const char* key_path, bool validate_log);
     RESULT execute();
@@ -39,4 +39,4 @@ private:
 
 } // nes
 
-#endif /* NES_VALIDATOR_HPP */
+#endif /* NESTEST_VALIDATOR_HPP */

@@ -9,11 +9,11 @@ constexpr uint8_t length_counter_lut[32] = { // 0x00 - 0x1F
     0x0C, 0x10, 0x18, 0x12, 0x30, 0x14, 0x60, 0x16, 0xC0, 0x18, 0x48, 0x1A, 0x10, 0x1C, 0x20, 0x1E
 };
 
-void apu_t::init(mem_t &mem)
+void apu_t::init(mem_t* mem)
 {
-    memory = &mem;
+    memory = mem;
     memory->apu = this;
-    dmc.memory_reader.memory = &mem;
+    dmc.memory_reader.memory = mem;
     
     cycle = 8; // Power up shenanigans
     LOG_I("APU initiated successfully");

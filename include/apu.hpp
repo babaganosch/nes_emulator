@@ -286,7 +286,7 @@ struct apu_t
         uint8_t data{0};
     } frame_counter;
 
-    void init(mem_t &mem);
+    void init(mem_t* mem);
     void mixer();
     void quarter_frame();
     void half_frame();

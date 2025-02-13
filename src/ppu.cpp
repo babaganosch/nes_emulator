@@ -91,9 +91,9 @@ static bool allow_nmi = false;
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
 
-void ppu_t::init(mem_t &mem, uint32_t* &out)
+void ppu_t::init(mem_t* mem, uint32_t* &out)
 {
-    memory = &mem;
+    memory = mem;
     memory->ppu = this;
     output = out;
     recently_power_on = true;

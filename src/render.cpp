@@ -195,7 +195,7 @@ static void ppu_get_chr(emu_t& emu, uint16_t address, uint8_t* out_data, bool bg
         }
     }
 
-    uint8_t* chr_data = (uint8_t*)emu.memory.cartridge_mem.chr_rom.data + address + chr_offset;
+    uint8_t* chr_data = (uint8_t*)emu.memory->cartridge_mem.chr_rom.data + address + chr_offset;
 
     // low bits
     for (uint32_t y = 0; y < 8; ++y)
@@ -247,7 +247,7 @@ static void blit_chr(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr_in
             uint32_t ti = (ty * NES_WIDTH) + tx;
 
             if (bg && pix == 0x0) {
-                uint32_t palette_bg = emu.memory.ppu_mem.palette[0x00];
+                uint32_t palette_bg = emu.memory->ppu_mem.palette[0x00];
                 emu.back_buffer[ti] = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
             } else if (palette_set == 0x0) {
                 emu.back_buffer[ti] = MFB_RGB(gray_palette[pix*3], gray_palette[pix*3], gray_palette[pix*3]);
@@ -278,7 +278,7 @@ static void blit_chr_nt(emu_t& emu, uint32_t pix_x, uint32_t pix_y, uint32_t chr
             uint32_t ti = (ty * NES_WIDTH * 2) + tx;
 
             if (bg && pix == 0x0) {
-                uint32_t palette_bg = emu.memory.ppu_mem.palette[0x00];
+                uint32_t palette_bg = emu.memory->ppu_mem.palette[0x00];
                 nt_window_buffer[ti] = MFB_RGB(palette_id_to_red(palette_bg), palette_id_to_green(palette_bg), palette_id_to_blue(palette_bg));
             } else if (palette_set == 0x0) {
                 nt_window_buffer[ti] = MFB_RGB(gray_palette[pix*3], gray_palette[pix*3], gray_palette[pix*3]);
@@ -296,19 +296,19 @@ void dump_sprites(emu_t &emu)
     static uint8_t palette_set[3];
     for (uint32_t sprite_i = 0; sprite_i < 64; ++sprite_i)
     {
-        uint8_t sprite_data0 = emu.memory.ppu_mem.oam.arr2d[sprite_i][0]; // y
-        uint8_t sprite_data1 = emu.memory.ppu_mem.oam.arr2d[sprite_i][1]; // tile index
-        uint8_t sprite_data2 = emu.memory.ppu_mem.oam.arr2d[sprite_i][2]; // attributes
-        uint8_t sprite_data3 = emu.memory.ppu_mem.oam.arr2d[sprite_i][3]; // x
+        uint8_t sprite_data0 = emu.memory->ppu_mem.oam.arr2d[sprite_i][0]; // y
+        uint8_t sprite_data1 = emu.memory->ppu_mem.oam.arr2d[sprite_i][1]; // tile index
+        uint8_t sprite_data2 = emu.memory->ppu_mem.oam.arr2d[sprite_i][2]; // attributes
+        uint8_t sprite_data3 = emu.memory->ppu_mem.oam.arr2d[sprite_i][3]; // x
 
         bool flip_x = !!(sprite_data2 & (1 << 6));
         bool flip_y = !!(sprite_data2 & (1 << 7));
         uint8_t palette_id = sprite_data2 & 0x3;
 
         // uint8_t palette_ids = emu.ppu.palette[0x11+palette_id*3];
-        palette_set[0] = emu.memory.ppu_mem.palette[0x11+palette_id*4];
-        palette_set[1] = emu.memory.ppu_mem.palette[0x12+palette_id*4];
-        palette_set[2] = emu.memory.ppu_mem.palette[0x13+palette_id*4];
+        palette_set[0] = emu.memory->ppu_mem.palette[0x11+palette_id*4];
+        palette_set[1] = emu.memory->ppu_mem.palette[0x12+palette_id*4];
+        palette_set[2] = emu.memory->ppu_mem.palette[0x13+palette_id*4];
 
         blit_chr(emu, sprite_data3+2, sprite_data0, sprite_data1, false, flip_x, flip_y, palette_set);
 
@@ -330,11 +330,11 @@ void dump_ppu_vram(emu_t& emu)
             if (nti >= 0x800) {
                 LOG_E("trying to access vram out of bounds!\n");
             }
-            uint8_t chr_i = emu.memory.ppu_mem.vram[nti];
+            uint8_t chr_i = emu.memory->ppu_mem.vram[nti];
 
             // find correct attribute
             unsigned short attribute_addr = ((yi / 4)*8)+(xi / 4);
-            uint8_t attribute = emu.memory.ppu_mem.vram[attribute_addr+0x3C0];
+            uint8_t attribute = emu.memory->ppu_mem.vram[attribute_addr+0x3C0];
 
             uint32_t sub_x = (xi / 2) % 2;
             uint32_t sub_y = (yi / 2) % 2;
@@ -349,9 +349,9 @@ void dump_ppu_vram(emu_t& emu)
             } else if (sub_x == 1 && sub_y == 1) {
                 palette_id = (attribute >> 6) & 0x3;
             }
-            palette_set[0] = emu.memory.ppu_mem.palette[0x01+palette_id*4];
-            palette_set[1] = emu.memory.ppu_mem.palette[0x02+palette_id*4];
-            palette_set[2] = emu.memory.ppu_mem.palette[0x03+palette_id*4];
+            palette_set[0] = emu.memory->ppu_mem.palette[0x01+palette_id*4];
+            palette_set[1] = emu.memory->ppu_mem.palette[0x02+palette_id*4];
+            palette_set[2] = emu.memory->ppu_mem.palette[0x03+palette_id*4];
             blit_chr(emu, xi*8, yi*8, chr_i, true, false, false, palette_set); // ignore fliping for now
         }
     }
@@ -375,11 +375,11 @@ void dump_nametables(emu_t &emu)
                     LOG_E("trying to access vram out of bounds!");
                 }
                 
-                uint8_t chr_i = emu.memory.ppu_memory_read( base_nt_addr+nti, true );
+                uint8_t chr_i = emu.memory->ppu_memory_read( base_nt_addr+nti, true );
 
                 // find correct attribute
                 unsigned short attribute_addr = ((yi / 4)*8)+(xi / 4);
-                uint8_t attribute = emu.memory.ppu_memory_read( base_nt_addr+attribute_addr+0x3C0, true );
+                uint8_t attribute = emu.memory->ppu_memory_read( base_nt_addr+attribute_addr+0x3C0, true );
 
                 uint32_t sub_x = (xi / 2) % 2;
                 uint32_t sub_y = (yi / 2) % 2;
@@ -395,9 +395,9 @@ void dump_nametables(emu_t &emu)
                     palette_id = (attribute >> 6) & 0x3;
                 }
                 
-                palette_set[0] = emu.memory.ppu_mem.palette[0x01+palette_id*4];
-                palette_set[1] = emu.memory.ppu_mem.palette[0x02+palette_id*4];
-                palette_set[2] = emu.memory.ppu_mem.palette[0x03+palette_id*4];
+                palette_set[0] = emu.memory->ppu_mem.palette[0x01+palette_id*4];
+                palette_set[1] = emu.memory->ppu_mem.palette[0x02+palette_id*4];
+                palette_set[2] = emu.memory->ppu_mem.palette[0x03+palette_id*4];
                 
                 blit_chr_nt(emu, xi*8 + nt_x*NES_WIDTH, yi*8 + nt_y*NES_HEIGHT, chr_i, true, false, false, palette_set); // ignore fliping for now
             }
