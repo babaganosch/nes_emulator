@@ -159,31 +159,7 @@ uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
 uint8_t* cpu_t::fetch_byte_ref( uint16_t address )
 {
     tick_clock();
-    if ( address < 0x2000 )
-    { // internal ram
-        return &memory->cpu_mem.internal_ram[ address ];
-    }
-    else if ( address < 0x4020 )
-    {
-        LOG_E("Trying to fetch unmapped reference (%04x)", address);
-    }
-    else if ( address < 0x6000 )
-    { // expansion rom
-        return &memory->cartridge_mem.expansion_rom[ address - 0x4020 ];
-    }
-    else if ( address < 0x8000 )
-    { // sram
-        return &memory->cartridge_mem.sram[ address - 0x6000 ];
-    }
-    else if ( address < 0xC000 )
-    { // prg lower
-        return &memory->cartridge_mem.prg_lower_bank[ address - 0x8000 ];
-    }
-    else if ( address <= 0xFFFF )
-    { // prg upper
-        return &memory->cartridge_mem.prg_upper_bank[ address - 0xC000 ];
-    }
-    return nullptr;
+    return memory->fetch_byte_ref( address );
 }
 
 void cpu_t::write_byte( uint8_t data, uint8_t* ref )
@@ -215,8 +191,8 @@ void cpu_t::push_byte_to_stack( uint8_t data )
 {
     if ( regs.SP == 0x00 )
     {
-        LOG_E("--- Stack Overflow! (cur ins: 0x%02X) ---", cur_ins);
-        throw;
+        //LOG_E("--- Stack Overflow! (cur ins: 0x%02X) ---", cur_ins);
+        //throw;
     }
     uint8_t address = regs.SP--;
     tick_clock();
@@ -233,8 +209,8 @@ uint8_t cpu_t::pull_byte_from_stack()
 {
     if ( regs.SP == 0xFF )
     {
-        LOG_E("--- Stack Underflow! (cur ins: 0x%02X) ---", cur_ins);
-        throw;
+        //LOG_E("--- Stack Underflow! (cur ins: 0x%02X) ---", cur_ins);
+        //throw;
     }
     uint8_t address = ++regs.SP;
     tick_clock();

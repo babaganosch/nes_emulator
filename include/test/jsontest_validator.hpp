@@ -5,6 +5,8 @@
 #include "logging.hpp"
 
 #include <fstream>
+#include <vector>
+#include <string>
 
 namespace nes
 {
@@ -13,20 +15,22 @@ class jsontest_validator
 {
 public:
     jsontest_validator() = default;
-    ~jsontest_validator();
 
-    RESULT init(emu_t* emu_ref, const char* test_path);
-    void   setup();
+    void init(emu_t* emu_ref, const char* path);
+    void setup();
+    RESULT run_tests();
 
 private:
-    emu_t* emu;
-    std::ifstream file{};
+    emu_t* emu{nullptr};
+    std::vector<std::string> json_list;
 };
 
 struct mem_dummy_t : public mem_t
 {
     mem_dummy_t();
     ~mem_dummy_t();
+
+    uint8_t* fetch_byte_ref( uint16_t address ) override;
 
     uint8_t cpu_memory_read( uint16_t address, bool peek ) override;
     void cpu_memory_write( uint8_t data, uint16_t address ) override;

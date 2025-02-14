@@ -133,7 +133,8 @@ int main(int argc, char *argv[])
         { // Json Tests
             emu.init_testsuite();
             nes::jsontest_validator validator{};
-            ret = validator.init( &emu, json_test_filepath );
+            validator.init( &emu, json_test_filepath );
+            ret = validator.run_tests();
         } 
         else if (validate)
         { // NesTest Validation

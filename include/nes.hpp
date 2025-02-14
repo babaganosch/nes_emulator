@@ -224,6 +224,8 @@ struct mem_t
     virtual ~mem_t() = default;
     virtual void init( ines_rom_t &rom );
 
+    virtual uint8_t* fetch_byte_ref( uint16_t address );
+
     virtual uint8_t  memory_read( MEMORY_BUS bus, uint16_t address, bool peek );
     virtual void     memory_write( MEMORY_BUS bus, uint8_t data, uint16_t address );
 
@@ -248,7 +250,7 @@ struct cpu_t
 
         // Status Register
         //  7 6 5 4 3 2 1 0
-        //  N V - - D I Z C
+        //  N V - B D I Z C
         union 
         {
             struct __attribute__((packed))

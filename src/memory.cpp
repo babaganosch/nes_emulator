@@ -68,6 +68,35 @@ void mem_t::memory_write( MEMORY_BUS bus, uint8_t value, uint16_t address )
 ///////////////////////////// CPU
 //////////////////////////////////////////////////////////
 
+uint8_t* mem_t::fetch_byte_ref( uint16_t address )
+{
+    if ( address < 0x2000 )
+    { // internal ram
+        return &cpu_mem.internal_ram[ address ];
+    }
+    else if ( address < 0x4020 )
+    {
+        LOG_E("Trying to fetch unmapped reference (%04x)", address);
+    }
+    else if ( address < 0x6000 )
+    { // expansion rom
+        return &cartridge_mem.expansion_rom[ address - 0x4020 ];
+    }
+    else if ( address < 0x8000 )
+    { // sram
+        return &cartridge_mem.sram[ address - 0x6000 ];
+    }
+    else if ( address < 0xC000 )
+    { // prg lower
+        return &cartridge_mem.prg_lower_bank[ address - 0x8000 ];
+    }
+    else if ( address <= 0xFFFF )
+    { // prg upper
+        return &cartridge_mem.prg_upper_bank[ address - 0xC000 ];
+    }
+    return nullptr;
+}
+
 uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
 {
     if ( address < 0x2000 )
