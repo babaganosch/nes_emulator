@@ -7,8 +7,9 @@
 namespace nes
 {
 
-void cpu_t::init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem)
+void cpu_t::init(cpu_callback_t cpu_cb, cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem)
 {
+    cpu_callback = cpu_cb;
     ppu_callback = ppu_cb;
     apu_callback = apu_cb;
     memory = mem;
@@ -34,6 +35,7 @@ uint16_t cpu_t::execute()
 {
     // Reset CPU instruction delta
     delta_cycles = 0u;
+    page_crossed = false;
 
     // Fetch instruction
     uint8_t old_ins = cur_ins;
@@ -66,6 +68,10 @@ void cpu_t::tick_clock()
     cycles++;
     memory->cpu_cycles = cycles;
 
+    if (cpu_callback)
+    {
+        cpu_callback(nullptr);
+    }
     if (ppu_callback)
     { // NTSC PPU runs at 3x the CPU clock speed
         ppu_callback(nullptr);
@@ -196,7 +202,7 @@ void cpu_t::push_byte_to_stack( uint8_t data )
     }
     uint8_t address = regs.SP--;
     tick_clock();
-    (*memory).cpu_mem.stack[ address ] = data;
+    memory->memory_write( mem_t::CPU, data, 0x100 + address );
 }
 
 void cpu_t::push_short_to_stack( uint16_t data )
@@ -214,7 +220,7 @@ uint8_t cpu_t::pull_byte_from_stack()
     }
     uint8_t address = ++regs.SP;
     tick_clock();
-    uint8_t data = (*memory).cpu_mem.stack[ address ];
+    uint8_t data = memory->memory_read( mem_t::CPU, 0x100 + address, false );
     return data;
 }
 

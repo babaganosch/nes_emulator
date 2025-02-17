@@ -27,6 +27,25 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t target )
     }
 }
 
+void unofficial_hi_nib_inc_and(cpu_t &cpu, uint16_t address, uint8_t value)
+{
+    uint8_t lo = address & 0xFF;
+    uint8_t hi = address >> 8;
+    uint8_t res;
+    if (cpu.page_crossed)
+    {
+        res = value & hi;
+        address = (res << 8) | lo;
+    } 
+    else
+    {
+        res = value & (hi + 1);
+        address = (hi << 8) | lo;
+        cpu.tick_clock();
+    }
+    cpu.write_byte( res, address );
+}
+
 constexpr bool I = false; // Illegal  OP
 constexpr bool O = true;  // Official OP
 
@@ -140,7 +159,7 @@ op_code_t op_codes[256] = {
     CPU_OP(PLA, O, implied),                // 104     $ 68
     CPU_OP(ADC, O, immediate),              // 105     $ 69
     CPU_OP(ROR, O, accumulator),            // 106     $ 6A
-    CPU_OP(___, O, implied),                // 107     $ 6B
+    CPU_OP(ARR, I, immediate),              // 107     $ 6B
     CPU_OP(JMP, O, indirect),               // 108     $ 6C
     CPU_OP(ADC, O, absolute),               // 109     $ 6D
     CPU_OP(ROR, O, absolute),               // 110     $ 6E
@@ -172,7 +191,7 @@ op_code_t op_codes[256] = {
     CPU_OP(DEY, O, implied),                // 136     $ 88
     CPU_OP(NOP, I, immediate),              // 137     $ 89
     CPU_OP(TXA, O, implied),                // 138     $ 8A
-    CPU_OP(___, O, implied),                // 139     $ 8B
+    CPU_OP(ANE, I, immediate),              // 139     $ 8B
     CPU_OP(STY, O, absolute),               // 140     $ 8C
     CPU_OP(STA, O, absolute),               // 141     $ 8D
     CPU_OP(STX, O, absolute),               // 142     $ 8E
@@ -180,7 +199,7 @@ op_code_t op_codes[256] = {
     CPU_OP(BCC, O, relative),               // 144     $ 90
     CPU_OP(STA, O, post_index_indirect_y),  // 145     $ 91
     CPU_OP(JAM, I, implied),                // 146     $ 92
-    CPU_OP(___, O, implied),                // 147     $ 93
+    CPU_OP(SHA, I, post_index_indirect_y),  // 147     $ 93
     CPU_OP(STY, O, index_zp_x),             // 148     $ 94
     CPU_OP(STA, O, index_zp_x),             // 149     $ 95
     CPU_OP(STX, O, index_zp_y),             // 150     $ 96
@@ -188,11 +207,11 @@ op_code_t op_codes[256] = {
     CPU_OP(TYA, O, implied),                // 152     $ 98
     CPU_OP(STA, O, index_y),                // 153     $ 99
     CPU_OP(TXS, O, implied),                // 154     $ 9A
-    CPU_OP(___, O, implied),                // 155     $ 9B
-    CPU_OP(___, O, implied),                // 156     $ 9C
+    CPU_OP(TAS, I, index_y),                // 155     $ 9B
+    CPU_OP(SHY, I, index_x),                // 156     $ 9C
     CPU_OP(STA, O, index_x),                // 157     $ 9D
-    CPU_OP(___, O, implied),                // 158     $ 9E
-    CPU_OP(___, O, implied),                // 159     $ 9F
+    CPU_OP(SHX, I, index_y),                // 158     $ 9E
+    CPU_OP(SHA, I, index_y),                // 159     $ 9F
     CPU_OP(LDY, O, immediate),              // 160     $ A0
     CPU_OP(LDA, O, pre_index_indirect_x),   // 161     $ A1
     CPU_OP(LDX, O, immediate),              // 162     $ A2
@@ -204,7 +223,7 @@ op_code_t op_codes[256] = {
     CPU_OP(TAY, O, implied),                // 168     $ A8
     CPU_OP(LDA, O, immediate),              // 169     $ A9
     CPU_OP(TAX, O, implied),                // 170     $ AA
-    CPU_OP(___, O, implied),                // 171     $ AB
+    CPU_OP(LXA, I, immediate),              // 171     $ AB
     CPU_OP(LDY, O, absolute),               // 172     $ AC
     CPU_OP(LDA, O, absolute),               // 173     $ AD
     CPU_OP(LDX, O, absolute),               // 174     $ AE
@@ -220,7 +239,7 @@ op_code_t op_codes[256] = {
     CPU_OP(CLV, O, implied),                // 184     $ B8
     CPU_OP(LDA, O, index_y),                // 185     $ B9
     CPU_OP(TSX, O, implied),                // 186     $ BA
-    CPU_OP(___, O, implied),                // 187     $ BB
+    CPU_OP(LAS, I, index_y),                // 187     $ BB
     CPU_OP(LDY, O, index_x),                // 188     $ BC
     CPU_OP(LDA, O, index_x),                // 189     $ BD
     CPU_OP(LDX, O, index_y),                // 190     $ BE
@@ -236,7 +255,7 @@ op_code_t op_codes[256] = {
     CPU_OP(INY, O, implied),                // 200     $ C8
     CPU_OP(CMP, O, immediate),              // 201     $ C9
     CPU_OP(DEX, O, implied),                // 202     $ CA
-    CPU_OP(___, O, implied),                // 203     $ CB
+    CPU_OP(SBX, I, immediate),              // 203     $ CB
     CPU_OP(CPY, O, absolute),               // 204     $ CC
     CPU_OP(CMP, O, absolute),               // 205     $ CD
     CPU_OP(DEC, O, absolute),               // 206     $ CE
@@ -346,8 +365,12 @@ ADDRESS_MODE(index_x)
     uint8_t new_hi = hi;
 
     new_hi += (new_lo < lo) ? 1 : 0; // Page crossing
-    if ( (new_hi != hi) || modify_memory )
-    { // Extra cycle for page crossing
+    if ( new_hi != hi )
+    {
+        cpu.page_crossed = true;
+        cpu.tick_clock();
+    } else if ( modify_memory )
+    {
         cpu.tick_clock();
     }
 
@@ -368,8 +391,12 @@ ADDRESS_MODE(index_y)
     uint8_t new_hi = hi;
 
     new_hi += (new_lo < lo) ? 1 : 0; // Page crossing
-    if ( (new_hi != hi) || modify_memory )
-    { // Extra cycle for page crossing
+    if ( new_hi != hi )
+    {
+        cpu.page_crossed = true;
+        cpu.tick_clock();
+    } else if ( modify_memory )
+    {
         cpu.tick_clock();
     }
 
@@ -465,8 +492,12 @@ ADDRESS_MODE(post_index_indirect_y)
     uint8_t new_hi = hi;
 
     new_hi += (new_lo < lo) ? 1 : 0; // Page crossing
-    if ( (new_hi != hi) || modify_memory )
-    { // Extra cycle for page crossing
+    if ( new_hi != hi )
+    {
+        cpu.page_crossed = true;
+        cpu.tick_clock();
+    } else if ( modify_memory )
+    {
         cpu.tick_clock();
     }
 
@@ -1482,6 +1513,7 @@ OP_FUNCTION(ALR)
     uint8_t  data = operand & cpu.regs.A;
     cpu.regs.C = data & 0x1;
     data = data >> 1;
+    cpu.regs.A = data;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
 }
@@ -1535,15 +1567,12 @@ OP_FUNCTION(DCP)
     uint8_t  operand = cpu.fetch_byte( address );
     // M - 1 -> M
     uint8_t data = operand - 0x1;
-    CALC_N_FLAG( data );
-    CALC_Z_FLAG( data );
-    CALC_C_FLAG( data );
     cpu.write_byte( data, address );
     // A - M
     data = cpu.regs.A - data;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
-    cpu.regs.C = (cpu.regs.A >= operand) ? 1 : 0;
+    cpu.regs.C = (cpu.regs.A >= data) ? 1 : 0;
     cpu.tick_clock();
 }
 
@@ -1669,11 +1698,11 @@ OP_FUNCTION(RRA)
     cpu.write_byte( data, address );
     // A + M + C -> A, C
     uint16_t res = cpu.regs.A + data + cpu.regs.C;
-    cpu.regs.A = res;
     CALC_N_FLAG( res );
     CALC_Z_FLAG( res );
     CALC_C_FLAG( res );
     CALC_V_FLAG( cpu.regs.A, data, res );
+    cpu.regs.A = res;
     cpu.tick_clock();
 }
 
@@ -1698,6 +1727,208 @@ OP_FUNCTION(ANC)
 }
 
 /////////////////////////////////////////////////////////
+// ARR
+// AND oper + ROR
+// 
+// A AND oper, C -> [76543210] -> C
+// 
+// This operation involves the adder:
+// V-flag is set according to (A AND oper) + oper
+// The carry is not set, but bit 7 (sign) is
+// exchanged with the carry
+// 
+// N Z C I D V
+// + + + - - +
+//
+OP_FUNCTION(ARR)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+
+    uint8_t  res = (cpu.regs.A & operand);
+    res = ( res >> 1 ) | cpu.regs.C << 7;
+    cpu.regs.A = res;
+
+    cpu.regs.C = BIT_CHECK_HI(res, 6);
+    CALC_N_FLAG(res);
+    CALC_Z_FLAG(res);
+    cpu.regs.V = BIT_CHECK_HI(res, 6) ^ BIT_CHECK_HI(res, 5);
+}
+
+/////////////////////////////////////////////////////////
+// ANE (XAA)
+// * OR X + AND oper
+// 
+// Highly unstable, do not use.
+// A base value in A is determined based on the contets 
+// of A and a constant, which may be typically $00, $ff,
+// $ee, etc. The value of this constant depends on 
+// temerature, the chip series, and maybe other factors,
+// as well. In order to eliminate these uncertaincies 
+// from the equation, use either 0 as the operand or a 
+// value of $FF in the accumulator.
+// 
+// (A OR CONST) AND X AND oper -> A
+// 
+// N Z C I D V
+// + + - - - -
+//
+OP_FUNCTION(ANE)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    const uint8_t magic = 0xEE;
+    cpu.regs.A = (cpu.regs.A | magic) & cpu.regs.X & operand;
+    CALC_N_FLAG(cpu.regs.A);
+    CALC_Z_FLAG(cpu.regs.A);
+}
+
+/////////////////////////////////////////////////////////
+// SHA (AHX, AXA)
+// Stores A AND X AND (high-byte of addr. + 1) at addr.
+// 
+// unstable: sometimes 'AND (H+1)' is dropped, page 
+// boundary crossings may not work (with the high-byte
+// of the value used as the high-byte of the address)
+// 
+// A AND X AND (H+1) -> M
+// 
+// N Z C I D V
+// - - - - - -
+//
+OP_FUNCTION(SHA)
+{
+    uint16_t operand = addr_mode( cpu, false, false );
+    uint8_t  data = cpu.regs.A & cpu.regs.X;
+    unofficial_hi_nib_inc_and( cpu, operand, data );
+}
+
+/////////////////////////////////////////////////////////
+// TAS (XAS, SHS)
+// Puts A AND X in SP and stores A AND X AND (high-byte
+// of addr. + 1) at addr.
+// 
+// unstable: sometimes 'AND (H+1)' is dropped, page 
+// boundary crossings may not work (with the high-byte 
+// of the value used as the high-byte of the address)
+// 
+// A AND X -> SP, A AND X AND (H+1) -> M
+// 
+// N Z C I D V
+// - - - - - -
+// 
+OP_FUNCTION(TAS)
+{
+    uint16_t operand = addr_mode( cpu, false, false );
+    uint8_t  data = cpu.regs.A & cpu.regs.X;
+    cpu.regs.SP = data;
+    unofficial_hi_nib_inc_and( cpu, operand, data );
+}
+
+/////////////////////////////////////////////////////////
+// SHY (A11, SYA, SAY)
+// Stores Y AND (high-byte of addr. + 1) at addr.
+// 
+// unstable: sometimes 'AND (H+1)' is dropped, page 
+// boundary crossings may not work (with the high-byte
+// of the value used as the high-byte of the address)
+// 
+// Y AND (H+1) -> M
+// 
+// N Z C I D V
+// - - - - - -
+// 
+OP_FUNCTION(SHY)
+{
+    uint16_t operand = addr_mode( cpu, false, false );
+    unofficial_hi_nib_inc_and( cpu, operand, cpu.regs.Y );
+}
+
+/////////////////////////////////////////////////////////
+// SHX (A11, SXA, XAS)
+// Stores X AND (high-byte of addr. + 1) at addr.
+// 
+// unstable: sometimes 'AND (H+1)' is dropped, page 
+// boundary crossings may not work (with the high-byte 
+// of the value used as the high-byte of the address)
+// 
+// X AND (H+1) -> M
+// 
+// N Z C I D V
+// - - - - - -
+// 
+OP_FUNCTION(SHX)
+{
+    uint16_t operand = addr_mode( cpu, false, false );
+    unofficial_hi_nib_inc_and( cpu, operand, cpu.regs.X );
+}
+
+/////////////////////////////////////////////////////////
+// LXA (LAX immediate)
+// Store * AND oper in A and X
+// 
+// Highly unstable, involves a 'magic' constant, see ANE
+// 
+// (A OR CONST) AND oper -> A -> X
+// 
+// N Z C I D V
+// + + - - - -
+// 
+OP_FUNCTION(LXA)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    const uint8_t magic = 0xEE;
+    uint8_t  data = (cpu.regs.A | magic) & operand;
+    cpu.regs.A = data;
+    cpu.regs.X = data;
+    CALC_N_FLAG(data);
+    CALC_Z_FLAG(data);
+}
+
+/////////////////////////////////////////////////////////
+// LAS (LAR)
+// LDA/TSX oper
+// 
+// M AND SP -> A, X, SP
+// 
+// N Z C I D V
+// + + - - - -
+// 
+OP_FUNCTION(LAS)
+{
+    uint16_t address = addr_mode( cpu, false, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    uint8_t  data = operand & cpu.regs.SP;
+    cpu.regs.A = data;
+    cpu.regs.X = data;
+    cpu.regs.SP = data;
+    CALC_N_FLAG(data);
+    CALC_Z_FLAG(data);
+}
+
+/////////////////////////////////////////////////////////
+// SBX (AXS, SAX)
+// CMP and DEX at once, sets flags like CMP
+// 
+// (A AND X) - oper -> X
+// 
+// N Z C I D V
+// + + + - - -
+// 
+OP_FUNCTION(SBX)
+{
+    uint16_t address = addr_mode( cpu, true, false );
+    uint8_t  operand = cpu.fetch_byte( address );
+    uint8_t  a_and_x = cpu.regs.A & cpu.regs.X;
+    uint8_t  data = a_and_x - operand;
+    cpu.regs.X = data;
+    CALC_N_FLAG(data);
+    CALC_Z_FLAG(data);
+    cpu.regs.C = (a_and_x >= operand) ? 1 : 0;
+}
+
+/////////////////////////////////////////////////////////
 // JAM (KIL, HLT)
 // These instructions freeze the CPU.
 //
@@ -1706,6 +1937,7 @@ OP_FUNCTION(ANC)
 //
 OP_FUNCTION(JAM)
 {
+    /*
     LOG_W("JAM occured, dumping state..");
     LOG_W("PC: %04X", cpu.regs.PC);
     LOG_W("SP: %02X", cpu.regs.SP);
@@ -1713,6 +1945,7 @@ OP_FUNCTION(JAM)
     LOG_W("X:  %02X", cpu.regs.X);
     LOG_W("Y:  %02X", cpu.regs.Y);
     LOG_W("A:  %02X", cpu.regs.A);
+    */
     // Stall 10 cycles (to pass JSON tests) I should probably implement a real CPU trap.
     cpu.tick_clock(10);
     //throw RESULT_ERROR;

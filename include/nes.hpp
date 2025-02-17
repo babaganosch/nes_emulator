@@ -293,6 +293,8 @@ struct cpu_t
     uint16_t pal_clock_buffer{0};
     bool irq_pending{false};
     bool irq_inhibit{false};
+    bool page_crossed{false};
+    cpu_callback_t cpu_callback{nullptr};
     cpu_callback_t ppu_callback{nullptr};
     cpu_callback_t apu_callback{nullptr};
 
@@ -300,7 +302,7 @@ struct cpu_t
     
     void tick_clock();
     void tick_clock( uint16_t cycles );
-    void init(cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem);
+    void init(cpu_callback_t cpu_cb, cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem);
     void nmi();
     void irq();
     uint16_t execute();

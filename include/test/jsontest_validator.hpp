@@ -17,7 +17,6 @@ public:
     jsontest_validator() = default;
 
     void init(emu_t* emu_ref, const char* path);
-    void setup();
     RESULT run_tests();
 
 private:

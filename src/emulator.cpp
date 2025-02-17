@@ -25,6 +25,11 @@ uint32_t framebuffer_a[NES_WIDTH * NES_HEIGHT * 4];
 uint32_t framebuffer_b[NES_WIDTH * NES_HEIGHT * 4];
 float speed = 1.0f;
 
+void callback_execute_cpu(void *cookie)
+{
+
+}
+
 void callback_execute_ppu(void *cookie)
 {
     emulator_ref->ppu.execute();
@@ -94,7 +99,7 @@ void emu_t::init(ines_rom_t &rom)
 
     memory = new mem_t();
     memory->init( rom );
-    cpu.init( &callback_execute_ppu, &callback_execute_apu, memory );
+    cpu.init( nullptr, &callback_execute_ppu, &callback_execute_apu, memory );
     ppu.init( memory, back_buffer );
     apu.init( memory );
 }
@@ -106,7 +111,7 @@ void emu_t::init_testsuite()
     instantiate_mappers();
     memory = new nes::mem_dummy_t();
 
-    cpu.init( nullptr, nullptr, memory );
+    cpu.init( &callback_execute_cpu, nullptr, nullptr, memory );
     ppu.init( memory, back_buffer );
     apu.init( memory );
 }

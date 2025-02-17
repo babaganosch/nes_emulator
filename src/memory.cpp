@@ -47,12 +47,14 @@ void mem_t::init( ines_rom_t &rom )
 
 uint8_t mem_t::memory_read( MEMORY_BUS bus, uint16_t address, bool peek )
 {
+    uint8_t data = 0xFF;
     switch (bus)
     {
-        case CPU: return cpu_memory_read( address, peek );
-        case PPU: return ppu_memory_read( address, peek );
-        case APU: return 0xFF;
+        case CPU: data = cpu_memory_read( address, peek ); break;
+        case PPU: data = ppu_memory_read( address, peek ); break;
+        case APU: break;
     }
+    return data;
 }
 
 void mem_t::memory_write( MEMORY_BUS bus, uint8_t value, uint16_t address )

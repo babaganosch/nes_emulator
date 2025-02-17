@@ -37,7 +37,7 @@ void jsontest_validator::init(emu_t* emu_ref, const char* path)
 
 RESULT jsontest_validator::run_tests()
 {
-    std::ifstream file{};
+    std::ifstream file;
     for (std::string &path : json_list) 
     {
         file.open(path);
@@ -60,9 +60,14 @@ RESULT jsontest_validator::run_tests()
         const rapidjson::Value& tests = document["tests"];
         assert(tests.IsArray());
         
+        int passed_tests = 0;
         for (rapidjson::SizeType i = 0; i < tests.Size(); ++i)
         { // Loop through tests
-            setup();
+            
+            // Reset memory
+            memset(emu->memory->memory_hook, 0, 0xFFFF);
+
+            // Setup CPU regs and memory
             const rapidjson::Value& initial = tests[i]["initial"];
             const rapidjson::Value& final_v = tests[i]["final"];
             emu->cpu.regs.PC = initial["pc"].GetUint();
@@ -77,7 +82,7 @@ RESULT jsontest_validator::run_tests()
                 emu->memory->cpu_memory_write(ram[j][1].GetUint(), ram[j][0].GetUint());
             }
 
-            // Setup vectors
+            // Setup CPU vectors
             emu->cpu.vectors.NMI = emu->cpu.peek_short( 0xFFFA );
             emu->cpu.vectors.RESET = emu->cpu.peek_short( 0xFFFC );
             emu->cpu.vectors.IRQBRK = emu->cpu.peek_short( 0xFFFE );
@@ -114,68 +119,56 @@ RESULT jsontest_validator::run_tests()
             uint8_t p = final_v["p"].GetUint();
             if (emu->cpu.regs.SR != final_v["p"].GetUint()) {
                 LOG_D("SR %02X != %02X", emu->cpu.regs.SR, p);
-                //  7 6 5 4 3 2 1 0
-                //  N V - - D I Z C
-                if (emu->cpu.regs.N != (p & 0x80))
-                {
-                    LOG_W("N");
-                }
-                if (emu->cpu.regs.V != (p & 0x40))
-                {
-                    LOG_W("V");
-                }
-                if (emu->cpu.regs.B != (p & 0x30))
-                {
-                    LOG_W("B");
-                }
-                if (emu->cpu.regs.D != (p & 0x8))
-                {
-                    LOG_W("D");
-                }
-                if (emu->cpu.regs.I != (p & 0x4))
-                {
-                    LOG_W("I");
-                }
-                if (emu->cpu.regs.Z != (p & 0x2))
-                {
-                    LOG_W("Z");
-                }
-                if (emu->cpu.regs.C != (p & 0x1))
-                {
-                    LOG_W("C");
-                }
+                LOG_D("     N V - B D I Z C");
+                LOG_D("Got: %u %u %u %u %u %u %u %u     (%02X)", 
+                    emu->cpu.regs.N, emu->cpu.regs.V, 
+                    emu->cpu.regs.B >> 1, emu->cpu.regs.B & 0x1, 
+                    emu->cpu.regs.D, emu->cpu.regs.I, 
+                    emu->cpu.regs.Z, emu->cpu.regs.C, emu->cpu.regs.SR);
+                LOG_D("Exp: %u %u %u %u %u %u %u %u     (%02X)", 
+                    (p & 0x80) > 0, (p & 0x40) > 0, 
+                    (p & 0x20) > 0, (p & 0x10) > 0, 
+                    (p & 0x8) > 0, (p & 0x4) > 0, 
+                    (p & 0x2) > 0, (p & 0x1) > 0, p);
                 failure = true;
             }
+
+            const rapidjson::Value& final_ram = tests[i]["final"]["ram"];
+            for (rapidjson::SizeType j = 0; j < final_ram.Size(); ++j)
+            {
+                uint16_t addr = final_ram[j][0].GetUint();
+                uint8_t data = emu->memory->cpu_memory_read(addr, true);
+                uint8_t expected = final_ram[j][1].GetUint();
+                if (data != expected)
+                {
+                    LOG_D("Memory mismatch @ %04X  %02X != %02X", addr, data, expected);
+                    failure = true;
+                }
+            }
+            
             if (failure)
             {
-                LOG_E("Failed test: %s", tests[i]["name"].GetString());
+                LOG_E("Failed test%d: %s", passed_tests+1, tests[i]["name"].GetString());
                 return RESULT::RESULT_ERROR;
             }
+            passed_tests++;
         }
+        LOG_S("%s", path.c_str());
     }
-
-    
     
     return RESULT::RESULT_OK;
 }
 
-void jsontest_validator::setup()
-{
-    if (!emu->memory->memory_hook)
-    {
-        delete[] emu->memory->memory_hook;
-    }
-    emu->memory->memory_hook = new uint8_t[0xFFFF]{0};
-}
-
 mem_dummy_t::mem_dummy_t()
 {
+    if (memory_hook) delete[] memory_hook;
     memory_hook = new uint8_t[0xFFFF]{0};
 }
 
 mem_dummy_t::~mem_dummy_t()
 {
     if (memory_hook) delete[] memory_hook;
+    memory_hook = nullptr;
 }
 
 uint8_t* mem_dummy_t::fetch_byte_ref( uint16_t address )
@@ -185,7 +178,6 @@ uint8_t* mem_dummy_t::fetch_byte_ref( uint16_t address )
 
 uint8_t mem_dummy_t::cpu_memory_read( uint16_t address, bool peek )
 {
-    (void) peek;
     return memory_hook[address];
 }
 

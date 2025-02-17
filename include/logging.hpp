@@ -9,7 +9,8 @@ enum LOG_LEVEL
     L_INFO,
     L_DEBUG,
     L_WARNING,
-    L_ERROR
+    L_ERROR,
+    L_SUCCESS
 };
 
 void _log(LOG_LEVEL level, const char* buffer, ...);
@@ -28,6 +29,7 @@ void _log(LOG_LEVEL level, const char* buffer, ...);
 
 #define LOG_I(...) _log(nes::L_INFO, __VA_ARGS__)
 #define LOG_E(...) _log(nes::L_ERROR, __VA_ARGS__)
+#define LOG_S(...) _log(nes::L_SUCCESS, __VA_ARGS__)
 
 } // nes
 
