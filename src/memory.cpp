@@ -54,6 +54,9 @@ uint8_t mem_t::memory_read( MEMORY_BUS bus, uint16_t address, bool peek )
         case PPU: data = ppu_memory_read( address, peek ); break;
         case APU: break;
     }
+    cpu_mem.activity.address = address;
+    cpu_mem.activity.value = data;
+    cpu_mem.activity.read = true;
     return data;
 }
 
@@ -65,6 +68,9 @@ void mem_t::memory_write( MEMORY_BUS bus, uint8_t value, uint16_t address )
         case PPU: ppu_memory_write( value, address ); break;
         case APU: break;
     }
+    cpu_mem.activity.address = address;
+    cpu_mem.activity.value = value;
+    cpu_mem.activity.read = false;
 }
 
 ///////////////////////////// CPU
@@ -72,9 +78,10 @@ void mem_t::memory_write( MEMORY_BUS bus, uint8_t value, uint16_t address )
 
 uint8_t* mem_t::fetch_byte_ref( uint16_t address )
 {
+    uint8_t* ref = nullptr;
     if ( address < 0x2000 )
     { // internal ram
-        return &cpu_mem.internal_ram[ address ];
+        ref = &cpu_mem.internal_ram[ address ];
     }
     else if ( address < 0x4020 )
     {
@@ -82,21 +89,22 @@ uint8_t* mem_t::fetch_byte_ref( uint16_t address )
     }
     else if ( address < 0x6000 )
     { // expansion rom
-        return &cartridge_mem.expansion_rom[ address - 0x4020 ];
+        ref = &cartridge_mem.expansion_rom[ address - 0x4020 ];
     }
     else if ( address < 0x8000 )
     { // sram
-        return &cartridge_mem.sram[ address - 0x6000 ];
+        ref = &cartridge_mem.sram[ address - 0x6000 ];
     }
     else if ( address < 0xC000 )
     { // prg lower
-        return &cartridge_mem.prg_lower_bank[ address - 0x8000 ];
+        ref = &cartridge_mem.prg_lower_bank[ address - 0x8000 ];
     }
     else if ( address <= 0xFFFF )
     { // prg upper
-        return &cartridge_mem.prg_upper_bank[ address - 0xC000 ];
+        ref = &cartridge_mem.prg_upper_bank[ address - 0xC000 ];
     }
-    return nullptr;
+    
+    return ref;
 }
 
 uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )

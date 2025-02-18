@@ -164,7 +164,6 @@ uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
 
 uint8_t* cpu_t::fetch_byte_ref( uint16_t address )
 {
-    tick_clock();
     return memory->fetch_byte_ref( address );
 }
 
@@ -177,6 +176,9 @@ void cpu_t::write_byte( uint8_t data, uint8_t* ref )
     }
     
     *ref = data;
+    memory->cpu_mem.activity.read = false;
+    tick_clock();
+    memory->cpu_mem.activity.value = data;
     tick_clock();
 }
 
@@ -201,8 +203,8 @@ void cpu_t::push_byte_to_stack( uint8_t data )
         //throw;
     }
     uint8_t address = regs.SP--;
-    tick_clock();
     memory->memory_write( mem_t::CPU, data, 0x100 + address );
+    tick_clock();
 }
 
 void cpu_t::push_short_to_stack( uint16_t data )

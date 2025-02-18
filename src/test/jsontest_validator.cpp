@@ -66,10 +66,12 @@ RESULT jsontest_validator::run_tests()
             
             // Reset memory
             memset(emu->memory->memory_hook, 0, 0xFFFF);
+            bus_activities.clear();
 
             // Setup CPU regs and memory
             const rapidjson::Value& initial = tests[i]["initial"];
             const rapidjson::Value& final_v = tests[i]["final"];
+            const rapidjson::Value& cycles  = tests[i]["cycles"];
             emu->cpu.regs.PC = initial["pc"].GetUint();
             emu->cpu.regs.SP = initial["s"].GetUint();
             emu->cpu.regs.A  = initial["a"].GetUint();
@@ -88,14 +90,45 @@ RESULT jsontest_validator::run_tests()
             emu->cpu.vectors.IRQBRK = emu->cpu.peek_short( 0xFFFE );
 
             // Run test
-            uint16_t cycles = emu->cpu.execute();
+            uint16_t cycles_executed = emu->cpu.execute();
 
             // Check results
             bool failure = false;
-            if (cycles != tests[i]["cycles"].Size()) {
-                LOG_E("cycles missmatch! %u != %u", cycles, tests[i]["cycles"].Size());
+            if (cycles_executed != cycles.Size()) {
+                LOG_E("cycles mismatch! %u != %u", cycles_executed, cycles.Size());
                 failure = true;
             }
+
+            for (rapidjson::SizeType j = 0; j < cycles.Size(); ++j)
+            {
+                if (j >= bus_activities.size()) {
+                    LOG_D("Missing bus activity!");
+                    failure = true;
+                    continue;
+                }
+
+                cpu_mem_t::bus_activity_t &activity = bus_activities[j];
+                if (cycles[j][0].GetUint() != activity.address) {
+                    LOG_D("CYCLE %u ADR %02X != %02X", j+1, activity.address, cycles[j][0].GetUint());
+                    failure = true;
+                }
+                if (cycles[j][1].GetUint() != activity.value) {
+                    LOG_D("CYCLE %u VAL %02X != %02X", j+1, activity.value, cycles[j][1].GetUint());
+                    failure = true;
+                }
+                if (strcmp(cycles[j][2].GetString(), "read") == 0) {
+                    if (!activity.read) {
+                        LOG_D("CYCLE %u STS write != read", j+1);
+                        failure = true;
+                    }
+                } else {
+                    if (activity.read) {
+                        LOG_D("CYCLE %u STS read != write", j+1);
+                        failure = true;
+                    }
+                }
+            }
+
             if (emu->cpu.regs.PC != final_v["pc"].GetUint()) {
                 LOG_D("PC %02X != %02X", emu->cpu.regs.PC, final_v["pc"].GetUint());
                 failure = true;

@@ -131,8 +131,8 @@ int main(int argc, char *argv[])
     {
         if (json_test)
         { // Json Tests
-            emu.init_testsuite();
             nes::jsontest_validator validator{};
+            emu.init_testsuite(&validator);
             validator.init( &emu, json_test_filepath );
             ret = validator.run_tests();
         } 

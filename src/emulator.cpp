@@ -19,6 +19,7 @@ namespace nes
 namespace
 {
 emu_t* emulator_ref;
+jsontest_validator* validator_ref;
 audio_t* audio_ref;
 
 uint32_t framebuffer_a[NES_WIDTH * NES_HEIGHT * 4];
@@ -27,7 +28,7 @@ float speed = 1.0f;
 
 void callback_execute_cpu(void *cookie)
 {
-
+    validator_ref->bus_activities.push_back(emulator_ref->memory->cpu_mem.activity);
 }
 
 void callback_execute_ppu(void *cookie)
@@ -104,10 +105,11 @@ void emu_t::init(ines_rom_t &rom)
     apu.init( memory );
 }
 
-void emu_t::init_testsuite()
+void emu_t::init_testsuite(void* validator)
 { // Headless CPU only
     emulator_ref = this;
-    
+    validator_ref = (jsontest_validator*)validator;
+
     instantiate_mappers();
     memory = new nes::mem_dummy_t();
 

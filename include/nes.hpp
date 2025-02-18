@@ -105,6 +105,13 @@ struct cpu_mem_t
 
     // $4018 – $401F
     uint8_t* cpu_test_mode{nullptr}; 
+
+    struct bus_activity_t
+    {
+        uint16_t address;
+        uint8_t  value;
+        bool     read;
+    } activity;
 };
 
 union oam_t
@@ -319,6 +326,7 @@ struct cpu_t
     void     write_byte( uint8_t data, uint8_t lo, uint8_t hi );
     void     push_byte_to_stack( uint8_t data );
     void     push_short_to_stack( uint16_t data );
+    //void     perform_calculation( uint);
 
     // Validation Helpers
     bool nestest_validation{false};
@@ -516,7 +524,7 @@ struct emu_t
     ~emu_t();
 
     void init(ines_rom_t &rom);
-    void init_testsuite();
+    void init_testsuite(void* validator);
     void swap_framebuffers();
     RESULT step_cycles(int32_t cycles);
     uint16_t step_vblank();

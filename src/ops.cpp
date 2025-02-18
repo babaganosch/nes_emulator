@@ -18,10 +18,10 @@ void branch( cpu_t &cpu, uint8_t condition, uint8_t expected, uint16_t target )
     uint16_t old_PC = cpu.regs.PC;
     if (condition == expected)
     { // Branch occurs
-        cpu.tick_clock();
+        cpu.fetch_byte( old_PC );
         if ( (old_PC & 0xFF00) != (target & 0xFF00) )
         { // Branch caused page change
-            cpu.tick_clock();
+            cpu.fetch_byte( (old_PC & 0xFF00) | (target & 0x00FF) );
         }
         cpu.regs.PC = target;
     }
@@ -315,6 +315,7 @@ op_code_t op_codes[256] = {
 
 ADDRESS_MODE(implied)
 {
+    cpu.fetch_byte( cpu.regs.PC ); // dummy
     return 0;
 }
 
@@ -368,10 +369,11 @@ ADDRESS_MODE(index_x)
     if ( new_hi != hi )
     {
         cpu.page_crossed = true;
-        cpu.tick_clock();
-    } else if ( modify_memory )
+        cpu.fetch_byte( UINT16( new_lo, hi ) );
+    } 
+    else if ( modify_memory )
     {
-        cpu.tick_clock();
+        cpu.fetch_byte( UINT16( new_lo, new_hi ) );
     }
 
     uint16_t address = UINT16( new_lo, new_hi );
@@ -394,10 +396,11 @@ ADDRESS_MODE(index_y)
     if ( new_hi != hi )
     {
         cpu.page_crossed = true;
-        cpu.tick_clock();
-    } else if ( modify_memory )
+        cpu.fetch_byte( UINT16( new_lo, hi ) );
+    } 
+    else if ( modify_memory )
     {
-        cpu.tick_clock();
+        cpu.fetch_byte( UINT16( new_lo, new_hi ) );
     }
 
     uint16_t address = UINT16( new_lo, new_hi );
@@ -412,8 +415,8 @@ ADDRESS_MODE(index_y)
 ADDRESS_MODE(index_zp_x)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
+    cpu.fetch_byte( UINT16(lo, 0x00) );
     lo += cpu.regs.X;
-    cpu.tick_clock();
 
     uint16_t address = UINT16( lo, 0x00 );
     if (cpu.nestest_validation)
@@ -427,8 +430,8 @@ ADDRESS_MODE(index_zp_x)
 ADDRESS_MODE(index_zp_y)
 {
     uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ );
+    cpu.fetch_byte( UINT16(lo, 0x00) );
     lo += cpu.regs.Y;
-    cpu.tick_clock();
 
     uint16_t address = UINT16( lo, 0x00 );
     if (cpu.nestest_validation)
@@ -469,8 +472,9 @@ ADDRESS_MODE(indirect)
 ADDRESS_MODE(pre_index_indirect_x)
 {
     uint8_t tmp = cpu.fetch_byte( cpu.regs.PC++ );
+    cpu.fetch_byte( tmp ); // Dummy read
     tmp += cpu.regs.X;
-    cpu.tick_clock();
+    
     uint8_t lo = cpu.fetch_byte( tmp,     0x00 );
     uint8_t hi = cpu.fetch_byte( tmp + 1, 0x00 );
     uint16_t address = UINT16( lo, hi );
@@ -495,10 +499,11 @@ ADDRESS_MODE(post_index_indirect_y)
     if ( new_hi != hi )
     {
         cpu.page_crossed = true;
-        cpu.tick_clock();
-    } else if ( modify_memory )
+        cpu.fetch_byte( UINT16( new_lo, hi ) );
+    } 
+    else if ( modify_memory )
     {
-        cpu.tick_clock();
+        cpu.fetch_byte( UINT16( new_lo, new_hi ) );
     }
 
     uint16_t address = UINT16( new_lo, new_hi );
@@ -585,27 +590,25 @@ OP_FUNCTION(ASL)
 {
     uint8_t* operand = nullptr;
     uint16_t address = addr_mode( cpu, true, false );
-    if (addr_mode != addr_mode_accumulator)
+    if (addr_mode == addr_mode_accumulator)
     {
+        uint16_t data = cpu.regs.A << 1;
+        cpu.regs.A = data;
+
+        CALC_N_FLAG( data );
+        CALC_Z_FLAG( data );
+        CALC_C_FLAG( data );
+        cpu.fetch_byte( cpu.regs.PC );
+    } else
+    {
+        cpu.fetch_byte( address );
         operand = cpu.fetch_byte_ref( address );
-        cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    else
-    {
-        operand = &cpu.regs.A;
-    }
-    if (operand)
-    {
         uint16_t data = *operand << 1;
     
         CALC_N_FLAG( data );
         CALC_Z_FLAG( data );
         CALC_C_FLAG( data );
         cpu.write_byte( data, operand );
-    }
-    else
-    {
-        cpu.tick_clock();
     }
 }
 
@@ -727,16 +730,15 @@ OP_FUNCTION(BRK)
     cpu.push_short_to_stack( cpu.regs.PC + 1 );
     uint16_t vector = cpu.nmi_control.pending ? cpu.vectors.NMI : cpu.vectors.IRQBRK;
     cpu.push_byte_to_stack( cpu.regs.SR | 0x10 );
-    cpu.tick_clock();
     // Set I and fetch low nibble
     cpu.regs.I  = 1;
     cpu.regs.PC &= 0xFF00;
     cpu.regs.PC |= vector & 0x00FF;
-    cpu.tick_clock();
+    cpu.fetch_byte( vector == cpu.vectors.IRQBRK ? 0xFFFE : 0xFFFA );
     // Fetch high nibble
     cpu.regs.PC &= 0x00FF;
     cpu.regs.PC |= vector & 0xFF00;
-    cpu.tick_clock();
+    cpu.fetch_byte( vector == cpu.vectors.IRQBRK ? 0xFFFF : 0xFFFB );
 }
 
 /////////////////////////////////////////////////////////
@@ -776,7 +778,6 @@ OP_FUNCTION(CLC)
 {
     addr_mode( cpu, false, false );
     cpu.regs.C = 0;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1013,10 +1014,12 @@ OP_FUNCTION(JMP)
 //
 OP_FUNCTION(JSR)
 {
-    cpu.push_short_to_stack( cpu.regs.PC + 1 );
-    uint16_t address = addr_mode( cpu, false, true );
-    cpu.tick_clock(); // One extra cycle when buffering data
-    cpu.regs.PC = address;
+    // Not using addr_mode here due to JSR being so special
+    uint8_t lo = cpu.fetch_byte( cpu.regs.PC++ ); // Read ADL
+    cpu.fetch_byte( 0x100 + cpu.regs.SP );        // Buffer ADL
+    cpu.push_short_to_stack( cpu.regs.PC );       // Push PCL and PCH
+    uint8_t hi = cpu.fetch_byte( cpu.regs.PC );   // Read ADH
+    cpu.regs.PC = UINT16( lo, hi );               // Load PC
 }
 
 /////////////////////////////////////////////////////////
@@ -1104,8 +1107,11 @@ OP_FUNCTION(LSR)
 //
 OP_FUNCTION(NOP)
 {
-    addr_mode( cpu, false, false );
-    cpu.tick_clock();
+    uint16_t address = addr_mode( cpu, false, false );
+    if (addr_mode != addr_mode_implied) 
+    {
+        cpu.fetch_byte( address );
+    }
 }
 
 /////////////////////////////////////////////////////////
@@ -1152,7 +1158,6 @@ OP_FUNCTION(PHP)
 {
     addr_mode( cpu, true, false );
     uint8_t status = cpu.regs.SR | 0x30;
-    cpu.tick_clock();
     cpu.push_byte_to_stack( status );
 }
 
@@ -1620,14 +1625,14 @@ OP_FUNCTION(SLO)
     uint16_t address = addr_mode( cpu, true, false );
     uint16_t data    = cpu.fetch_byte( address );
     // M = C <- [76543210] <- 0
+    cpu.write_byte( data, address );
     data = data << 1;
     CALC_C_FLAG( data );
-    cpu.write_byte( data, address );
     // A OR M -> A
     cpu.regs.A = cpu.regs.A | data;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
-    cpu.tick_clock();
+    cpu.write_byte( data, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1937,6 +1942,17 @@ OP_FUNCTION(SBX)
 //
 OP_FUNCTION(JAM)
 {
+    cpu.fetch_byte( cpu.regs.PC );
+    cpu.fetch_byte( 0xFFFF );
+    cpu.fetch_byte( 0xFFFE );
+    cpu.fetch_byte( 0xFFFE );
+    cpu.fetch_byte( 0xFFFF );
+    cpu.fetch_byte( 0xFFFF );
+    cpu.fetch_byte( 0xFFFF );
+    cpu.fetch_byte( 0xFFFF );
+    cpu.fetch_byte( 0xFFFF );
+    cpu.fetch_byte( 0xFFFF );
+
     /*
     LOG_W("JAM occured, dumping state..");
     LOG_W("PC: %04X", cpu.regs.PC);
@@ -1947,7 +1963,7 @@ OP_FUNCTION(JAM)
     LOG_W("A:  %02X", cpu.regs.A);
     */
     // Stall 10 cycles (to pass JSON tests) I should probably implement a real CPU trap.
-    cpu.tick_clock(10);
+    //cpu.tick_clock();
     //throw RESULT_ERROR;
 }
 

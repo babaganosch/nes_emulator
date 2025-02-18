@@ -19,6 +19,8 @@ public:
     void init(emu_t* emu_ref, const char* path);
     RESULT run_tests();
 
+    std::vector<cpu_mem_t::bus_activity_t> bus_activities;
+
 private:
     emu_t* emu{nullptr};
     std::vector<std::string> json_list;
