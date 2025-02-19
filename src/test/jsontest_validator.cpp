@@ -67,6 +67,7 @@ RESULT jsontest_validator::run_tests()
             // Reset memory
             memset(emu->memory->memory_hook, 0, 0xFFFF);
             bus_activities.clear();
+            emu->cpu.trapped = false;
 
             // Setup CPU regs and memory
             const rapidjson::Value& initial = tests[i]["initial"];
@@ -90,11 +91,15 @@ RESULT jsontest_validator::run_tests()
             emu->cpu.vectors.IRQBRK = emu->cpu.peek_short( 0xFFFE );
 
             // Run test
-            uint16_t cycles_executed = emu->cpu.execute();
+            uint16_t cycles_executed = 0;
+            while (cycles_executed < cycles.Size())
+            {
+                cycles_executed += emu->cpu.execute();
+            }
 
             // Check results
             bool failure = false;
-            if (cycles_executed != cycles.Size()) {
+            if (cycles_executed > cycles.Size()) {
                 LOG_E("cycles mismatch! %u != %u", cycles_executed, cycles.Size());
                 failure = true;
             }

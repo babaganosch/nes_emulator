@@ -85,6 +85,8 @@ inline uint8_t palette_id_to_blue(uint32_t id)
     return color_2c02[id*3+2];
 }
 
+static uint8_t render_bg_lagg = 0;
+static uint8_t render_sp_lagg = 0;
 static bool old_nmi_enable = false;
 static bool allow_nmi = false;
 } // anonymous
@@ -98,6 +100,8 @@ void ppu_t::init(mem_t* mem, uint32_t* &out)
     output = out;
     recently_power_on = true;
 
+    render_bg = false;
+    render_sp = false;
     vblank_suppression = false;
     frame_skip_suppression = false;
 
@@ -124,6 +128,22 @@ void ppu_t::execute()
         x = 0;
         y = (y + 1) % 262; // NTSC = 262 scanlines
     }
+    
+    // Toggling rendering takes effect approximately 3-4 dots after the write.
+    if (((regs.PPUMASK & 0b00000100) > 0) != render_bg)
+    { 
+        if (render_bg_lagg++ > 2) {
+            render_bg = ((regs.PPUMASK & 0b00000100) > 0);
+            render_bg_lagg = 0;
+        }
+    }
+    if (((regs.PPUMASK & 0b00001000) > 0) != render_sp)
+    {
+        if (render_sp_lagg++ > 2) {
+            render_sp = ((regs.PPUMASK & 0b00001000) > 0);
+            render_sp_lagg = 0;
+        }
+    }
 
     if (memory->cpu->nmi_control.trigger_countdown > 0) memory->cpu->nmi_control.trigger_countdown--;
 
@@ -149,8 +169,8 @@ void ppu_t::execute()
             if ((frame_num++ % 2) != 0)
             {
                 // Note: I should probably check the transitions from 0->1 and 1->0 here (check the old values)
-                if (( BIT_CHECK_HI(regs.PPUMASK, 3) && !frame_skip_suppression ) ||
-                    ( BIT_CHECK_LO(regs.PPUMASK, 3) &&  frame_skip_suppression ))
+                if (( !render_bg && !frame_skip_suppression ) ||
+                    ( !render_bg &&  frame_skip_suppression ))
                 {
                     x = 0;
                     y = 0;
@@ -213,7 +233,7 @@ void ppu_t::execute()
 
 void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( (BIT_CHECK_LO(regs.PPUMASK, 3)) || render_state == render_states::post_render_scanline )
+    if ( !render_bg || render_state == render_states::post_render_scanline )
     { // BG rendering disabled
         return;
     }
@@ -422,7 +442,7 @@ void ppu_t::reload_shift_registers()
 
 void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( BIT_CHECK_LO(regs.PPUMASK, 4) || dot == 0 ||
+    if ( !render_sp || dot == 0 ||
         (render_state != render_states::visible_scanline && render_state != render_states::pre_render_scanline) )
     { // BG rendering disabled or idle cycle
         return;

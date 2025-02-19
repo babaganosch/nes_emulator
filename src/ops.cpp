@@ -39,9 +39,9 @@ void unofficial_hi_nib_inc_and(cpu_t &cpu, uint16_t address, uint8_t value)
     } 
     else
     {
+        cpu.fetch_byte( address );
         res = value & (hi + 1);
         address = (hi << 8) | lo;
-        cpu.tick_clock();
     }
     cpu.write_byte( res, address );
 }
@@ -336,10 +336,6 @@ ADDRESS_MODE(absolute)
         {
             snprintf(cpu.nestest_validation_str, 5, "= %02X", cpu.peek_byte(address));
         }
-        else
-        {
-            snprintf(cpu.nestest_validation_str, 5, "    ");
-        }
     }
 
     return address;
@@ -589,27 +585,24 @@ OP_FUNCTION(AND)
 OP_FUNCTION(ASL)
 {
     uint8_t* operand = nullptr;
+    uint16_t data;
     uint16_t address = addr_mode( cpu, true, false );
     if (addr_mode == addr_mode_accumulator)
     {
-        uint16_t data = cpu.regs.A << 1;
+        data = cpu.regs.A << 1;
         cpu.regs.A = data;
-
-        CALC_N_FLAG( data );
-        CALC_Z_FLAG( data );
-        CALC_C_FLAG( data );
+        
         cpu.fetch_byte( cpu.regs.PC );
     } else
     {
-        cpu.fetch_byte( address );
         operand = cpu.fetch_byte_ref( address );
-        uint16_t data = *operand << 1;
-    
-        CALC_N_FLAG( data );
-        CALC_Z_FLAG( data );
-        CALC_C_FLAG( data );
+        data = *operand << 1;
+        
         cpu.write_byte( data, operand );
     }
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
+    CALC_C_FLAG( data );
 }
 
 /////////////////////////////////////////////////////////
@@ -791,7 +784,6 @@ OP_FUNCTION(CLD)
 {
     addr_mode( cpu, false, false );
     cpu.regs.D = 0;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -804,7 +796,6 @@ OP_FUNCTION(CLD)
 OP_FUNCTION(CLI)
 {
     addr_mode( cpu, false, false );
-    cpu.tick_clock();
     cpu.regs.I = 0;
 }
 
@@ -819,7 +810,6 @@ OP_FUNCTION(CLV)
 {
     addr_mode( cpu, false, false );
     cpu.regs.V = 0;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -884,10 +874,10 @@ OP_FUNCTION(DEC)
 {
     uint16_t address = addr_mode( cpu, true, false );
     uint8_t data = cpu.fetch_byte( address );
+    cpu.write_byte( data, address );
     data = data - 0x1;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
-    cpu.tick_clock();
     cpu.write_byte( data, address );
 }
 
@@ -904,7 +894,6 @@ OP_FUNCTION(DEX)
     cpu.regs.X--;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -920,7 +909,6 @@ OP_FUNCTION(DEY)
     cpu.regs.Y--;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -950,10 +938,10 @@ OP_FUNCTION(INC)
 {
     uint16_t address = addr_mode( cpu, true, false );
     uint8_t data = cpu.fetch_byte( address );
+    cpu.write_byte( data, address );
     data = data + 0x1;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
-    cpu.tick_clock();
     cpu.write_byte( data, address );
 }
 
@@ -970,7 +958,6 @@ OP_FUNCTION(INX)
     cpu.regs.X++;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -986,7 +973,6 @@ OP_FUNCTION(INY)
     cpu.regs.Y++;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1078,25 +1064,27 @@ OP_FUNCTION(LDY)
 //
 OP_FUNCTION(LSR)
 {
-    uint8_t* operand = &cpu.regs.A;
+    uint8_t* operand = nullptr;
+    uint16_t data;
     uint16_t address = addr_mode( cpu, true, false );
-    if (addr_mode != addr_mode_accumulator)
+    if (addr_mode == addr_mode_accumulator)
+    {
+        cpu.regs.C = (cpu.regs.A & 0x1) == 0x1;
+        data = cpu.regs.A >> 1;
+        cpu.regs.A = data;
+        
+        cpu.fetch_byte( cpu.regs.PC );
+        
+    } else
     {
         operand = cpu.fetch_byte_ref( address );
-        cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    if (operand)
-    {
-        uint16_t data = *operand >> 1;
-        cpu.regs.N = 0;
-        CALC_Z_FLAG( data );
         cpu.regs.C = (*operand & 0x1) == 0x1;
+        data = *operand >> 1;
+        
         cpu.write_byte( data, operand );
     }
-    else
-    {
-        LOG_E("LSR attempted on nullptr");
-    }
+    cpu.regs.N = 0;
+    CALC_Z_FLAG( data );
 }
 
 /////////////////////////////////////////////////////////
@@ -1141,7 +1129,6 @@ OP_FUNCTION(PHA)
 {
     addr_mode( cpu, true, false );
     cpu.push_byte_to_stack( cpu.regs.A );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1171,8 +1158,8 @@ OP_FUNCTION(PHP)
 OP_FUNCTION(PLA)
 {
     addr_mode( cpu, false, false );
-    uint8_t data = cpu.pull_byte_from_stack();
-    cpu.tick_clock( 2 ); // Stack-pop extra cycles
+    cpu.pre_inc_stack();
+    uint8_t data = cpu.pull_byte_from_stack( false );
     cpu.regs.A = data;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
@@ -1191,8 +1178,8 @@ OP_FUNCTION(PLA)
 OP_FUNCTION(PLP)
 {
     addr_mode( cpu, false, false );
-    uint8_t status = cpu.pull_byte_from_stack() & 0xCF;
-    cpu.tick_clock( 2 ); // Stack-pop extra cycles
+    cpu.pre_inc_stack();
+    uint8_t status = cpu.pull_byte_from_stack( false ) & 0xCF;
     cpu.regs.SR = status | (cpu.regs.SR & 0x30);
 }
 
@@ -1205,28 +1192,27 @@ OP_FUNCTION(PLP)
 //
 OP_FUNCTION(ROL)
 {
-    uint8_t* operand = &cpu.regs.A;
+    uint8_t* operand = nullptr;
+    uint16_t data;
     uint16_t address = addr_mode( cpu, true, false );
-    if (addr_mode != addr_mode_accumulator)
+    if (addr_mode == addr_mode_accumulator)
+    {
+        data = cpu.regs.A << 1;
+        data = (data & 0xFFFE) | cpu.regs.C;
+        
+        cpu.regs.A = data;
+        cpu.fetch_byte( cpu.regs.PC );
+    } else
     {
         operand = cpu.fetch_byte_ref( address );
-        cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    if (operand)
-    {
-        uint16_t data = (uint16_t)*operand << 1;
+        data = *operand << 1;
         data = (data & 0xFFFE) | cpu.regs.C;
 
-        cpu.regs.C = data > 0xFF ? 1 : 0;
-        CALC_N_FLAG( data );
-        CALC_Z_FLAG( data );
-        
         cpu.write_byte( data, operand );
     }
-    else
-    {
-        LOG_E("ROL attempted on nullptr");
-    }
+    cpu.regs.C = data > 0xFF ? 1 : 0;
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
 }
 
 /////////////////////////////////////////////////////////
@@ -1238,28 +1224,30 @@ OP_FUNCTION(ROL)
 //
 OP_FUNCTION(ROR)
 {
-    uint8_t* operand = &cpu.regs.A;
+    uint8_t* operand = nullptr;
+    uint16_t data;
     uint16_t address = addr_mode( cpu, true, false );
-    if (addr_mode != addr_mode_accumulator)
+    if (addr_mode == addr_mode_accumulator)
+    {
+        bool c_out = (cpu.regs.A & 0x1) == 0x1;
+        data = cpu.regs.A >> 1;
+        data = (data & 0x7F) | cpu.regs.C << 7;
+        
+        cpu.regs.C = c_out;
+        cpu.regs.A = data;
+        cpu.fetch_byte( cpu.regs.PC );
+    } else
     {
         operand = cpu.fetch_byte_ref( address );
-        cpu.tick_clock(); // Extra cycle when modifying value
-    }
-    if (operand)
-    {
-        uint8_t data = *operand >> 1;
+        bool c_out = (*operand & 0x1) == 0x1;
+        data = *operand >> 1;
         data = (data & 0x7F) | cpu.regs.C << 7;
 
-        cpu.regs.C = (*operand & 0x1) == 0x1;
-        CALC_N_FLAG( data );
-        CALC_Z_FLAG( data );
-        
+        cpu.regs.C = c_out;
         cpu.write_byte( data, operand );
     }
-    else
-    {
-        LOG_E("ROR attempted on nullptr");
-    }
+    CALC_N_FLAG( data );
+    CALC_Z_FLAG( data );
 }
 
 /////////////////////////////////////////////////////////
@@ -1275,11 +1263,10 @@ OP_FUNCTION(ROR)
 OP_FUNCTION(RTI)
 {
     addr_mode( cpu, false, false );
-    cpu.tick_clock( 2 ); // Stack-pop extra cycles
-    uint8_t status = cpu.pull_byte_from_stack();
+    cpu.pre_inc_stack();
+    uint8_t status = cpu.pull_byte_from_stack( true );
     cpu.regs.SR = (status & 0xCF) | (cpu.regs.SR & 0x30);
-    uint16_t new_pc = cpu.pull_short_from_stack();
-    cpu.regs.PC = new_pc;
+    cpu.regs.PC = cpu.pull_short_from_stack();
 
     if (cpu.irq_pending && cpu.regs.I == 0)
     { // IRQ queued, trigger it right away.
@@ -1297,10 +1284,11 @@ OP_FUNCTION(RTI)
 OP_FUNCTION(RTS)
 {
     addr_mode( cpu, false, true );
+    cpu.pre_inc_stack();
+
     uint16_t address = cpu.pull_short_from_stack();
-    cpu.tick_clock( 2 ); // Stack-pop extra cycles
-    cpu.regs.PC = address + 1;
-    cpu.tick_clock(); // One extra cycle to post-increment PC
+    cpu.regs.PC = address;
+    cpu.fetch_byte( cpu.regs.PC++ );
 }
 
 /////////////////////////////////////////////////////////
@@ -1336,7 +1324,6 @@ OP_FUNCTION(SEC)
 {
     addr_mode( cpu, false, false );
     cpu.regs.C = 1;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1350,7 +1337,6 @@ OP_FUNCTION(SED)
 {
     addr_mode( cpu, false, false );
     cpu.regs.D = 1;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1363,7 +1349,6 @@ OP_FUNCTION(SED)
 OP_FUNCTION(SEI)
 {
     addr_mode( cpu, false, false );
-    cpu.tick_clock();
     cpu.regs.I = 1;
 }
 
@@ -1419,7 +1404,6 @@ OP_FUNCTION(TAX)
     cpu.regs.X = cpu.regs.A;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1435,7 +1419,6 @@ OP_FUNCTION(TAY)
     cpu.regs.Y = cpu.regs.A;
     CALC_N_FLAG( cpu.regs.Y );
     CALC_Z_FLAG( cpu.regs.Y );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1451,7 +1434,6 @@ OP_FUNCTION(TSX)
     cpu.regs.X = cpu.regs.SP;
     CALC_N_FLAG( cpu.regs.X );
     CALC_Z_FLAG( cpu.regs.X );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1467,7 +1449,6 @@ OP_FUNCTION(TXA)
     cpu.regs.A = cpu.regs.X;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1481,7 +1462,6 @@ OP_FUNCTION(TXS)
 {
     addr_mode( cpu, false, false );
     cpu.regs.SP = cpu.regs.X;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1497,7 +1477,6 @@ OP_FUNCTION(TYA)
     cpu.regs.A = cpu.regs.Y;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
-    cpu.tick_clock();
 }
 
 ///////// ------------------------ Illegal Operations ------------------------
@@ -1569,16 +1548,17 @@ OP_FUNCTION(SAX)
 OP_FUNCTION(DCP)
 {
     uint16_t address = addr_mode( cpu, true, false );
-    uint8_t  operand = cpu.fetch_byte( address );
+    uint8_t  data = cpu.fetch_byte( address );
     // M - 1 -> M
-    uint8_t data = operand - 0x1;
     cpu.write_byte( data, address );
+    data = data - 0x1;
     // A - M
+    cpu.write_byte( data, address );
     data = cpu.regs.A - data;
     CALC_N_FLAG( data );
     CALC_Z_FLAG( data );
     cpu.regs.C = (cpu.regs.A >= data) ? 1 : 0;
-    cpu.tick_clock();
+    //cpu.write_byte( data, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1595,12 +1575,13 @@ OP_FUNCTION(ISB)
     uint16_t address = addr_mode( cpu, true, false );
     uint8_t  data0 = cpu.fetch_byte( address );
     // M + 1 -> M
+    cpu.write_byte( data0, address );
     uint8_t  data1 = data0 + 0x1;
     CALC_N_FLAG( data1 );
     CALC_Z_FLAG( data1 );
-    cpu.write_byte( data1, address );
     //         _
     // A - M - C -> A
+    cpu.write_byte( data1, address );
     data0 = ~data1;
     uint16_t res = cpu.regs.A + data0 + cpu.regs.C;
     CALC_C_FLAG( res );
@@ -1608,7 +1589,6 @@ OP_FUNCTION(ISB)
     CALC_N_FLAG( res );
     CALC_V_FLAG( cpu.regs.A, data0, res );
     cpu.regs.A = res;
-    cpu.tick_clock();
 }
 
 /////////////////////////////////////////////////////////
@@ -1649,14 +1629,14 @@ OP_FUNCTION(RLA)
     uint16_t address = addr_mode( cpu, true, false );
     uint16_t data    = cpu.fetch_byte( address );
     // M = C <- [76543210] <- C
+    cpu.write_byte( data, address );
     data = (data << 1) | cpu.regs.C;
     CALC_C_FLAG( data );
-    cpu.write_byte( data, address );
     // A AND M -> A
     cpu.regs.A = cpu.regs.A & data;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
-    cpu.tick_clock();
+    cpu.write_byte( data, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1673,14 +1653,14 @@ OP_FUNCTION(SRE)
     uint16_t address = addr_mode( cpu, true, false );
     uint8_t  data    = cpu.fetch_byte( address );
     // M = 0 -> [76543210] -> C
+    cpu.write_byte( data, address );
     cpu.regs.C = data & 0x01;
     data = data >> 1;
-    cpu.write_byte( data, address );
     // A EOR M -> A
     cpu.regs.A = cpu.regs.A ^ data;
     CALC_N_FLAG( cpu.regs.A );
     CALC_Z_FLAG( cpu.regs.A );
-    cpu.tick_clock();
+    cpu.write_byte( data, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1697,10 +1677,10 @@ OP_FUNCTION(RRA)
     uint16_t address = addr_mode( cpu, true, false );
     uint8_t  data    = cpu.fetch_byte( address );
     // M = C -> [76543210] -> C
+    cpu.write_byte( data, address );
     bool old_C = cpu.regs.C;
     cpu.regs.C = data & 0x01;
     data = (data >> 1) | old_C << 7;
-    cpu.write_byte( data, address );
     // A + M + C -> A, C
     uint16_t res = cpu.regs.A + data + cpu.regs.C;
     CALC_N_FLAG( res );
@@ -1708,7 +1688,7 @@ OP_FUNCTION(RRA)
     CALC_C_FLAG( res );
     CALC_V_FLAG( cpu.regs.A, data, res );
     cpu.regs.A = res;
-    cpu.tick_clock();
+    cpu.write_byte( data, address );
 }
 
 /////////////////////////////////////////////////////////
@@ -1942,29 +1922,12 @@ OP_FUNCTION(SBX)
 //
 OP_FUNCTION(JAM)
 {
-    cpu.fetch_byte( cpu.regs.PC );
+    addr_mode( cpu, false, false );
     cpu.fetch_byte( 0xFFFF );
     cpu.fetch_byte( 0xFFFE );
     cpu.fetch_byte( 0xFFFE );
     cpu.fetch_byte( 0xFFFF );
-    cpu.fetch_byte( 0xFFFF );
-    cpu.fetch_byte( 0xFFFF );
-    cpu.fetch_byte( 0xFFFF );
-    cpu.fetch_byte( 0xFFFF );
-    cpu.fetch_byte( 0xFFFF );
-
-    /*
-    LOG_W("JAM occured, dumping state..");
-    LOG_W("PC: %04X", cpu.regs.PC);
-    LOG_W("SP: %02X", cpu.regs.SP);
-    LOG_W("P:  %02X", cpu.regs.SR);
-    LOG_W("X:  %02X", cpu.regs.X);
-    LOG_W("Y:  %02X", cpu.regs.Y);
-    LOG_W("A:  %02X", cpu.regs.A);
-    */
-    // Stall 10 cycles (to pass JSON tests) I should probably implement a real CPU trap.
-    //cpu.tick_clock();
-    //throw RESULT_ERROR;
+    cpu.trapped = true;
 }
 
 } // nes

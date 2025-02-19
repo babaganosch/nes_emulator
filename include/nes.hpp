@@ -298,6 +298,7 @@ struct cpu_t
     uint16_t delta_cycles{0};
     VARIANT variant{NTSC};
     uint16_t pal_clock_buffer{0};
+    bool trapped{false};
     bool irq_pending{false};
     bool irq_inhibit{false};
     bool page_crossed{false};
@@ -313,20 +314,20 @@ struct cpu_t
     void nmi();
     void irq();
     uint16_t execute();
+    void     pre_inc_stack();
 
     uint8_t  peek_byte( uint16_t address );
     uint16_t peek_short( uint16_t address );
     uint8_t  fetch_byte( uint16_t address );
     uint8_t  fetch_byte( uint8_t lo, uint8_t hi );
     uint8_t* fetch_byte_ref( uint16_t address );
-    uint8_t  pull_byte_from_stack();
+    uint8_t  pull_byte_from_stack( bool inc_sp );
     uint16_t pull_short_from_stack();
     void     write_byte( uint8_t data, uint8_t* ref );
     void     write_byte( uint8_t data, uint16_t address );
     void     write_byte( uint8_t data, uint8_t lo, uint8_t hi );
     void     push_byte_to_stack( uint8_t data );
     void     push_short_to_stack( uint16_t data );
-    //void     perform_calculation( uint);
 
     // Validation Helpers
     bool nestest_validation{false};
@@ -482,6 +483,8 @@ struct ppu_t
     mem_t* memory{nullptr};
     uint32_t* output{nullptr};
 
+    bool render_bg{false};
+    bool render_sp{false};
     bool recently_power_on{false};
     bool vblank_suppression{false};
     bool frame_skip_suppression{false};

@@ -27,6 +27,7 @@ void cpu_t::init(cpu_callback_t cpu_cb, cpu_callback_t ppu_cb, cpu_callback_t ap
 
     cycles = 0u;
 
+    trapped = false;
     nmi_control.pending = false;
     nmi_control.trigger_countdown = 0u;
 }
@@ -36,6 +37,12 @@ uint16_t cpu_t::execute()
     // Reset CPU instruction delta
     delta_cycles = 0u;
     page_crossed = false;
+
+    if (trapped) 
+    { // JAM, CPU needs a restart
+        tick_clock();
+        return delta_cycles;
+    }
 
     // Fetch instruction
     uint8_t old_ins = cur_ins;
@@ -164,6 +171,7 @@ uint8_t cpu_t::fetch_byte( uint8_t lo, uint8_t hi )
 
 uint8_t* cpu_t::fetch_byte_ref( uint16_t address )
 {
+    fetch_byte( address );
     return memory->fetch_byte_ref( address );
 }
 
@@ -213,24 +221,29 @@ void cpu_t::push_short_to_stack( uint16_t data )
     push_byte_to_stack( 0x00FF & data );
 }
 
-uint8_t cpu_t::pull_byte_from_stack()
+uint8_t cpu_t::pull_byte_from_stack( bool inc_sp )
 {
     if ( regs.SP == 0xFF )
     {
         //LOG_E("--- Stack Underflow! (cur ins: 0x%02X) ---", cur_ins);
         //throw;
     }
-    uint8_t address = ++regs.SP;
-    tick_clock();
-    uint8_t data = memory->memory_read( mem_t::CPU, 0x100 + address, false );
+
+    uint8_t data = fetch_byte(0x100 + regs.SP);
+    if (inc_sp) regs.SP++;
     return data;
 }
 
 uint16_t cpu_t::pull_short_from_stack()
 {
-    uint8_t lo = pull_byte_from_stack();
-    uint8_t hi = pull_byte_from_stack();
+    uint8_t lo = pull_byte_from_stack( true );
+    uint8_t hi = pull_byte_from_stack( false );
     return ((uint16_t)hi << 8) | lo;
+}
+
+void cpu_t::pre_inc_stack()
+{
+    fetch_byte( 0x100 + regs.SP++ );
 }
 
 } // nes

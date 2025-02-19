@@ -56,7 +56,7 @@ RESULT nestest_validator::execute()
     if (ret != RESULT_OK) return ret;
 
     // Clear validation str
-    *emu->cpu.nestest_validation_str = '\0';
+    snprintf(emu->cpu.nestest_validation_str, 5, "    ");
 
     ret = emu->step_cycles(1);
     if (ret != RESULT_OK) return ret; 
