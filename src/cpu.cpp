@@ -28,10 +28,11 @@ void cpu_t::init(cpu_callback_t cpu_cb, cpu_callback_t ppu_cb, cpu_callback_t ap
     cycles = 0u;
 
     trapped = false;
-    nmi_control.pending = false;
-    nmi_control.trigger_countdown = 0u;
+    nmi_pending = false;
+    irq_pending = false;
 }
 
+static bool nmi = false;
 uint16_t cpu_t::execute()
 {
     // Reset CPU instruction delta
@@ -47,21 +48,16 @@ uint16_t cpu_t::execute()
     // Fetch instruction
     uint8_t old_ins = cur_ins;
     cur_ins = fetch_byte( regs.PC++ );
-
     // Check for interrupts (ignore IRQ if CLI followed by RTI)
     bool allow_irq = irq_pending && !(old_ins == 0x58 && cur_ins == 0x40);
-    bool nmi_pending = nmi_control.pending && nmi_control.trigger_countdown <= 1;
-    
+    bool trig_nmi = nmi;
+
     // Perform instruction
     op_code_t& op_code = op_codes[cur_ins];
     op_code.function(*this, op_code.addr_mode );
 
-    // Has NMI occurred?
-    if ( nmi_pending ) {
-        nmi_control.pending = false;
-        irq_pending = false;
-        nmi();
-    } else if ( allow_irq && irq_inhibit == 0) {
+    // Has IRQ/NMI occurred?
+    if ( trig_nmi || (allow_irq && irq_inhibit == 0) ) {
         irq();
     }
 
@@ -82,6 +78,7 @@ void cpu_t::tick_clock()
     if (ppu_callback)
     { // NTSC PPU runs at 3x the CPU clock speed
         ppu_callback(nullptr);
+        nmi |= nmi_pending;
         ppu_callback(nullptr);
         ppu_callback(nullptr);
         if (variant == PAL)
@@ -98,6 +95,7 @@ void cpu_t::tick_clock()
     {
         apu_callback(nullptr);
     }
+
 }
 
 void cpu_t::tick_clock( uint16_t ticks )
@@ -108,40 +106,29 @@ void cpu_t::tick_clock( uint16_t ticks )
     }
 }
 
-void cpu_t::nmi()
-{ // non-maskable interrupt
-    push_short_to_stack( regs.PC );
-    push_byte_to_stack( regs.SR );
-    // Set I, fetch low nibble
-    regs.I = 1;
-    regs.PC &= 0xFF00;
-    regs.PC |= vectors.NMI & 0x00FF;
-    tick_clock();
-    // Fetch high nibble
-    regs.PC &= 0x00FF;
-    regs.PC |= vectors.NMI & 0xFF00;
-    tick_clock();
-}
-
 void cpu_t::irq()
-{ // interrupt request
-    push_short_to_stack( regs.PC );
-    push_byte_to_stack( regs.SR );
+{ // Also NMI
     uint16_t vector = vectors.IRQBRK;
-    if (nmi_control.pending)
-    { // IRQ hijacked by NMI
+    push_byte_to_stack( (0xFF00 & regs.PC) >> 8 );
+    push_byte_to_stack( 0x00FF & regs.PC );
+
+    if (nmi)
+    { // NMI hijack
         vector = vectors.NMI;
-        nmi_control.pending = false;
+        nmi_pending = false;
+        nmi = false;
     }
-    // Set I, fetch low nibble
-    regs.I = 1;
+
+    push_byte_to_stack( regs.SR );    
+    // Set I and fetch low nibble
+    regs.I  = 1;
     regs.PC &= 0xFF00;
     regs.PC |= vector & 0x00FF;
-    tick_clock();
+    fetch_byte( vector == vectors.IRQBRK ? 0xFFFE : 0xFFFA );
     // Fetch high nibble
     regs.PC &= 0x00FF;
     regs.PC |= vector & 0xFF00;
-    tick_clock();
+    fetch_byte( vector == vectors.IRQBRK ? 0xFFFF : 0xFFFB );
 }
 
 uint8_t cpu_t::peek_byte( uint16_t address )

@@ -287,18 +287,13 @@ struct cpu_t
         PAL
     };
 
-    struct nmi_control_t
-    {
-        bool pending{false};
-        uint8_t trigger_countdown{0};
-    } nmi_control;
-
     uint8_t  cur_ins{0};
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
     VARIANT variant{NTSC};
     uint16_t pal_clock_buffer{0};
     bool trapped{false};
+    bool nmi_pending = false;
     bool irq_pending{false};
     bool irq_inhibit{false};
     bool page_crossed{false};
@@ -311,8 +306,7 @@ struct cpu_t
     void tick_clock();
     void tick_clock( uint16_t cycles );
     void init(cpu_callback_t cpu_cb, cpu_callback_t ppu_cb, cpu_callback_t apu_cb, mem_t* mem);
-    void nmi();
-    void irq();
+    void irq(); // Also NMI
     uint16_t execute();
     void     pre_inc_stack();
 
@@ -484,10 +478,11 @@ struct ppu_t
     uint32_t* output{nullptr};
 
     bool render_bg{false};
+    bool render_bg_leftmost{false};
     bool render_sp{false};
+    bool render_sp_leftmost{false};
     bool recently_power_on{false};
     bool vblank_suppression{false};
-    bool frame_skip_suppression{false};
     render_states render_state{render_states::pre_render_scanline};
     uint32_t frame_num{0};
     uint8_t  sprite_indices_next_scanline[8];

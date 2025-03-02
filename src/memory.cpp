@@ -199,7 +199,7 @@ uint8_t mem_t::cpu_memory_read( uint16_t address, bool peek )
         apu->status.r_frame_interrupt = apu->frame_interrupt;
         apu->status.r_dmc_interrupt = apu->dmc.interrupt_flag;
 
-        LOG_W("Playing: %u (bytes left: %u) cycle: %u", apu->status.r_dmc, apu->dmc.memory_reader.bytes_remaining_counter, apu->cycle);
+        //LOG_W("Playing: %u (bytes left: %u) cycle: %u", apu->status.r_dmc, apu->dmc.memory_reader.bytes_remaining_counter, apu->cycle);
         
         uint8_t status = apu->status.data;
         apu->frame_interrupt = 0;
@@ -257,12 +257,13 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
                 ppu_mem.write_latch = value;
                 ppu->regs.PPUCTRL = value;
                 ppu->recently_power_on = false;
+                //LOG_D("%02X PT: %u dot: %u, %u", value, BIT_CHECK_HI(ppu->regs.PPUCTRL, 4), ppu->x, ppu->y);
             } break;
             case( 0x2001 ):
             { // PPUMASK > write
                 ppu->regs.PPUMASK = value;
                 ppu_mem.write_latch = value;
-                ppu->frame_skip_suppression = true;
+                LOG_D("%02X render: %u bg: %u sp: %u dot: %u, %u", value, ppu->render_bg || ppu->render_sp, ppu->render_bg, ppu->render_sp, ppu->x, ppu->y);
             } break;
             case( 0x2002 ):
             { // PPUSTATUS < read

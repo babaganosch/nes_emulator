@@ -720,8 +720,11 @@ OP_FUNCTION(BRK)
 {
     addr_mode( cpu, true, false );
     // Save return address and decide interrupt vector
-    cpu.push_short_to_stack( cpu.regs.PC + 1 );
-    uint16_t vector = cpu.nmi_control.pending ? cpu.vectors.NMI : cpu.vectors.IRQBRK;
+    uint16_t data = cpu.regs.PC + 1;
+    cpu.push_byte_to_stack( (0xFF00 & data) >> 8 );
+    uint16_t vector = cpu.nmi_pending ? cpu.vectors.NMI : cpu.vectors.IRQBRK;
+    cpu.push_byte_to_stack( 0x00FF & data );
+    // TODO: Vector decision should actually be here.. fix that!
     cpu.push_byte_to_stack( cpu.regs.SR | 0x10 );
     // Set I and fetch low nibble
     cpu.regs.I  = 1;
@@ -1928,6 +1931,13 @@ OP_FUNCTION(JAM)
     cpu.fetch_byte( 0xFFFE );
     cpu.fetch_byte( 0xFFFF );
     cpu.trapped = true;
+    LOG_W("JAM occured, dumping state..");
+    LOG_W("PC: %04X", cpu.regs.PC);
+    LOG_W("SP: %02X", cpu.regs.SP);
+    LOG_W("P:  %02X", cpu.regs.SR);
+    LOG_W("X:  %02X", cpu.regs.X);
+    LOG_W("Y:  %02X", cpu.regs.Y);
+    LOG_W("A:  %02X", cpu.regs.A);
 }
 
 } // nes

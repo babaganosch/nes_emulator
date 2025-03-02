@@ -85,10 +85,13 @@ inline uint8_t palette_id_to_blue(uint32_t id)
     return color_2c02[id*3+2];
 }
 
-static uint8_t render_bg_lagg = 0;
-static uint8_t render_sp_lagg = 0;
 static bool old_nmi_enable = false;
 static bool allow_nmi = false;
+
+constexpr uint8_t render_enable_lagg = 1;
+static uint8_t ppumask_history[8]{0x00};
+static uint8_t ppumask_history_index = 0;
+
 } // anonymous
 
 uint32_t window_buffer[NES_WIDTH * NES_HEIGHT * 4];
@@ -103,7 +106,6 @@ void ppu_t::init(mem_t* mem, uint32_t* &out)
     render_bg = false;
     render_sp = false;
     vblank_suppression = false;
-    frame_skip_suppression = false;
 
     frame_num = 0;
     cycles = 0;
@@ -117,6 +119,7 @@ void ppu_t::init(mem_t* mem, uint32_t* &out)
     LOG_I("PPU initiated successfully");
 }
 
+static bool render = false;
 void ppu_t::execute()
 {
     cycles++;
@@ -128,24 +131,16 @@ void ppu_t::execute()
         x = 0;
         y = (y + 1) % 262; // NTSC = 262 scanlines
     }
-    
-    // Toggling rendering takes effect approximately 3-4 dots after the write.
-    if (((regs.PPUMASK & 0b00000100) > 0) != render_bg)
-    { 
-        if (render_bg_lagg++ > 2) {
-            render_bg = ((regs.PPUMASK & 0b00000100) > 0);
-            render_bg_lagg = 0;
-        }
-    }
-    if (((regs.PPUMASK & 0b00001000) > 0) != render_sp)
-    {
-        if (render_sp_lagg++ > 2) {
-            render_sp = ((regs.PPUMASK & 0b00001000) > 0);
-            render_sp_lagg = 0;
-        }
-    }
 
-    if (memory->cpu->nmi_control.trigger_countdown > 0) memory->cpu->nmi_control.trigger_countdown--;
+    // Toggling rendering takes effect approximately 3-4 dots after the write.
+    ppumask_history[ppumask_history_index] = regs.PPUMASK;
+    uint8_t ind = (ppumask_history_index + (8-render_enable_lagg)) % 8;
+    ppumask_history_index = (ppumask_history_index + 1) % 8;
+    render_bg_leftmost = BIT_CHECK_HI(ppumask_history[ind], 1);
+    render_sp_leftmost = BIT_CHECK_HI(ppumask_history[ind], 2);
+    render_bg = BIT_CHECK_HI(ppumask_history[ind], 3);
+    render_sp = BIT_CHECK_HI(ppumask_history[ind], 4);
+    render = render_bg || render_sp;
 
     bool nmi_enable = BIT_CHECK_HI(regs.PPUCTRL, 7);
     bool nmi_disabled = (old_nmi_enable && !nmi_enable);
@@ -166,15 +161,10 @@ void ppu_t::execute()
         if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
 
-            if ((frame_num++ % 2) != 0)
+            if ((frame_num++ % 2) != 0 && render)
             {
-                // Note: I should probably check the transitions from 0->1 and 1->0 here (check the old values)
-                if (( !render_bg && !frame_skip_suppression ) ||
-                    ( !render_bg &&  frame_skip_suppression ))
-                {
-                    x = 0;
-                    y = 0;
-                }
+                x = 0;
+                y = 0;
             }
         }
     }
@@ -208,23 +198,20 @@ void ppu_t::execute()
     { // Trigger NMI if PPUSTATUS & PPUCTRL permits
         if ( BIT_CHECK_HI(regs.PPUSTATUS, 7) && nmi_enable && allow_nmi ) {
             // NMI seems unstable about 3 PPU clocks post NMI trigger via PPU
-            if (!memory->cpu->nmi_control.pending) {
-                memory->cpu->nmi_control.trigger_countdown = 3;
-                memory->cpu->nmi_control.pending = true;
+            if (!memory->cpu->nmi_pending) {
+                memory->cpu->nmi_pending = true;
                 allow_nmi = false;
             }
         }
     }
 
-    bool nmi_unstable = memory->cpu->nmi_control.pending && memory->cpu->nmi_control.trigger_countdown > 0;
+    bool nmi_unstable = memory->cpu->nmi_pending;
     if ( nmi_unstable && (vblank_suppression || nmi_disabled)) {
         // NMI can be interrupted if PPUSTATUS gets read just right before triggering or PPUCTRL NMI enable gets disabled
-        memory->cpu->nmi_control.trigger_countdown = 0;
-        memory->cpu->nmi_control.pending = false;
+        memory->cpu->nmi_pending = false;
     }
 
     vblank_suppression = false;
-    frame_skip_suppression = false;
 
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
@@ -233,7 +220,7 @@ void ppu_t::execute()
 
 void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( !render_bg || render_state == render_states::post_render_scanline )
+    if ( !render || render_state == render_states::post_render_scanline )
     { // BG rendering disabled
         return;
     }
@@ -442,9 +429,8 @@ void ppu_t::reload_shift_registers()
 
 void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( !render_sp || dot == 0 ||
-        (render_state != render_states::visible_scanline && render_state != render_states::pre_render_scanline) )
-    { // BG rendering disabled or idle cycle
+    if ( !render || dot == 0 || render_state == render_states::post_render_scanline )
+    { // SP rendering disabled or idle cycle
         return;
     }
 
@@ -460,6 +446,11 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
     { 
         // Secondary OAM clear and sprite evaluation for next scanline
 
+        if ( dot <= 64 )
+        { // Secondary OAM clear
+            soam.data[ (dot - 1) / 2 ] = 0xFF;
+        }
+
         if ( dot == 65 )
         { // Reset stuff
             oam_n = 0; // n: Sprite [ 0 - 63 ]
@@ -469,12 +460,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
             memset( sprite_indices_next_scanline, 0xFF, sizeof(uint8_t) * 8 );
         }
 
-        if ( dot <= 64 )
-        { // Secondary OAM clear
-            soam.data[ (dot - 1) / 2 ] = 0xFF;
-        }
-
-        else if ( dot <= NES_WIDTH )
+        if ( dot >= 65 && dot <= NES_WIDTH )
         { // Sprite evaluation (dot 65-256)
 
             if ( (dot % 2) == 0 )
@@ -508,7 +494,6 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                                 if (scanline > yy + 7) 
                                 { // bot tile
                                     yy -= 8;
-                                    
                                 }
                                 
                                 if (BIT_CHECK_HI(at, 7)) 
@@ -554,10 +539,17 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
             else
             { // Uneven cycle
                 // Data is read from pOAM
-                memcpy( oam_read_buffer, oam.arr2d[ oam_n ], sizeof(u_int8_t) * 4 );
+                memcpy( oam_read_buffer, oam.arr2d[ oam_n ], sizeof(uint8_t) * 4 );
             }   
 
         }
+
+        /*
+        if ( dot == 192 && !render_bg && !render_sp ) {
+            memset( oam.data, 0, 4*64*sizeof(uint8_t) );
+            memset( soam.data, 0, 4*8*sizeof(uint8_t) );
+            LOG_W("Hit!");
+        }*/
 
         if ( dot == 257 )
         { // Clear sprite indices for old scanline
@@ -659,7 +651,6 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
     // Background pixel color
     if ( dot < NES_WIDTH && scanline < NES_HEIGHT )
     {
-        
         uint8_t fine_x = 7 - memory->ppu_mem.fine_x;
         bg_pattern = ((((shift_regs.pt_lo.hi >> fine_x) & 0x1) << 0) |
                       (((shift_regs.pt_hi.hi >> fine_x) & 0x1) << 1));
@@ -668,6 +659,8 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
         uint8_t palette_hi = shift_regs.at_hi;
         uint8_t palette_id = ((((palette_lo >> fine_x) & 0x1) << 0) |
                               (((palette_hi >> fine_x) & 0x1) << 1));
+
+        if ( !render_bg ) bg_pattern = 0;
 
         if ( bg_pattern == 0x0 ) 
         {
@@ -689,7 +682,7 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
     }
 
     // Shifting of shift registers
-    if ( (dot < NES_WIDTH && scanline < NES_HEIGHT) || (dot > 320 && dot < 336) )
+    if ( (dot < NES_WIDTH && scanline < NES_HEIGHT ) || (dot > 320 && dot < 336) )
     {
         // Shift BG registers
         shift_regs.pt_lo.data <<= 1;
@@ -701,19 +694,19 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
         shift_regs.at_lo |= (latches.at_latch & 0b01);
     }
 
-    if ( BIT_CHECK_LO(regs.PPUMASK, 1) && dot < 8 )
+    if ( !render_bg_leftmost && dot < 8 )
     { // Leftmost 8-pixel mask for BGs
         bg_color = 0x0;
         bg_pattern = 0x0;
     }
 
     // Sprites pixel color
-    if ( dot <= NES_WIDTH )
+    if ( dot < NES_WIDTH )
     {
         for (auto sprite = 0; sprite < 8; ++sprite)
         {
             int16_t& sprite_x_counter = sprite_counters[ sprite ];
-            if ( sprite_x_counter != 0xFF)
+            if ( sprite_x_counter <= 0xFF)
             { // Dec the counter
                 sprite_x_counter--;
             }
@@ -736,16 +729,18 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
                 shift_regs.sprite_pattern_tables_lo[ sprite ] <<= 1;
                 shift_regs.sprite_pattern_tables_hi[ sprite ] <<= 1;
 
-                uint8_t pattern = lo_bit | (hi_bit << 1);
+                uint8_t pattern = ((!render_sp_leftmost && dot < 8) || !render_sp) ? 0 : lo_bit | (hi_bit << 1);
 
-                if ( BIT_CHECK_LO(regs.PPUSTATUS, 6) && pattern && sprite_indices_current_scanline[ sprite ] == 0 )
+                if ( render_bg && render_sp && BIT_CHECK_LO(regs.PPUSTATUS, 6) && pattern && bg_pattern && sprite_indices_current_scanline[ sprite ] == 0 && dot != 255 )
                 { // Sprite Zero check
                     regs.PPUSTATUS |= 0x40;
+                    LOG_W("hit @ %u", dot);
                 }
                 
                 if ( !sprite_hit && pattern )
                 {
                     sprite_hit = true;
+                    
                     uint8_t palette_id = latches.sprite_attribute_latch[ sprite ] & 0b11;
                     sp_to_bg_priority = BIT_CHECK_HI(latches.sprite_attribute_latch[ sprite ], 5);
 
@@ -761,11 +756,6 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
                 }
             }
         }
-    }
-
-    if ( BIT_CHECK_LO(regs.PPUMASK, 2) && dot < 8 )
-    { // Leftmost 8-pixel mask for sprites
-        sp_color = 0x0;
     }
 
     // Priority multiplexing
