@@ -46,11 +46,18 @@ void apu_t::half_frame()
     noise.tick_length_counter();
 }
 
+static bool irq_lag[3]{false};
+static uint8_t irq_lag_index{0};
 float apu_t::execute()
 {
     // Run the sequencer
     // NTSC timings
     uint16_t clock = cycle++;
+
+    // Actual IRQ seems to lag 2 cycles behind. It's probably wrong but it seems to work. 
+    irq_lag[irq_lag_index++] = frame_interrupt || dmc.interrupt_flag;
+    irq_lag_index %= 3;
+    memory->cpu->irq_pending = irq_lag[irq_lag_index];
 
     if (reset_frame_counter > 0 && --reset_frame_counter == 0)
     {
@@ -136,8 +143,6 @@ float apu_t::execute()
     dmc.tick();
 
     mixer();
-
-    memory->cpu->irq_pending = frame_interrupt || dmc.interrupt_flag;
     
     return output;
 }

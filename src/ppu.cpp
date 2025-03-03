@@ -91,6 +91,7 @@ static bool allow_nmi = false;
 constexpr uint8_t render_enable_lagg = 1;
 static uint8_t ppumask_history[8]{0x00};
 static uint8_t ppumask_history_index = 0;
+static uint8_t nmi_unstable = 0;
 
 } // anonymous
 
@@ -119,7 +120,6 @@ void ppu_t::init(mem_t* mem, uint32_t* &out)
     LOG_I("PPU initiated successfully");
 }
 
-static bool render = false;
 void ppu_t::execute()
 {
     cycles++;
@@ -140,7 +140,7 @@ void ppu_t::execute()
     render_sp_leftmost = BIT_CHECK_HI(ppumask_history[ind], 2);
     render_bg = BIT_CHECK_HI(ppumask_history[ind], 3);
     render_sp = BIT_CHECK_HI(ppumask_history[ind], 4);
-    render = render_bg || render_sp;
+    render_enable = render_bg || render_sp;
 
     bool nmi_enable = BIT_CHECK_HI(regs.PPUCTRL, 7);
     bool nmi_disabled = (old_nmi_enable && !nmi_enable);
@@ -161,7 +161,7 @@ void ppu_t::execute()
         if ( dot == 339 )
         { // Jump from (339, 261) to (0,0) on odd frames
 
-            if ((frame_num++ % 2) != 0 && render)
+            if ((frame_num++ % 2) != 0 && render_enable)
             {
                 x = 0;
                 y = 0;
@@ -201,17 +201,18 @@ void ppu_t::execute()
             if (!memory->cpu->nmi_pending) {
                 memory->cpu->nmi_pending = true;
                 allow_nmi = false;
+                nmi_unstable = 3;
             }
         }
     }
 
-    bool nmi_unstable = memory->cpu->nmi_pending;
-    if ( nmi_unstable && (vblank_suppression || nmi_disabled)) {
+    if ( (nmi_unstable > 0) && (vblank_suppression || nmi_disabled)) {
         // NMI can be interrupted if PPUSTATUS gets read just right before triggering or PPUCTRL NMI enable gets disabled
         memory->cpu->nmi_pending = false;
     }
 
     vblank_suppression = false;
+    if (nmi_unstable > 0) nmi_unstable--;
 
     bg_evaluation( dot, scanline );
     sp_evaluation( dot, scanline );
@@ -220,7 +221,7 @@ void ppu_t::execute()
 
 void ppu_t::bg_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( !render || render_state == render_states::post_render_scanline )
+    if ( !render_enable || render_state == render_states::post_render_scanline )
     { // BG rendering disabled
         return;
     }
@@ -429,7 +430,7 @@ void ppu_t::reload_shift_registers()
 
 void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
 {
-    if ( !render || dot == 0 || render_state == render_states::post_render_scanline )
+    if ( !render_enable || dot == 0 || render_state == render_states::post_render_scanline )
     { // SP rendering disabled or idle cycle
         return;
     }

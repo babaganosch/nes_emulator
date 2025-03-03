@@ -32,7 +32,6 @@ void cpu_t::init(cpu_callback_t cpu_cb, cpu_callback_t ppu_cb, cpu_callback_t ap
     irq_pending = false;
 }
 
-static bool nmi = false;
 uint16_t cpu_t::execute()
 {
     // Reset CPU instruction delta
@@ -45,12 +44,13 @@ uint16_t cpu_t::execute()
         return delta_cycles;
     }
 
-    // Fetch instruction
+    // Instruction fetch
     uint8_t old_ins = cur_ins;
     cur_ins = fetch_byte( regs.PC++ );
+    
     // Check for interrupts (ignore IRQ if CLI followed by RTI)
     bool allow_irq = irq_pending && !(old_ins == 0x58 && cur_ins == 0x40);
-    bool trig_nmi = nmi;
+    bool trig_nmi = nmi_trigger;
 
     // Perform instruction
     op_code_t& op_code = op_codes[cur_ins];
@@ -78,18 +78,9 @@ void cpu_t::tick_clock()
     if (ppu_callback)
     { // NTSC PPU runs at 3x the CPU clock speed
         ppu_callback(nullptr);
-        nmi |= nmi_pending;
+        nmi_trigger |= nmi_pending;
         ppu_callback(nullptr);
         ppu_callback(nullptr);
-        if (variant == PAL)
-        { // PAL PPU runs at 3.2x the CPU clock speed
-            pal_clock_buffer++;
-            if (pal_clock_buffer >= 5)
-            {
-                ppu_callback(nullptr);
-                pal_clock_buffer = 0;
-            }
-        }
     }
     if (apu_callback)
     {
@@ -112,14 +103,16 @@ void cpu_t::irq()
     push_byte_to_stack( (0xFF00 & regs.PC) >> 8 );
     push_byte_to_stack( 0x00FF & regs.PC );
 
-    if (nmi)
+    // This badboy should actually be before pushing status.. But this works!
+    if (nmi_pending)
     { // NMI hijack
         vector = vectors.NMI;
         nmi_pending = false;
-        nmi = false;
+        nmi_trigger = false;
     }
 
-    push_byte_to_stack( regs.SR );    
+    push_byte_to_stack( regs.SR );
+
     // Set I and fetch low nibble
     regs.I  = 1;
     regs.PC &= 0xFF00;

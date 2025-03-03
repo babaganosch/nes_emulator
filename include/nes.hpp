@@ -281,19 +281,12 @@ struct cpu_t
         uint16_t IRQBRK;
     } vectors;
 
-    enum VARIANT
-    {
-        NTSC,
-        PAL
-    };
-
     uint8_t  cur_ins{0};
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
-    VARIANT variant{NTSC};
-    uint16_t pal_clock_buffer{0};
     bool trapped{false};
-    bool nmi_pending = false;
+    bool nmi_pending{false};
+    bool nmi_trigger{false};
     bool irq_pending{false};
     bool irq_inhibit{false};
     bool page_crossed{false};
@@ -477,6 +470,7 @@ struct ppu_t
     mem_t* memory{nullptr};
     uint32_t* output{nullptr};
 
+    bool render_enable{false};
     bool render_bg{false};
     bool render_bg_leftmost{false};
     bool render_sp{false};

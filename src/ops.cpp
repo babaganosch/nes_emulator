@@ -722,9 +722,8 @@ OP_FUNCTION(BRK)
     // Save return address and decide interrupt vector
     uint16_t data = cpu.regs.PC + 1;
     cpu.push_byte_to_stack( (0xFF00 & data) >> 8 );
-    uint16_t vector = cpu.nmi_pending ? cpu.vectors.NMI : cpu.vectors.IRQBRK;
     cpu.push_byte_to_stack( 0x00FF & data );
-    // TODO: Vector decision should actually be here.. fix that!
+    uint16_t vector = cpu.nmi_trigger ? cpu.vectors.NMI : cpu.vectors.IRQBRK;
     cpu.push_byte_to_stack( cpu.regs.SR | 0x10 );
     // Set I and fetch low nibble
     cpu.regs.I  = 1;
