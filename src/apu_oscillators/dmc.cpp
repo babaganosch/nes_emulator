@@ -1,5 +1,5 @@
-#include "nes.hpp"
 #include "logging.hpp"
+#include "nes.hpp"
 
 namespace nes
 {

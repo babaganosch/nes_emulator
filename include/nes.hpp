@@ -2,6 +2,7 @@
 #define NES_HPP
 
 #include <cstdint>
+
 #include "apu.hpp"
 
 namespace nes

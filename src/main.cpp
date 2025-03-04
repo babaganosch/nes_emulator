@@ -1,14 +1,13 @@
+#include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <MiniFB.h>
 
-#include "nes.hpp"
-#include "test/nestest_validator.hpp"
-#include "test/jsontest_validator.hpp"
-#include "render.hpp"
 #include "logging.hpp"
-
-#include <chrono>
-#include <cstring>
+#include "nes.hpp"
+#include "render.hpp"
+#include "test/jsontest_validator.hpp"
+#include "test/nestest_validator.hpp"
 
 namespace 
 {

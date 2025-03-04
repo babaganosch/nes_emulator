@@ -1,8 +1,9 @@
 #ifndef MAPPERS_HPP
 #define MAPPERS_HPP
 
-#include "nes.hpp"
 #include <cstdint>
+
+#include "nes.hpp"
 
 namespace nes
 {

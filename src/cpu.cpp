@@ -1,8 +1,8 @@
+#include <cstdio>
+
+#include "logging.hpp"
 #include "nes.hpp"
 #include "nes_ops.hpp"
-#include "logging.hpp"
-
-#include <cstdio>
 
 namespace nes
 {
