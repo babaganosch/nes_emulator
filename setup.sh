@@ -14,12 +14,12 @@ export PATH=$PATH:$_WORKSPACE_HOME/tools/$_WORKSPACE_PLATFORM/
 if [ $_WORKSPACE_PLATFORM == "linux" ]; then
     if [ ! -f tools/linux/genie ]; then
         mkdir -p tools/linux/
-        wget https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie -O tools/linux/genie
+        curl -L https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie -o tools/linux/genie
         chmod +x tools/linux/genie
     fi
     if [ ! -f tools/linux/ninja ]; then
         mkdir -p tools/linux/
-        wget https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip -O tools/linux/ninja-linux.zip
+        curl -L https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip -o tools/linux/ninja-linux.zip
         cd tools/linux
         tar -xzf ninja-linux.zip
         rm ninja-linux.zip
@@ -30,12 +30,12 @@ fi
 if [ $_WORKSPACE_PLATFORM == "macos" ]; then
     if [ ! -f tools/macos/genie ]; then
         mkdir -p tools/macos/
-        wget https://github.com/bkaradzic/bx/raw/master/tools/bin/darwin/genie -O tools/macos/genie
+        curl -L https://github.com/bkaradzic/bx/raw/master/tools/bin/darwin/genie -o tools/macos/genie
         chmod +x tools/macos/genie
     fi
     if [ ! -f tools/macos/ninja ]; then
         mkdir -p tools/macos/
-        wget https://github.com/ninja-build/ninja/releases/latest/download/ninja-mac.zip -O tools/macos/ninja-mac.zip
+        curl -L https://github.com/ninja-build/ninja/releases/latest/download/ninja-mac.zip -o tools/macos/ninja-mac.zip
         cd tools/macos
         tar -xzf ninja-mac.zip
         rm ninja-mac.zip
@@ -46,12 +46,12 @@ fi
 if [ $_WORKSPACE_PLATFORM == "windows" ]; then
     if [ ! -f tools/windows/genie.exe ]; then
         mkdir -p tools/windows/
-        wget https://github.com/bkaradzic/bx/raw/master/tools/bin/windows/genie.exe -O tools/windows/genie.exe
+        curl -L https://github.com/bkaradzic/bx/raw/master/tools/bin/windows/genie.exe -o tools/windows/genie.exe
         chmod +x tools/windows/genie.exe
     fi
     if [ ! -f tools/windows/ninja.exe ]; then
         mkdir -p tools/windows/
-        wget https://github.com/ninja-build/ninja/releases/latest/download/ninja-win.zip -O tools/windows/ninja-win.zip
+        curl -L https://github.com/ninja-build/ninja/releases/latest/download/ninja-win.zip -o tools/windows/ninja-win.zip
         cd tools/windows
         unzip ninja-win.zip
         rm ninja-win.zip
