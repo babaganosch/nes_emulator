@@ -29,8 +29,8 @@ solution "nes_emulator"
          buildoptions { "-Wall",
                         "-Werror", }
          links {
-            "Opengl32.lib",
-            "winmm.lib",
+            "Opengl32",
+            "winmm",
          }
       elseif (os.get() == "macosx") then
          buildoptions { "-Wall",
@@ -87,8 +87,8 @@ solution "nes_emulator"
          }
          includedirs { "thirdparty/minifb/src/windows/" }
          links {
-            "Opengl32.lib",
-            "winmm.lib",
+            "Opengl32",
+            "winmm",
          }
       elseif (os.get() == "macosx") then
         defines { "USE_METAL_API" }
