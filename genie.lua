@@ -21,12 +21,19 @@ solution "nes_emulator"
       links { "minifb_internal" }
 
       -- c++17 required for json CPU tests (std::filesystem::directory_iterator)
-      buildoptions_cpp {
-          "-std=c++17",
-      }
+      if os.get() == "windows" then
+         buildoptions { "/std:c++17" }
+      else
+         buildoptions { "-std=c++17" }
+      end
 
       if os.get() == "windows" then
-         buildoptions { "/W4", "/WX" }
+         buildoptions { 
+            "/W4", 
+            "/WX",
+            "/MP",  -- Enable multi-processor compilation
+            "/EHsc" -- Enable C++ exception handling
+         }
          links {
             "Opengl32.lib",
             "winmm.lib",
@@ -63,9 +70,11 @@ solution "nes_emulator"
       kind "StaticLib"
       language "C++"
 
-      buildoptions_cpp {
-          "-std=c++11",
-      }
+      if os.get() == "windows" then
+         buildoptions { "/std:c++11" }
+      else
+         buildoptions { "-std=c++11" }
+      end
 
       includedirs { "thirdparty/minifb/include/", "thirdparty/minifb/src/" }
 
@@ -88,6 +97,10 @@ solution "nes_emulator"
          links {
             "Opengl32.lib",
             "winmm.lib",
+         }
+         buildoptions { 
+            "/MP",  -- Enable multi-processor compilation
+            "/EHsc" -- Enable C++ exception handling
          }
       elseif (os.get() == "macosx") then
         defines { "USE_METAL_API" }
