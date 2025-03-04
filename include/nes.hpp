@@ -7,19 +7,6 @@
 namespace nes
 {
 
-// Cross-platform packed attribute macro
-#ifdef _MSC_VER
-    #define PACKED_STRUCT __pragma(pack(push, 1)) struct
-    #define PACKED_STRUCT_END __pragma(pack(pop))
-    #define PACKED_UNION __pragma(pack(push, 1)) union
-    #define PACKED_UNION_END __pragma(pack(pop))
-#else
-    #define PACKED_STRUCT struct __attribute__((packed))
-    #define PACKED_STRUCT_END
-    #define PACKED_UNION union __attribute__((packed))
-    #define PACKED_UNION_END
-#endif
-
 #define NES_WIDTH  256
 #define NES_HEIGHT 240
 
@@ -74,9 +61,9 @@ struct mapper_t {
 
 struct gamepad_t
 {
-    PACKED_UNION
+    union 
     {
-        PACKED_STRUCT
+        struct __attribute__((packed))
         {
             uint8_t A      : 1;
             uint8_t B      : 1;
@@ -86,27 +73,27 @@ struct gamepad_t
             uint8_t down   : 1;
             uint8_t left   : 1;
             uint8_t right  : 1;
-        } PACKED_STRUCT_END;
+        };
         uint8_t data{0};
-    } PACKED_UNION_END;
+    };
 
     uint8_t latch{0};
 };
 
 struct cpu_mem_t
 { // $0000 - $401F
-    PACKED_UNION
+    union
     {
-        PACKED_STRUCT
+        struct __attribute__((packed))
         {
             uint8_t zero_page         [0x0100]; // $0000 - $00FF
             uint8_t stack             [0x0100]; // $0100 - $01FF
             uint8_t ram               [0x0600]; // $0200 - $07FF
-        } PACKED_STRUCT_END;
+        };
         uint8_t internal_ram          [0x0800]; // $0000 - $07FF
         // Mirroring $0800 - $1FFF of $0000 - $07FF
         // (repeats every $800 bytes)
-    } PACKED_UNION_END;
+    };
 
     // $2000 - $2007
     // PPU Registers
@@ -156,23 +143,18 @@ struct ppu_mem_t
      */
     union vram_shift_regs_t
     {
-        PACKED_STRUCT
+        struct __attribute__((packed))
         {
             uint16_t coarse_x  : 5;
             uint16_t coarse_y  : 5;
             uint16_t nametable : 2;
             uint16_t fine_y    : 3;
             uint16_t padding   : 1;
-        } PACKED_STRUCT_END;
+        };
         uint8_t  entry;
         uint16_t data{0};
-    } v; // Current vram address
-    union vram_shift_regs_t t; // Temporary vram address
-    uint8_t fine_x{0};   // Fine X scroll
-    uint8_t w{0};        // Write toggle
+    };
 
-    uint8_t write_latch{0};
-    uint8_t ppudata_read_buffer{0};
     enum class nametable_mirroring
     {
         horizontal           = 0,
@@ -182,6 +164,13 @@ struct ppu_mem_t
         four_screen          = 4
     };
 
+    vram_shift_regs_t v; // Current vram address
+    vram_shift_regs_t t; // Temporary vram address
+    uint8_t fine_x{0};   // Fine X scroll
+    uint8_t w{0};        // Write toggle
+
+    uint8_t write_latch{0};
+    uint8_t ppudata_read_buffer{0};
     nametable_mirroring nt_mirroring{nametable_mirroring::horizontal};
 };
 
@@ -190,7 +179,7 @@ struct cartridge_mem_t
     // PPU: $0000 - $1FFF
     union chr_rom_t
     { 
-        PACKED_STRUCT
+        struct __attribute__((packed))
         { // 1KB banked windows
             uint8_t chr_bank_1kb_0[0x0400]; // PPU: $0000 - $03FF (1KB)
             uint8_t chr_bank_1kb_1[0x0400]; // PPU: $0400 - $07FF (1KB)
@@ -200,19 +189,19 @@ struct cartridge_mem_t
             uint8_t chr_bank_1kb_5[0x0400]; // PPU: $1400 - $17FF (1KB)
             uint8_t chr_bank_1kb_6[0x0400]; // PPU: $1800 - $1BFF (1KB)
             uint8_t chr_bank_1kb_7[0x0400]; // PPU: $1C00 - $1FFF (1KB)
-        } PACKED_STRUCT_END;
-        PACKED_STRUCT
+        };
+        struct __attribute__((packed))
         { // 2KB banked windows
             uint8_t chr_bank_2kb_0[0x0800]; // PPU: $0000 - $07FF (2KB)
             uint8_t chr_bank_2kb_1[0x0800]; // PPU: $0800 - $0FFF (2KB)
             uint8_t chr_bank_2kb_2[0x0800]; // PPU: $1000 - $17FF (2KB)
             uint8_t chr_bank_2kb_3[0x0800]; // PPU: $1800 - $1FFF (2KB)
-        } PACKED_STRUCT_END;
-        PACKED_STRUCT
+        };
+        struct __attribute__((packed))
         { // 4KB banked windows
             uint8_t chr_bank_4kb_lower[0x1000]; // PPU: $0000 - $0FFF (4KB)
             uint8_t chr_bank_4kb_upper[0x1000]; // PPU: $1000 - $1FFF (4KB)
-        } PACKED_STRUCT_END;
+        };
         uint8_t chr_bank_8kb[0x2000];
     } chr_rom;
 
@@ -289,7 +278,7 @@ struct cpu_t
         //  N V - B D I Z C
         union 
         {
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t C : 1; // Carry 
                 uint8_t Z : 1; // Zero
@@ -298,7 +287,7 @@ struct cpu_t
                 uint8_t B : 2; // -- (Break)
                 uint8_t V : 1; // Overflow
                 uint8_t N : 1; // Negative
-            } PACKED_STRUCT_END;
+            };
             uint8_t SR;
         };
     } regs;
@@ -448,17 +437,14 @@ struct ppu_t
 
     struct shift_regs_t
     {
-        struct pt_t
+        union pt_t
         {
-            PACKED_UNION
+            struct __attribute__((packed))
             {
-                PACKED_STRUCT
-                {
-                    uint16_t lo : 8;
-                    uint16_t hi : 8;
-                } PACKED_STRUCT_END;
-                uint16_t data;
-            } PACKED_UNION_END;
+                uint16_t lo : 8;
+                uint16_t hi : 8;
+            };
+            uint16_t data;
         };
         // BGs
         pt_t pt_hi;

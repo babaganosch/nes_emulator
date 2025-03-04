@@ -22,9 +22,9 @@ solution "nes_emulator"
 
       -- c++17 required for json CPU tests (std::filesystem::directory_iterator)
       if os.get() == "windows" then
-        buildoptions_cpp { "/std:c++17" }
+         buildoptions { "/std:c++17" }
       else
-        buildoptions_cpp { "-std=c++17" }
+         buildoptions { "-std=c++17" }
       end
 
       if os.get() == "windows" then
@@ -71,9 +71,9 @@ solution "nes_emulator"
       language "C++"
 
       if os.get() == "windows" then
-        buildoptions_cpp { "/std:c++11" }
+         buildoptions { "/std:c++11" }
       else
-        buildoptions_cpp { "-std=c++11" }
+         buildoptions { "-std=c++11" }
       end
 
       includedirs { "thirdparty/minifb/include/", "thirdparty/minifb/src/" }

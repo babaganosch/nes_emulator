@@ -2,7 +2,6 @@
 #define APU_HPP
 
 #include <cstdint>
-#include "nes.hpp"
 
 namespace nes
 {
@@ -11,58 +10,45 @@ struct mem_t;
 
 extern const uint8_t length_counter_lut[];
 
-// Cross-platform packed attribute macro
-#ifdef _MSC_VER
-    #define PACKED_STRUCT __pragma(pack(push, 1)) struct
-    #define PACKED_STRUCT_END __pragma(pack(pop))
-    #define PACKED_UNION __pragma(pack(push, 1)) union
-    #define PACKED_UNION_END __pragma(pack(pop))
-#else
-    #define PACKED_STRUCT struct __attribute__((packed))
-    #define PACKED_STRUCT_END
-    #define PACKED_UNION union __attribute__((packed))
-    #define PACKED_UNION_END
-#endif
-
 struct apu_t
 {
     struct pulse_t {
-        PACKED_UNION
+        union
         { // 0x4000  /  0x4004
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t volume              : 4;
                 uint8_t constant_volume     : 1;
                 uint8_t length_counter_halt : 1;
                 uint8_t duty                : 2;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END envelope;
+        } envelope;
 
-        PACKED_UNION
+        union
         { // 0x4001  /  0x4005
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t shift   : 3;
                 uint8_t negate  : 1;
                 uint8_t divider : 3;
                 uint8_t enable  : 1;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END sweep;
+        } sweep;
 
         // 0x4002  /  0x4006
         uint8_t timer_low{0};
 
-        PACKED_UNION
+        union
         { // 0x4003  /  0x4007
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t timer_high : 3;
                 uint8_t load       : 5;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END length_counter_load;
+        } length_counter_load;
 
         void write( uint16_t address, uint8_t value );
         void tick();
@@ -90,30 +76,30 @@ struct apu_t
     };
 
     struct triangle_t {
-        PACKED_UNION
+        union
         { // 0x4008
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t counter_reload : 7;
                 uint8_t control        : 1;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END linear_counter_load;
+        } linear_counter_load;
 
         // 0x4009 unused
 
         // 0x400A
         uint8_t timer_low{0};
 
-        PACKED_UNION
+        union
         { // 0x400B
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t timer_high : 3;
                 uint8_t load       : 5;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END length_counter_load;
+        } length_counter_load;
 
         void write( uint16_t address, uint8_t value );
         void tick();
@@ -135,40 +121,40 @@ struct apu_t
     };
 
     struct noise_t {
-        PACKED_UNION
+        union
         { // 0x400C
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t volume              : 4;
                 uint8_t constant_volume     : 1;
                 uint8_t length_counter_halt : 1;
                 uint8_t unused              : 2;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END envelope;
+        } envelope;
 
         // 0x400D unused
 
-        PACKED_UNION
+        union
         { // 0x400E
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t period : 4;
                 uint8_t unused : 3;
                 uint8_t mode   : 1;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END control;
+        } control;
 
-        PACKED_UNION
+        union
         { // 0x400F
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t unused : 3;
                 uint8_t load   : 5;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END length_counter_load;
+        } length_counter_load;
 
         void write( uint16_t address, uint8_t value );
         void tick();
@@ -192,27 +178,27 @@ struct apu_t
     };
 
     struct dmc_t {
-        PACKED_UNION
+        union
         { // 0x4010
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t rate       : 4;
                 uint8_t unused     : 2;
                 uint8_t loop       : 1;
                 uint8_t irq_enable : 1;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END control; // flags and rate
+        } control; // flags and rate
 
-        PACKED_UNION
+        union
         { // 0x4011
-            PACKED_STRUCT
+            struct __attribute__((packed))
             {
                 uint8_t load   : 7;
                 uint8_t unused : 1;
-            } PACKED_STRUCT_END;
+            };
             uint8_t data{0};
-        } PACKED_UNION_END direct_load;
+        } direct_load;
 
         // 0x4012
         uint8_t sample_address{0};
@@ -264,9 +250,9 @@ struct apu_t
 
     };
 
-    PACKED_UNION
+    union
     { // 0x4015
-        PACKED_STRUCT
+        struct __attribute__((packed))
         {
             uint8_t w_pulse_1  : 1;
             uint8_t w_pulse_2  : 1;
@@ -274,8 +260,8 @@ struct apu_t
             uint8_t w_noise    : 1;
             uint8_t w_dmc      : 1;
             uint8_t w_unused   : 3;
-        } PACKED_STRUCT_END;
-        PACKED_STRUCT
+        }; // For write-only
+        struct __attribute__((packed))
         {
             uint8_t r_pulse_1  : 1;
             uint8_t r_pulse_2  : 1;
@@ -285,20 +271,20 @@ struct apu_t
             uint8_t r_unused   : 1;
             uint8_t r_frame_interrupt : 1;
             uint8_t r_dmc_interrupt   : 1;
-        } PACKED_STRUCT_END;
+        }; // For read-only
         uint8_t data{0};
-    } PACKED_UNION_END status;
+    } status;
 
-    PACKED_UNION
+    union
     { // 0x4017
-        PACKED_STRUCT
+        struct __attribute__((packed))
         {
             uint8_t unused            : 6;
             uint8_t interrupt_inhibit : 1;
             uint8_t sequencer_mode    : 1;
-        } PACKED_STRUCT_END;
+        };
         uint8_t data{0};
-    } PACKED_UNION_END frame_counter;
+    } frame_counter;
 
     void init(mem_t* mem);
     void mixer();
