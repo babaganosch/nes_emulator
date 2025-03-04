@@ -124,8 +124,11 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
         data_ptr += CHR_PAGE_SIZE;
     }
 
+    // Flags7.1 = PlayChoice-10 (8 KB of Hint Screen data stored after CHR data)
+    const auto extra_size = (header.flags_7 & 0b10) > 0 ? 0x2000 : 0x0;
+    
     const auto loaded_data_size = data_ptr - &data[INES_HEADER_SIZE];
-    const auto expected_data_size = size - INES_HEADER_SIZE;
+    const auto expected_data_size = size - INES_HEADER_SIZE - extra_size;
     if (loaded_data_size != expected_data_size)
     {
         LOG_E("Written data not the same as specified.");

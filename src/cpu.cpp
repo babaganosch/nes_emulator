@@ -49,7 +49,7 @@ uint16_t cpu_t::execute()
     cur_ins = fetch_byte( regs.PC++ );
     
     // Check for interrupts (ignore IRQ if CLI followed by RTI)
-    bool allow_irq = irq_pending && !(old_ins == 0x58 && cur_ins == 0x40);
+    irq_trigger = irq_pending && !(old_ins == 0x58 && cur_ins == 0x40);
     bool trig_nmi = nmi_trigger;
 
     // Perform instruction
@@ -57,7 +57,7 @@ uint16_t cpu_t::execute()
     op_code.function(*this, op_code.addr_mode );
 
     // Has IRQ/NMI occurred?
-    if ( trig_nmi || (allow_irq && irq_inhibit == 0) ) {
+    if ( trig_nmi || (irq_trigger && irq_inhibit == 0) ) {
         irq();
     }
 
@@ -67,26 +67,30 @@ uint16_t cpu_t::execute()
 
 void cpu_t::tick_clock()
 {
-    delta_cycles++;
-    cycles++;
-    memory->cpu_cycles = cycles;
+    do {
+        delta_cycles++;
+        cycles++;
+        memory->cpu_cycles = cycles;
 
-    if (cpu_callback)
-    {
-        cpu_callback(nullptr);
-    }
-    if (ppu_callback)
-    { // NTSC PPU runs at 3x the CPU clock speed
-        ppu_callback(nullptr);
-        nmi_trigger |= nmi_pending;
-        ppu_callback(nullptr);
-        ppu_callback(nullptr);
-    }
-    if (apu_callback)
-    {
-        apu_callback(nullptr);
-    }
+        if (cpu_callback)
+        {
+            cpu_callback(nullptr);
+        }
+        if (ppu_callback)
+        { // NTSC PPU runs at 3x the CPU clock speed
+            ppu_callback(nullptr);
+            nmi_trigger |= nmi_pending;
+            ppu_callback(nullptr);
+            ppu_callback(nullptr);
+        }
+        if (apu_callback)
+        {
+            apu_callback(nullptr);
+        }
 
+        // DMA halt
+        if (dma_halt_cycles > 0) dma_halt_cycles--;
+    } while (dma_halt_cycles > 0);
 }
 
 void cpu_t::tick_clock( uint16_t ticks )
@@ -103,7 +107,6 @@ void cpu_t::irq()
     push_byte_to_stack( (0xFF00 & regs.PC) >> 8 );
     push_byte_to_stack( 0x00FF & regs.PC );
 
-    // This badboy should actually be before pushing status.. But this works!
     if (nmi_pending)
     { // NMI hijack
         vector = vectors.NMI;

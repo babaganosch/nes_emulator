@@ -39,7 +39,7 @@ void mapper_t::init( mem_t* memory_ref ) {
     // Map CHR ROM
     if (chr_banks > 0) 
     { // Cartridge contains CHR ROM
-        memcpy(memory->cartridge_mem.chr_rom.data, memory->ines_rom->chr_pages[0], CHR_8KB_SIZE);
+        memcpy(memory->cartridge_mem.chr_rom.chr_bank_8kb, memory->ines_rom->chr_pages[0], CHR_8KB_SIZE);
     }
 }
 
@@ -51,7 +51,7 @@ uint8_t mapper_t::cpu_read( uint16_t address ) {
 }
 
 uint8_t mapper_t::ppu_read( uint16_t address ) {
-    return memory->cartridge_mem.chr_rom.data[ address ];
+    return memory->cartridge_mem.chr_rom.chr_bank_8kb[ address ];
 }
 
 void mapper_t::cpu_write( uint16_t address, uint8_t value ) {
@@ -62,7 +62,7 @@ void mapper_t::cpu_write( uint16_t address, uint8_t value ) {
 }
 
 void mapper_t::ppu_write( uint16_t address, uint8_t value ) {
-    memory->cartridge_mem.chr_rom.data[ address ] = value;
+    memory->cartridge_mem.chr_rom.chr_bank_8kb[ address ] = value;
 }
 
 //////// mapper 001 - MMC1B
@@ -115,7 +115,7 @@ void mapper_mmc1b_t::cpu_write( uint16_t address, uint8_t value ) {
                 { // CHR RAM
                     src = memory->ines_rom->prg_pages;
                 }
-                memcpy(memory->cartridge_mem.chr_rom.data, src[bank] + offset, size);
+                memcpy(memory->cartridge_mem.chr_rom.chr_bank_8kb, src[bank] + offset, size);
                 
             } else if ( address < 0xE000 )
             { // CHR Bank 1
@@ -161,6 +161,10 @@ void mapper_uxrom_t::cpu_write( uint16_t address, uint8_t value ) {
     memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[bank];
 }
 
+void mapper_mmc3_t::cpu_write( uint16_t address, uint8_t value ) {
+    // TODO
+}
+
 //////// mapper 007 - AxROM
 void mapper_axrom_t::init( mem_t* memory_ref ) {
     mapper_t::init( memory_ref );
@@ -171,8 +175,8 @@ void mapper_axrom_t::init( mem_t* memory_ref ) {
 
 void mapper_axrom_t::cpu_write( uint16_t address, uint8_t value ) {
     uint8_t prg_bank = (value & 0b00000111);
-    uint8_t vram_page = (value & 0b00010000);
-    (void) vram_page; // TODO
+    uint8_t vram_page = (value & 0b00010000) >> 4;
+    memory->ppu_mem.nt_mirroring = (ppu_mem_t::nametable_mirroring)(2 + vram_page);
     memory->cartridge_mem.prg_lower_bank = memory->ines_rom->prg_pages[(prg_bank*2)];
     memory->cartridge_mem.prg_upper_bank = memory->ines_rom->prg_pages[(prg_bank*2)+1];
 }

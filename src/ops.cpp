@@ -456,7 +456,7 @@ ADDRESS_MODE(indirect)
     */
     uint8_t ind_lo = cpu.fetch_byte( lo,     hi );
     uint8_t ind_hi = cpu.fetch_byte( lo + 1, hi );
-
+    
     uint16_t address = UINT16( ind_lo, ind_hi );
     if (cpu.nestest_validation)
     {

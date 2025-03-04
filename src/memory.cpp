@@ -263,7 +263,7 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
             { // PPUMASK > write
                 ppu->regs.PPUMASK = value;
                 ppu_mem.write_latch = value;
-                LOG_D("%02X render: %u bg: %u sp: %u dot: %u, %u", value, ppu->render_bg || ppu->render_sp, ppu->render_bg, ppu->render_sp, ppu->x, ppu->y);
+                //LOG_D("%02X render: %u bg: %u sp: %u dot: %u, %u", value, ppu->render_bg || ppu->render_sp, ppu->render_bg, ppu->render_sp, ppu->x, ppu->y);
             } break;
             case( 0x2002 ):
             { // PPUSTATUS < read
@@ -390,8 +390,8 @@ void mem_t::cpu_memory_write( uint8_t value, uint16_t address )
         // The CPU is suspended during the transfer, which will take 513 or 514 cycles after the $4014 write tick.
         // (1 wait state cycle while waiting for writes to complete, +1 if on an odd CPU cycle, then 256 alternating read/write cycles.)
         memcpy( ppu_mem.oam.data, source, 256 );
-        uint16_t wait_cycles = 513 + (cpu->cycles % 2) == 0 ? 0 : 1;
-        cpu->tick_clock( wait_cycles );
+        uint32_t wait_cycles = 515 + (cpu->cycles % 2);
+        cpu->dma_halt_cycles = wait_cycles;
         return;
     }
 

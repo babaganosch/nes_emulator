@@ -16,7 +16,6 @@ void apu_t::dmc_t::write( uint16_t address, uint8_t value )
         { // Flags and rate
             control.data = value;
             if (!control.irq_enable) interrupt_flag = false;
-            
             period = period_lut[control.rate]; // 0x0 - 0xF NTSC
             //LOG_I("4010 control %02X (rate: 0x%03X) (I:%u L:%u)", value, period, control.irq_enable, control.loop);
         } break;
@@ -24,17 +23,14 @@ void apu_t::dmc_t::write( uint16_t address, uint8_t value )
         { // Direct load
             direct_load.data = value;
             output_level = direct_load.load;
-            //LOG_I("4011 direct load %02X", value);
         } break;
         case ( 0x4012 ): 
         { // Sample address
             sample_address = value;
-            //LOG_I("4012 sample address %02X", value);
         } break;
         case ( 0x4013 ): 
         { // Sample length
             sample_length = value;
-            //LOG_I("4013 length %02X", value);
         } break;
     }
 }
@@ -104,7 +100,8 @@ void apu_t::dmc_t::memory_reader_t::tick( dmc_t* dmc )
                 data_loaded = true;
                 // TODO: Need to stall the CPU
                 tmp_data = memory->memory_read(nes::mem_t::CPU, address, true);
-                LOG_D("0x%02X 0x%04X %u", tmp_data, address, bytes_remaining_counter);
+                memory->cpu->dma_halt_cycles = 1;
+                LOG_D("DMC DMA READ: 0x%02X 0x%04X %u", tmp_data, address, bytes_remaining_counter);
             } 
             else if (dmc->put_cycle && data_loaded)
             {
@@ -117,11 +114,9 @@ void apu_t::dmc_t::memory_reader_t::tick( dmc_t* dmc )
 
             if (bytes_remaining_counter == 0)
             {
-                LOG_D("EMPTY (%u)", memory->apu->cycle);
                 dmc->playing = false;
                 if (dmc->control.loop)
                 { // The sample is restarted (see above);
-                    LOG_D("RELOAD LOOP");
                     start_sample( dmc );
                 } else if (dmc->control.irq_enable)
                 { // If the IRQ enabled flag is set, the interrupt flag is set.
@@ -134,7 +129,6 @@ void apu_t::dmc_t::memory_reader_t::tick( dmc_t* dmc )
         }
     } 
     else if (dmc->play) {
-        LOG_D("reload LAST");
         start_sample( dmc );
     }
 }

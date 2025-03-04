@@ -180,11 +180,29 @@ struct cartridge_mem_t
     union chr_rom_t
     { 
         struct __attribute__((packed))
+        { // 1KB banked windows
+            uint8_t chr_bank_1kb_0[0x0400]; // PPU: $0000 - $03FF (1KB)
+            uint8_t chr_bank_1kb_1[0x0400]; // PPU: $0400 - $07FF (1KB)
+            uint8_t chr_bank_1kb_2[0x0400]; // PPU: $0800 - $0BFF (1KB)
+            uint8_t chr_bank_1kb_3[0x0400]; // PPU: $0C00 - $0FFF (1KB)
+            uint8_t chr_bank_1kb_4[0x0400]; // PPU: $1000 - $13FF (1KB)
+            uint8_t chr_bank_1kb_5[0x0400]; // PPU: $1400 - $17FF (1KB)
+            uint8_t chr_bank_1kb_6[0x0400]; // PPU: $1800 - $1BFF (1KB)
+            uint8_t chr_bank_1kb_7[0x0400]; // PPU: $1C00 - $1FFF (1KB)
+        };
+        struct __attribute__((packed))
+        { // 2KB banked windows
+            uint8_t chr_bank_2kb_0[0x0800]; // PPU: $0000 - $07FF (2KB)
+            uint8_t chr_bank_2kb_1[0x0800]; // PPU: $0800 - $0FFF (2KB)
+            uint8_t chr_bank_2kb_2[0x0800]; // PPU: $1000 - $17FF (2KB)
+            uint8_t chr_bank_2kb_3[0x0800]; // PPU: $1800 - $1FFF (2KB)
+        };
+        struct __attribute__((packed))
         { // 4KB banked windows
             uint8_t chr_bank_4kb_lower[0x1000]; // PPU: $0000 - $0FFF (4KB)
             uint8_t chr_bank_4kb_upper[0x1000]; // PPU: $1000 - $1FFF (4KB)
         };
-        uint8_t data[0x2000];
+        uint8_t chr_bank_8kb[0x2000];
     } chr_rom;
 
     // CPU: $4020 - $FFFF
@@ -284,10 +302,12 @@ struct cpu_t
     uint8_t  cur_ins{0};
     uint32_t cycles{0};
     uint16_t delta_cycles{0};
+    uint16_t dma_halt_cycles{0};
     bool trapped{false};
     bool nmi_pending{false};
     bool nmi_trigger{false};
     bool irq_pending{false};
+    bool irq_trigger{false};
     bool irq_inhibit{false};
     bool page_crossed{false};
     cpu_callback_t cpu_callback{nullptr};

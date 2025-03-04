@@ -609,7 +609,7 @@ void ppu_t::sp_evaluation( uint16_t dot, uint16_t scanline )
                         y_offset = 7 - y_offset;
                     }
 
-                    uint8_t* chr_data = (uint8_t*)memory->cartridge_mem.chr_rom.data + (sprite_tile*16) + chr_offset + y_offset;
+                    uint8_t* chr_data = (uint8_t*)memory->cartridge_mem.chr_rom.chr_bank_8kb + (sprite_tile*16) + chr_offset + y_offset;
                     uint8_t lo = *chr_data;
                     uint8_t hi = *(chr_data+8);
 
@@ -732,10 +732,10 @@ void ppu_t::render_pixel( uint16_t dot, uint16_t scanline )
 
                 uint8_t pattern = ((!render_sp_leftmost && dot < 8) || !render_sp) ? 0 : lo_bit | (hi_bit << 1);
 
-                if ( render_bg && render_sp && BIT_CHECK_LO(regs.PPUSTATUS, 6) && pattern && bg_pattern && sprite_indices_current_scanline[ sprite ] == 0 && dot != 255 )
+                if ( render_enable && BIT_CHECK_LO(regs.PPUSTATUS, 6) && pattern && bg_pattern && sprite_indices_current_scanline[ sprite ] == 0 && dot != 255 )
                 { // Sprite Zero check
                     regs.PPUSTATUS |= 0x40;
-                    LOG_W("hit @ %u", dot);
+                    //LOG_W("hit @ %u", dot);
                 }
                 
                 if ( !sprite_hit && pattern )

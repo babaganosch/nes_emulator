@@ -36,6 +36,11 @@ struct mapper_uxrom_t : public mapper_t {
     void cpu_write( uint16_t address, uint8_t value ) override;
 };
 
+//////// mapper 004 - MMC3
+struct mapper_mmc3_t : public mapper_t {
+    void cpu_write( uint16_t address, uint8_t value ) override;
+};
+
 //////// mapper 007 - AxROM
 struct mapper_axrom_t : public mapper_t {
     void init( mem_t* memory_ref ) override;
