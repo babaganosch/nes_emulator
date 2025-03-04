@@ -27,7 +27,8 @@ solution "nes_emulator"
 
       if os.get() == "windows" then
          buildoptions { "-Wall",
-                        "-Werror", }
+                        "-Werror", 
+                      }
          links {
             "Opengl32",
             "winmm",
@@ -38,8 +39,7 @@ solution "nes_emulator"
                         "-Werror",
                         "-fcolor-diagnostics"
                       }
-         links
-         {
+         links {
            "Cocoa.framework",
            "QuartzCore.framework",
            "Metal.framework",
@@ -104,8 +104,7 @@ solution "nes_emulator"
 
         includedirs { "thirdparty/minifb/macosx/" }
 
-        links
-        {
+        links {
           "Cocoa.framework",
           "QuartzCore.framework",
           "Metal.framework",
