@@ -657,7 +657,7 @@ OP_FUNCTION(BIT)
     uint16_t address = addr_mode( cpu, false, false );
     uint8_t operand = cpu.fetch_byte( address );
     cpu.regs.N = BIT_CHECK_HI( operand, 7 );
-    cpu.regs.V = BIT_CHECK_HI( operand, 6 ); 
+    cpu.regs.V = BIT_CHECK_HI( operand, 6 );
     cpu.regs.Z = CALC_Z_FLAG( operand & cpu.regs.A );
 }
 

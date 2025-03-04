@@ -2,6 +2,7 @@
 #include "logging.hpp"
 #include "mappers.hpp"
 #include <memory>
+#include <cstring>
 
 namespace nes
 {
@@ -10,7 +11,7 @@ void mem_t::init( ines_rom_t &rom )
 {
     ines_rom = &rom;
     memset(cpu_mem.internal_ram, 0x00, sizeof(cpu_mem.internal_ram));
-    for (auto i = 0; i < sizeof(cpu_mem.ram); ++i)
+    for (size_t i = 0; i < sizeof(cpu_mem.ram); ++i)
     {
         //cpu_mem.ram[i] = rand() * 0xFF;
     }

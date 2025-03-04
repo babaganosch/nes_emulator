@@ -26,7 +26,8 @@ solution "nes_emulator"
       }
 
       if os.get() == "windows" then
-         buildoptions { "/W4", "/WX" }
+         buildoptions { "-Wall",
+                        "-Werror", }
          links {
             "Opengl32.lib",
             "winmm.lib",

@@ -107,7 +107,7 @@ void mapper_mmc1b_t::cpu_write( uint16_t address, uint8_t value ) {
                 chr_bank_mode = (pb & 0b10000) >> 4;
             } else if ( address < 0xC000 )
             { // CHR Bank 0
-                u_int32_t size = chr_bank_mode == 0 ? CHR_8KB_SIZE : CHR_4KB_SIZE;
+                uint32_t size = chr_bank_mode == 0 ? CHR_8KB_SIZE : CHR_4KB_SIZE;
                 uint32_t  offset = chr_bank_mode == 0 ? 0 : (pb & 0b1 ? CHR_4KB_SIZE : 0);
                 uint8_t   bank = (pb & 0b11110) >> 1;
                 uint8_t** src = memory->ines_rom->chr_pages;

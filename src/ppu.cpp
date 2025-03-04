@@ -1,4 +1,5 @@
 #include <MiniFB.h>
+#include <cstring>
 
 #include "nes.hpp"
 #include "logging.hpp"

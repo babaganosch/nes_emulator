@@ -2,6 +2,7 @@
 #include "logging.hpp"
 
 #include <fstream>
+#include <cstring>
 
 namespace nes
 {
@@ -111,7 +112,7 @@ void ines_rom_t::load_from_data(const uint8_t* data, const uint32_t size)
     const uint8_t* data_ptr = &data[INES_HEADER_SIZE];
     for (auto i = 0; i < header.prg_size; ++i)
     {
-        prg_pages[i] = new u_int8_t[PRG_PAGE_SIZE];
+        prg_pages[i] = new uint8_t[PRG_PAGE_SIZE];
         memcpy(prg_pages[i], data_ptr, PRG_PAGE_SIZE);
         data_ptr += PRG_PAGE_SIZE;
     }
@@ -144,7 +145,7 @@ void ines_rom_t::construct_empty()
     prg_pages = new uint8_t*[header.prg_size];
     for (auto i = 0; i < header.prg_size; ++i)
     {
-        prg_pages[i] = new u_int8_t[PRG_PAGE_SIZE];
+        prg_pages[i] = new uint8_t[PRG_PAGE_SIZE];
         memset(prg_pages[i], 0u, PRG_PAGE_SIZE);
     }
 }

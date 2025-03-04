@@ -3,6 +3,8 @@
 #include "nes.hpp"
 #include "logging.hpp"
 
+#include <cstring>
+
 namespace nes
 {
 
@@ -254,7 +256,7 @@ RESULT nestest_validator::validate_line()
         printf("\n-- \033[1;31mFAILED\033[0;0m --\n");
         printf(" @ line %llu\n", line_number);
         printf("\033[0;34mRES:\033[0;0m ");
-        auto i = 0;
+        size_t i = 0;
         while( i < emu_output_len )
         {
             if ( i < strlen(key_cline) && i < strlen(emu_output) )

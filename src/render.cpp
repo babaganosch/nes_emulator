@@ -1,8 +1,12 @@
 #include <MiniFB.h>
+#include <stdarg.h>
+#include <cstdio>
 
 #include "nes.hpp"
 #include "render.hpp"
 #include "logging.hpp"
+
+
 
 
 /*

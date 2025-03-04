@@ -8,6 +8,7 @@
 #include "logging.hpp"
 
 #include <chrono>
+#include <cstring>
 
 namespace 
 {
