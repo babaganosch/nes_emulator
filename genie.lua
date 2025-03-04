@@ -31,6 +31,7 @@ solution "nes_emulator"
          links {
             "Opengl32",
             "winmm",
+            "gdi32",
          }
       elseif (os.get() == "macosx") then
          buildoptions { "-Wall",
@@ -89,6 +90,7 @@ solution "nes_emulator"
          links {
             "Opengl32",
             "winmm",
+            "gdi32",
          }
       elseif (os.get() == "macosx") then
         defines { "USE_METAL_API" }
