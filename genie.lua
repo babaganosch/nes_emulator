@@ -28,9 +28,8 @@ solution "nes_emulator"
       if os.get() == "windows" then
          buildoptions { "/W4", "/WX" }
          links {
-            "gdi32",
-            "user32",
-            "kernel32"
+            "Opengl32.lib",
+            "winmm.lib",
          }
       elseif (os.get() == "macosx") then
          buildoptions { "-Wall",
@@ -83,17 +82,12 @@ solution "nes_emulator"
          defines { "USE_WINDOWS_API" }
          files {
             "thirdparty/minifb/src/windows/WinMiniFB.c",
-            "thirdparty/minifb/src/windows/WinMiniFB.h",
-            "thirdparty/minifb/src/windows/WinMiniFB.cpp",
-            "thirdparty/minifb/src/windows/WinMiniFB.h",
-            "thirdparty/minifb/src/windows/WinMiniFB_internal.h",
-            "thirdparty/minifb/src/windows/WinMiniFB_internal.cpp"
+            "thirdparty/minifb/src/windows/WindowData_Win.h",
          }
          includedirs { "thirdparty/minifb/src/windows/" }
          links {
-            "gdi32",
-            "user32",
-            "kernel32"
+            "Opengl32.lib",
+            "winmm.lib",
          }
       elseif (os.get() == "macosx") then
         defines { "USE_METAL_API" }
