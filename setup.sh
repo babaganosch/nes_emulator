@@ -3,34 +3,23 @@
 # Exit on error
 set -e
 
-# Get the directory where the script is located
-_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-_WORKSPACE_HOME="$( cd "$_SCRIPT_DIR/.." && pwd )"
-
-# Determine the platform
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    _WORKSPACE_PLATFORM="macos"
-elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-    _WORKSPACE_PLATFORM="windows"
+# Setup env vars
+export _WORKSPACE_HOME=$(pwd)
+if [ "$(uname)" == "Darwin" ]; then
+    export _WORKSPACE_PLATFORM="macos"
+elif [ "$(expr substr $(uname -s) 1 10)" == "MINGW64_NT" ]; then
+    export _WORKSPACE_PLATFORM="windows"
 else
-    _WORKSPACE_PLATFORM="linux"
+    export _WORKSPACE_PLATFORM="linux"
 fi
-
-# Add tools directory to PATH
-if [ -z "$PATH" ]; then
-    export PATH=$_WORKSPACE_HOME/tools/$_WORKSPACE_PLATFORM/
-else
-    export PATH=$PATH:$_WORKSPACE_HOME/tools/$_WORKSPACE_PLATFORM/
-fi
+export PATH=$PATH:$_WORKSPACE_HOME/tools/$_WORKSPACE_PLATFORM/
 
 # Check for required tools
 command -v curl >/dev/null 2>&1 || { echo "Error: curl is required but not installed. Aborting." >&2; exit 1; }
 if [ $_WORKSPACE_PLATFORM == "windows" ]; then
     command -v unzip >/dev/null 2>&1 || { echo "Error: unzip is required but not installed. Aborting." >&2; exit 1; }
-    command -v make >/dev/null 2>&1 || { echo "Error: make is required but not installed. Please install MinGW or MSYS2 which includes make." >&2; exit 1; }
 else
     command -v tar >/dev/null 2>&1 || { echo "Error: tar is required but not installed. Aborting." >&2; exit 1; }
-    command -v make >/dev/null 2>&1 || { echo "Error: make is required but not installed. Aborting." >&2; exit 1; }
 fi
 
 # Create tools directory
