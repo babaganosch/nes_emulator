@@ -5,8 +5,9 @@
 #include "rapidjson/document.h"     // rapidjson's DOM-style API
 #include <sstream>
 #include <iostream>
-#include <filesystem>
 #include <algorithm>
+#include <dirent.h>
+#include <sys/stat.h>
 
 namespace nes
 {
@@ -14,26 +15,35 @@ namespace nes
 void jsontest_validator::init(emu_t* emu_ref, const char* path)
 {
     emu = emu_ref;
-    // Find tests in directory and store in list
-    if (std::filesystem::is_directory(path))
+    
+    struct stat path_stat;
+    stat(path, &path_stat);
+    
+    if (S_ISDIR(path_stat.st_mode))
     {
-        for (const auto& entry : std::filesystem::directory_iterator(path)) 
+        DIR* dir = opendir(path);
+        if (dir != nullptr)
         {
-            std::filesystem::path file_path = entry.path();
-            std::string file_name = file_path.string();
-            
-            if (file_name.find(".json") != std::string::npos) 
-            { // Run test on file
-                json_list.push_back(file_name);
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != nullptr)
+            {
+                std::string file_name = entry->d_name;
+                if (file_name.find(".json") != std::string::npos)
+                {
+                    std::string full_path = std::string(path) + "/" + file_name;
+                    json_list.push_back(full_path);
+                }
             }
+            closedir(dir);
         }
-    } else 
+    }
+    else
     { // Path is not a directory. Treat as single test
         json_list.push_back(path);
     }
 
     // Sort tests ($00 -> $FF)
-    std::sort(json_list.begin(),json_list.end());
+    std::sort(json_list.begin(), json_list.end());
 }
 
 RESULT jsontest_validator::run_tests()

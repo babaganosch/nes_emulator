@@ -22,7 +22,7 @@ solution "nes_emulator"
 
       -- c++17 required for json CPU tests (std::filesystem::directory_iterator)
       buildoptions_cpp {
-          "-std=c++17",
+          "-std=c++11",
       }
 
       if os.get() == "windows" then
@@ -44,6 +44,22 @@ solution "nes_emulator"
            "QuartzCore.framework",
            "Metal.framework",
            "MetalKit.framework",
+         }
+      else -- linux
+         buildoptions { "-Wall",
+                       "-Werror",
+                       "-fcolor-diagnostics"
+                     }
+         links {
+           "X11",
+           "GL",
+           "Xrandr",
+           "Xi",
+           "Xxf86vm",
+           "Xinerama",
+           "Xcursor",
+           "dl",
+           "pthread"
          }
       end
 
@@ -109,6 +125,25 @@ solution "nes_emulator"
           "QuartzCore.framework",
           "Metal.framework",
           "MetalKit.framework",
+        }
+      else -- linux
+        defines { "USE_X11_API" }
+        files {
+          "thirdparty/minifb/src/gl/MiniFB_GL.c",
+          "thirdparty/minifb/src/x11/X11MiniFB.c",
+          "thirdparty/minifb/src/MiniFB_linux.c",
+        }
+        includedirs { "thirdparty/minifb/src/linux/" }
+        links {
+          "X11",
+          "GL",
+          "Xrandr",
+          "Xi",
+          "Xxf86vm",
+          "Xinerama",
+          "Xcursor",
+          "dl",
+          "pthread"
         }
       end
 
