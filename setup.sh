@@ -16,10 +16,10 @@ export PATH=$PATH:$_WORKSPACE_HOME/tools/$_WORKSPACE_PLATFORM/
 
 # Check for required tools
 command -v curl >/dev/null 2>&1 || { echo "Error: curl is required but not installed. Aborting." >&2; exit 1; }
-if [ $_WORKSPACE_PLATFORM == "windows" ]; then
-    command -v unzip >/dev/null 2>&1 || { echo "Error: unzip is required but not installed. Aborting." >&2; exit 1; }
-else
+if [ $_WORKSPACE_PLATFORM == "macos" ]; then
     command -v tar >/dev/null 2>&1 || { echo "Error: tar is required but not installed. Aborting." >&2; exit 1; }
+else
+    command -v unzip >/dev/null 2>&1 || { echo "Error: unzip is required but not installed. Aborting." >&2; exit 1; }
 fi
 
 # Create tools directory
@@ -35,7 +35,7 @@ if [ $_WORKSPACE_PLATFORM == "linux" ]; then
     if [ ! -f tools/linux/ninja ]; then
         curl -L https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip -o tools/linux/ninja-linux.zip
         cd tools/linux
-        tar -xzf ninja-linux.zip
+        unzip ninja-linux.zip
         rm ninja-linux.zip
         cd -
     fi
