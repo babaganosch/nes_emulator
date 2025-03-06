@@ -20,7 +20,6 @@ solution "nes_emulator"
 
       links { "minifb_internal" }
 
-      -- c++17 required for json CPU tests (std::filesystem::directory_iterator)
       buildoptions_cpp {
           "-std=c++11",
       }
