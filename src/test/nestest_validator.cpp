@@ -72,7 +72,7 @@ RESULT nestest_validator::execute()
     }
     else
     {
-        printf("%-105s\033[0;33m%llu\033[0;0m\n", emu_output, line_number);
+        printf("%-105s\033[0;33m%lu\033[0;0m\n", emu_output, line_number);
     }
     return ret;
 }
@@ -254,7 +254,7 @@ RESULT nestest_validator::validate_line()
     else
     {   // FAILURE
         printf("\n-- \033[1;31mFAILED\033[0;0m --\n");
-        printf(" @ line %llu\n", line_number);
+        printf(" @ line %lu\n", line_number);
         printf("\033[0;34mRES:\033[0;0m ");
         size_t i = 0;
         while( i < emu_output_len )

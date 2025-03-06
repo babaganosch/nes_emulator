@@ -48,18 +48,11 @@ solution "nes_emulator"
       else -- linux
          buildoptions { "-Wall",
                        "-Werror",
-                       "-fcolor-diagnostics"
                      }
          links {
            "X11",
-           "GL",
-           "Xrandr",
-           "Xi",
-           "Xxf86vm",
-           "Xinerama",
-           "Xcursor",
            "dl",
-           "pthread"
+           "pthread",
          }
       end
 
@@ -136,14 +129,6 @@ solution "nes_emulator"
         includedirs { "thirdparty/minifb/src/linux/" }
         links {
           "X11",
-          "GL",
-          "Xrandr",
-          "Xi",
-          "Xxf86vm",
-          "Xinerama",
-          "Xcursor",
-          "dl",
-          "pthread"
         }
       end
 

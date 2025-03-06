@@ -1,6 +1,7 @@
 #include "mappers.hpp"
 #include "logging.hpp"
 #include <memory>
+#include <cstring>
 
 namespace nes
 {
