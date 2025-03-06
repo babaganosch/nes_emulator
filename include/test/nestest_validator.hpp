@@ -32,7 +32,7 @@ private:
     uint16_t fails{0};
     uint16_t post_fix_cursor{0};
     uint16_t post_fix_letters{0};
-    uint64_t line_number{0};
+    unsigned long line_number{0};
     std::ifstream key{};
 };
 
