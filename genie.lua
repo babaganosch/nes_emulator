@@ -1,4 +1,4 @@
-solution "nes_emulator"
+solution "nesscape"
    configurations { "Debug", "Release" }
    location "build"
    targetdir "bin"
@@ -6,9 +6,9 @@ solution "nes_emulator"
    platforms { "x64" }
 
 
-   -- nes_emulator
+   -- nesscape
    -- ============
-   project "nes_emulator"
+   project "nesscape"
       language "C++"
       files { "src/**.cpp" }
       includedirs { 

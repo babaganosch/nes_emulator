@@ -11,7 +11,7 @@
 
 namespace 
 {
-constexpr const char* nes_test_rom = "../data/nestest.nes";
+constexpr const char* nes_test_rom = "../thirdparty/nes-test-roms/other/nestest.nes";
 constexpr const uint16_t screen_multiplier = 3u;
 constexpr const uint16_t microseconds_per_frame = 16667;
 
