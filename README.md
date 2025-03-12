@@ -2,6 +2,23 @@
 
 A Nintendo Entertainment System (NES) emulator implementation in C++ that aims to provide cycle accurate emulation of the original NTSC NES hardware. Implemented and tested on MacOS, but should _probably_ work on Windows and Linux as well.
 
+
+https://github.com/user-attachments/assets/c4a952a7-8922-4ecf-bc93-74d56e77b573
+
+<details>
+<summary>More videos</summary>
+
+https://github.com/user-attachments/assets/378fbb82-612a-4daa-9953-0f6c1763a9b5
+
+https://github.com/user-attachments/assets/cb087da7-b4c0-493b-ab79-62cf1c3a512e
+
+https://github.com/user-attachments/assets/220112f3-10ca-46bf-9e04-d2785a2aaab9
+
+https://github.com/user-attachments/assets/9e4b713a-1cbe-49af-a214-512b8a22bf71
+
+</details>
+
+
 ## Features
 
 __CPU__
