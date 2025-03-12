@@ -34,7 +34,7 @@ __APU__
 - Pulse channels implemented
 - Triangle channels implemented
 - Noise channel implemented
-- DMC channel mostly implemented
+- DMC channel _mostly_ implemented
 
 __iNES Mappers__ 
 - 000 - NROM
@@ -83,6 +83,7 @@ I have not implemented any type of save state yet. Neither have I implemented an
 The DMA timing on APU DMC access is not really implemented. On Battletoads, text and logos on the title screen is a little weird, and audio seems a little off when playing the game.
 
 ## Usage
+After compiling, the binary will end up in the `bin/` directory.
 ```bash
 $ nesscape <rom_path> <flag>
 Flags:
