@@ -5,7 +5,7 @@
 
 #include "logging.hpp"
 #include "nes.hpp"
-#include "render.hpp"
+#include "debug_render.hpp"
 #include "test/jsontest_validator.hpp"
 #include "test/nestest_validator.hpp"
 

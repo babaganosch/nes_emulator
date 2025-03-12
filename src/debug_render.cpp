@@ -3,7 +3,7 @@
 #include <cstdio>
 
 #include "nes.hpp"
-#include "render.hpp"
+#include "debug_render.hpp"
 #include "logging.hpp"
 
 
