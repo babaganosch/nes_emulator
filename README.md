@@ -2,7 +2,6 @@
 
 A Nintendo Entertainment System (NES) emulator implementation in C++ that aims to provide cycle accurate emulation of the original NTSC NES hardware. Implemented and tested on MacOS, but should _probably_ work on Windows and Linux as well.
 
-
 https://github.com/user-attachments/assets/c4a952a7-8922-4ecf-bc93-74d56e77b573
 
 <details>
@@ -128,7 +127,7 @@ make
 - `include/` - Header files
 - `thirdparty/` - Third-party dependencies (git submodules)
 - `tools/` - Build tools ([GENie](https://github.com/bkaradzic/GENie/tree/master) and [Ninja](https://ninja-build.org/))
-- `data/` - Some old validation logs for nestest
+- `data/` - Some old nestest validation logs and videos for this readme
 - `build/` - Generated build files
 - `bin/` - Output directory for compiled binary
 
@@ -143,6 +142,9 @@ make
 [NesTestRoms](https://github.com/christopherpow/nes-test-roms) - A collection of test roms used for functionality validation.
 
 ## Troubleshooting
+
+__MacOS__  
+The downloaded binaries for GENie and Ninja are probably compiled for Apple Silicon. If you're compiling on intel based mac, you probably need to download or compile tools manually.
 
 __Windows__  
 I've only tested the emulator briefly on windows, but it seems to work fine if compiled with gcc.
