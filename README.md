@@ -24,16 +24,16 @@ https://github.com/user-attachments/assets/9e4b713a-1cbe-49af-a214-512b8a22bf71
 
 __CPU__
 - All 256 opcodes implemented and cycle accurate
-- BRK, IRQ and NMI implemented with vector hijacking
+- BRK, IRQ and NMI implemented with [vector hijacking](https://www.nesdev.org/wiki/CPU_interrupts)
 
 __PPU__
-- Accurate pixel rendering
+- Accurate [pixel rendering](https://www.nesdev.org/wiki/PPU_rendering)
 - Accurate sprite0 hit detection
-- Scrolling via loopy registers
+- Scrolling via [loopy registers](https://www.nesdev.org/wiki/PPU_scrolling#PPU_internal_registers)
 
 __APU__
 - Pulse channels implemented
-- Triangle channels implemented
+- Triangle channel implemented
 - Noise channel implemented
 - DMC channel _mostly_ implemented
 
