@@ -127,7 +127,7 @@ make
 - `include/` - Header files
 - `thirdparty/` - Third-party dependencies (git submodules)
 - `tools/` - Build tools ([GENie](https://github.com/bkaradzic/GENie/tree/master) and [Ninja](https://ninja-build.org/))
-- `data/` - Some old nestest validation logs and videos for this readme
+- `data/` - Some old nestest validation logs
 - `build/` - Generated build files
 - `bin/` - Output directory for compiled binary
 

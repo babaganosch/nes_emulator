@@ -197,12 +197,12 @@ RESULT jsontest_validator::run_tests()
             
             if (failure)
             {
-                LOG_E("Failed test%d: %s", passed_tests+1, tests[i]["name"].GetString());
+                LOG_E("Failed test %d: %s (%d/%d tests passed)", passed_tests+1, tests[i]["name"].GetString(), passed_tests, tests.Size());
                 return RESULT::RESULT_ERROR;
             }
             passed_tests++;
         }
-        LOG_S("%s", path.c_str());
+        LOG_S("%s (%d/%d tests passed)", path.c_str(), passed_tests, tests.Size());
     }
     
     return RESULT::RESULT_OK;
